@@ -1,6 +1,8 @@
 # `Express Authentication`
 
-Express authentication template using Passport + Flash messages + custom middleware
+## User Stories
+
+As a user I want to be able to find my favorite cars so that I can build a customized profile of my favorite cars
 
 ## What it includes
 
