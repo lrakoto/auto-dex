@@ -6,6 +6,11 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const passport = require('./config/ppConfig');
 const isLoggedIn = require('./middleware/isLoggedIn');
+const axios = require('axios');
+
+// For Car Data API calls
+const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
+const CarAPIKey = process.env.CKEY
 
 const SECRET_SESSION = process.env.SECRET_SESSION;
 console.log('INJECTION --->>', SECRET_SESSION);
