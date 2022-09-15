@@ -7,6 +7,7 @@ const flash = require('connect-flash');
 const passport = require('./config/ppConfig');
 const isLoggedIn = require('./middleware/isLoggedIn');
 const axios = require('axios');
+const { application } = require('express');
 
 // For Car Data API calls
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
@@ -44,6 +45,8 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   res.render('index');
 })
+
+app.get('/cars', require('./controllers/cars'));
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
