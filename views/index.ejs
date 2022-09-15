@@ -1,17 +1,15 @@
 <h2>AutoDex</h2>
 
 <form action="/cars" method="GET">
+    <label for="selectmake">Select Make</label>
+    <select name="selectmake" id="selectmake">
+    <% data.forEach(element => { %>
+        <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
+        <option value=<%= element.Mfr_CommonName %>><%= element.Mfr_CommonName %></option>
+        <% } %>
+    <% }); %>
+    </select>
     <label for="carsearch">Search for Cars</label>
     <input type="text" id="carsearch" name="carsearch">
     <button type="submit">Search</button>
 </form>
-
-<ul>
-    <% data.forEach(element => { %>
-        <li>
-        <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
-            <%= element.Mfr_CommonName %>
-        <% } %>
-        </li>
-    <% }); %>
-</ul>
