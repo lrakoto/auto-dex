@@ -10,7 +10,8 @@ const axios = require('axios');
 
 // For Car Data API calls
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
-const CarAPIKey = process.env.CKEY
+const CarAPIKey = process.env.CKEY;
+const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
 
 const SECRET_SESSION = process.env.SECRET_SESSION;
 console.log('INJECTION --->>', SECRET_SESSION);
@@ -24,8 +25,8 @@ app.use(layouts);
 
 app.use(session({
   secret: SECRET_SESSION,
-  resacve: false,
-  saveUninitialized: true
+  resave: false,
+  saveUninitialized: false
 }));
 
 app.use(flash());
