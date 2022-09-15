@@ -5,3 +5,13 @@
     <input type="text" id="carsearch" name="carsearch">
     <button type="submit">Search</button>
 </form>
+
+<ul>
+    <% data.forEach(element => { %>
+        <li>
+        <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
+            <%= element.Mfr_CommonName %>
+        <% } %>
+        </li>
+    <% }); %>
+</ul>

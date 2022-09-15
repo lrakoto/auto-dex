@@ -43,10 +43,20 @@ app.use((req, res, next) => {
 });
 
 app.get('/', (req, res) => {
-  res.render('index');
+  axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
+  .then((response) => {
+    let data = response.data.Results;
+    res.render('index', {data: data})
+    // res.send(data);
+  })
+  .catch((err) => {
+      console.log(err);
+  })
+  .finally(() => {
+      console.log('it worked');
+  });
+  // res.render('index');
 })
-
-app.get('/cars', require('./controllers/cars'));
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
