@@ -11,7 +11,7 @@ Fork & Clone this repo.
 - [ ] In this space below, list **THREE** ideas for your Project 2. For each idea, include [user stories](https://www.atlassian.com/agile/project-management/user-stories) for each idea and a link to the API(s) you want to use for it.
 
 --------------------------------------------------------
-1. 
+1. AutoDex - A searchable exotic cars database with customizable profiles with favorite cars
 2. 
 3.
 ---------------------------------------------------------
@@ -29,12 +29,15 @@ In the space below:
 
 ----------------------------------------------------------
 ### ERD
+![alt text](/public/assets/ERD.png)
 
 ----------------------------------------------------------
 ### User Stories
-
+As a user I want to be able to search for cars by make, model, and/or year and add my favorites to my profile.
 ----------------------------------------------------------
 ### Wireframes
+![alt text](/public/assets/wireframe.png)
+
 
 ----------------------------------------------------------
 
