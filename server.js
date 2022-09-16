@@ -63,11 +63,11 @@ app.get('/', (req, res) => {
 // GET route for submitted form data from home route
 app.get('/cars', (req, res) => {
   let userQuery = req.query;
-  console.log('USER TYPED:', userQuery.selectmake);
   axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
   .then((response) => {
-    console.log(response.data);
-    res.render('cars', {cars: response.data})
+    let data = response.data.Results;
+    console.log('HERE IS THE DATA', data);
+    res.render('cars', { cars: data, search: userQuery.selectmake });
   })
   .catch((err) => {
     console.log(err);

@@ -1,3 +1,7 @@
 <h2>Cars</h2>
 
-<h3>Search Results</h3>
+<h3>Search Results for <%= search %> </h3>
+
+<% cars.forEach((e) => { %>
+    <p><%= e.Model_Name %></p> 
+<% }) %>  
