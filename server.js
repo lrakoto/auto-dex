@@ -13,6 +13,9 @@ const { application } = require('express');
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
 const CarAPIKey = process.env.CKEY;
 const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
+const allMakes = 'getallmanufacturers/';
+const allModelsByMake = 'getmodelsformake/'; // needs model name
+const endOfURL = '?format=json';
 
 const SECRET_SESSION = process.env.SECRET_SESSION;
 console.log('INJECTION --->>', SECRET_SESSION);
@@ -42,12 +45,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// GET Route for Home and search form
 app.get('/', (req, res) => {
   axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
   .then((response) => {
     let data = response.data.Results;
     res.render('index', {data: data})
-    // res.send(data);
   })
   .catch((err) => {
       console.log(err);
@@ -55,8 +58,24 @@ app.get('/', (req, res) => {
   .finally(() => {
       console.log('it worked');
   });
-  // res.render('index');
-})
+});
+
+// GET route for submitted form data from home route
+app.get('/cars', (req, res) => {
+  let userQuery = req.query;
+  console.log('USER TYPED:', userQuery.selectmake);
+  axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
+  .then((response) => {
+    console.log(response.data);
+    res.render('cars', {cars: response.data})
+  })
+  .catch((err) => {
+    console.log(err);
+  })
+  .finally(() => {
+    console.log('success');
+  });
+});
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
