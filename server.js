@@ -66,7 +66,6 @@ app.get('/cars', (req, res) => {
   axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
   .then((response) => {
     let data = response.data.Results;
-    console.log('HERE IS THE DATA', data);
     res.render('cars', { cars: data, search: userQuery.selectmake });
   })
   .catch((err) => {
