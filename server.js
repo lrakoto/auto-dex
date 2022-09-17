@@ -60,24 +60,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// GET route for submitted form data from home route
-app.get('/cars', (req, res) => {
-  let userQuery = req.query;
-  axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
-  .then((response) => {
-    let data = response.data.Results;
-    res.render('cars', { cars: data, search: userQuery.selectmake });
-  })
-  .catch((err) => {
-    console.log(err);
-  })
-  .finally(() => {
-    console.log('success');
-  });
-});
-
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
+app.use('/cars', require('./controllers/cars'));
 
 // Add this above /auth controllers
 app.get('/profile', isLoggedIn, (req, res) => {
