@@ -31,18 +31,11 @@ router.get('/', (req, res) => {
 
   // GET route cars/fav
   router.get('/fav', (req, res) => {
-    req.toJSON()
-    .then((response) => {
+    let data = req.body;
+    console.log(req.body)
         console.log('RES BODY:', res.body);
         console.log('REQ BODY:', req.body);
         res.render('cars/fav', { faves: res.body})
-    })
-    .catch((err) => {
-        console.log(err);
-    })
-    .finally(() => {
-        console.log('successful');
-    });
   });
 
 //   // POST Route for add to favorites form on cars page
