@@ -46,6 +46,21 @@ router.get('/', (req, res) => {
         console.log('ERROR', err);
     })
     .finally(() => {
+        console.log('ADDED CAR to CARS TABLE')
+    });
+    // add to favorite_cars
+    db.favorite_cars.create({
+        where: {
+            make: data.favecar_make,
+        }
+    })
+    .then(response => {
+        res.redirect('/');
+    })
+    .catch((err) => {
+        console.log('ERROR', err);
+    })
+    .finally(() => {
         console.log('you\'re the man')
     });
   });
