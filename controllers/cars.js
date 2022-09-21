@@ -26,7 +26,27 @@ router.get('/', (req, res) => {
       console.log(err);
     })
     .finally(() => {
-      console.log('success');
+      console.log('MESSAGE: submitted form data from home route');
+    });
+  });
+
+  // POST route cars/fav
+  router.post('/fav', (req, res) => {
+    let data = req.body;
+    db.cars.findOrCreate({
+        where: {
+            make: data.favecar_make,
+            model: data.favecar_model
+        }
+    })
+    .then(response => {
+        res.redirect('/');
+    })
+    .catch((err) => {
+        console.log('ERROR', err);
+    })
+    .finally(() => {
+        console.log('you\'re the man')
     });
   });
 
@@ -34,7 +54,7 @@ router.get('/', (req, res) => {
   router.get('/fav', (req, res) => {
     let data = req.query;
     console.log('REQ QUERY', req.query);
-    res.render('cars/fav', { favecar: data })
+    res.render('cars/fav', { favecar: data });
   });
 
 //   // POST Route for add to favorites form on cars page

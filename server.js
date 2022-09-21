@@ -9,14 +9,6 @@ const isLoggedIn = require('./middleware/isLoggedIn');
 const axios = require('axios');
 const { application } = require('express');
 
-// For Car Data API calls
-const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
-const CarAPIKey = process.env.CKEY;
-const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
-const allMakes = 'getallmanufacturers/';
-const allModelsByMake = 'getmodelsformake/'; // needs model name
-const endOfURL = '?format=json';
-
 const SECRET_SESSION = process.env.SECRET_SESSION;
 console.log('INJECTION --->>', SECRET_SESSION);
 
@@ -56,7 +48,7 @@ app.get('/', (req, res) => {
       console.log(err);
   })
   .finally(() => {
-      console.log('it worked');
+      console.log('HOME ROUTE FOR SELECT FIELDS WORKED');
   });
 });
 

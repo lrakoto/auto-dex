@@ -4,9 +4,9 @@
 
 <% cars.forEach((e) => { %>
     <p><%= e.Model_Name %></p>
-    <form action="cars/fav" method="GET"> 
-    <input type="hidden" id="favecar_model" name="favecar_model" value=<%= e.Model_Name %>/>
-    <input type="hidden" id="favecar_make" name="favecar_make" value=<%= e.Make_Name %>/>
+    <form action="cars/fav" method="POST"> 
+    <input type="hidden" id="favecar_model" name="favecar_model" value="<%= e.Model_Name %>"/>
+    <input type="hidden" id="favecar_make" name="favecar_make" value="<%= e.Make_Name %>"/>
     <button type="submit">Add to Favorites</button>
     </form>
 <% }) %>  
