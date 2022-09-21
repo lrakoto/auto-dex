@@ -3,6 +3,7 @@ const router = express.Router();
 const passport = require('../config/ppConfig');
 const db = require('../models');
 const axios = require('axios');
+const { request } = require('express');
 const app = express();
 
 // For Car Data API calls
@@ -31,11 +32,9 @@ router.get('/', (req, res) => {
 
   // GET route cars/fav
   router.get('/fav', (req, res) => {
-    let data = req.body;
-    console.log(req.body)
-        console.log('RES BODY:', res.body);
-        console.log('REQ BODY:', req.body);
-        res.render('cars/fav', { faves: res.body})
+    let data = req.query;
+    console.log('REQ QUERY', req.query);
+    res.render('cars/fav', { favecar: data })
   });
 
 //   // POST Route for add to favorites form on cars page
