@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      models.favorite_car.belongsToMany(models.user);
-      models.favorite_car.hasMany(models.car);
+      models.favorite_car.belongsTo(models.user);
+      models.favorite_car.belongsTo(models.car);
     }
   }
   favorite_car.init({

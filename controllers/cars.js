@@ -33,36 +33,64 @@ router.get('/', (req, res) => {
   // POST route cars/fav
   router.post('/fav', (req, res) => {
     let data = req.body;
-    db.cars.findOrCreate({
+    db.car.findOrCreate({
+        where: {
+            make: data.favecar_make,
+            model: data.favecar_model,
+        }
+    })
+    db.favorite_car.create({
+        carId: 2
+    })
+    .then(response => {
+        console.log('ADD CAR TO CARS ATTEMPT')
+    })
+    .catch((err) => {
+        console.log('ERROR', err);
+    })
+    .finally(() => {
+        console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
+    });
+    // // add to favorite_cars
+    // db.favorite_car.create({
+    //     carId: 2
+    // })
+    // .then(response => {
+    //     console.log('ADD CAR TO FAVORITES ATTEMPT')
+    // })
+    // .catch((err) => {
+    //     console.log('ERROR', err);
+    // })
+    // .finally(() => {
+    //     console.log('SUCCESSFULLY ADDED CAR TO FAVORITES')
+    // });
+    // add favcout
+    db.car.findOne({
         where: {
             make: data.favecar_make,
             model: data.favecar_model
         }
-    })
-    .then(response => {
-        res.redirect('/');
-    })
-    .catch((err) => {
-        console.log('ERROR', err);
-    })
-    .finally(() => {
-        console.log('ADDED CAR to CARS TABLE')
+    }).then(foundCar => {
+        console.log('FAVCAR DATA:', foundCar);
+    }).catch((err) => {
+        console.log('FINDCAR ERROR:', err);
     });
-    // add to favorite_cars
-    db.favorite_cars.create({
-        where: {
+    db.car.update({
+        favcount: 1,
+      }, 
+      {
+        where: { 
             make: data.favecar_make,
+            model: data.favecar_model
         }
     })
-    .then(response => {
-        res.redirect('/');
+    .then((favCountEdit) => {
+    res.redirect('/');
+      console.log('FAVCARCOUNT UPDATE ATTEMPT')
     })
     .catch((err) => {
-        console.log('ERROR', err);
+        console.log('FAVCOUNT ERROR:', err);
     })
-    .finally(() => {
-        console.log('you\'re the man')
-    });
   });
 
   // GET route cars/fav
