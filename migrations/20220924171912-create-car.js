@@ -1,17 +1,26 @@
 'use strict';
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('favorite_cars', {
+    await queryInterface.createTable('cars', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      carId: {
+      make: {
+        type: Sequelize.STRING
+      },
+      model: {
+        type: Sequelize.STRING
+      },
+      year: {
         type: Sequelize.INTEGER
       },
-      userId: {
+      type: {
+        type: Sequelize.STRING
+      },
+      favcount: {
         type: Sequelize.INTEGER
       },
       createdAt: {
@@ -25,6 +34,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('favorite_cars');
+    await queryInterface.dropTable('cars');
   }
 };

@@ -7,6 +7,8 @@
     <form action="cars/fav" method="POST"> 
     <input type="hidden" id="favecar_model" name="favecar_model" value="<%= e.Model_Name %>"/>
     <input type="hidden" id="favecar_make" name="favecar_make" value="<%= e.Make_Name %>"/>
+    <input type="hidden" id="userId" name="userId" value="<%= currentUser.id %>"/>
+
     <button type="submit">Add to Favorites</button>
     </form>
 <% }) %>  

@@ -30,6 +30,14 @@ router.get('/', (req, res) => {
     });
   });
 
+  // results
+  router.get('/results', async (req, res) => {
+    let results = await db.favorite_car.findAll();
+    results = results.map((r => r.toJSON()));
+    console.log(results);
+    res.render('cars/results', { results: results});
+  });
+
   // POST route cars/fav
   router.post('/fav', (req, res) => {
     let data = req.body;
@@ -40,9 +48,20 @@ router.get('/', (req, res) => {
         }
     })
     db.favorite_car.create({
-        carId: 2
+        carId: 2,
+        userId: parseInt(data.userId)
+    })
+    db.car.update({
+        favcount: 15
+      }, 
+      {
+        where: { 
+            make: data.favecar_make,
+            model: data.favecar_model
+        }
     })
     .then(response => {
+        res.redirect('/');
         console.log('ADD CAR TO CARS ATTEMPT')
     })
     .catch((err) => {
@@ -51,46 +70,6 @@ router.get('/', (req, res) => {
     .finally(() => {
         console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
     });
-    // // add to favorite_cars
-    // db.favorite_car.create({
-    //     carId: 2
-    // })
-    // .then(response => {
-    //     console.log('ADD CAR TO FAVORITES ATTEMPT')
-    // })
-    // .catch((err) => {
-    //     console.log('ERROR', err);
-    // })
-    // .finally(() => {
-    //     console.log('SUCCESSFULLY ADDED CAR TO FAVORITES')
-    // });
-    // add favcout
-    db.car.findOne({
-        where: {
-            make: data.favecar_make,
-            model: data.favecar_model
-        }
-    }).then(foundCar => {
-        console.log('FAVCAR DATA:', foundCar);
-    }).catch((err) => {
-        console.log('FINDCAR ERROR:', err);
-    });
-    db.car.update({
-        favcount: 1,
-      }, 
-      {
-        where: { 
-            make: data.favecar_make,
-            model: data.favecar_model
-        }
-    })
-    .then((favCountEdit) => {
-    res.redirect('/');
-      console.log('FAVCARCOUNT UPDATE ATTEMPT')
-    })
-    .catch((err) => {
-        console.log('FAVCOUNT ERROR:', err);
-    })
   });
 
   // GET route cars/fav

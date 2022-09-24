@@ -54,7 +54,7 @@ app.get('/', (req, res) => {
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
-app.use('/cars', require('./controllers/cars'));
+app.use('/cars', isLoggedIn, require('./controllers/cars'));
 
 // Add this above /auth controllers
 app.get('/profile', isLoggedIn, (req, res) => {
