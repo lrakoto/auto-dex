@@ -5,7 +5,7 @@
     <select name="selectmake" id="selectmake">
     <% data.forEach(element => { %>
         <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
-        <option value=<%= element.Mfr_CommonName %>><%= element.Mfr_CommonName %></option>
+        <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
         <% } %>
     <% }); %>
     </select>

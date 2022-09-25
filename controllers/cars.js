@@ -14,6 +14,12 @@ const allMakes = 'getallmanufacturers/';
 const allModelsByMake = 'getmodelsformake/'; // needs model name
 const endOfURL = '?format=json';
 
+// Unsplash API Details
+const uSplashSKey = process.env.USPLASHSKEY;
+const uSplashBaseURL = 'https://api.unsplash.com/';
+const allManufacturers = 'getallmanufacturers';
+const uSplashEnd = `client_id=${uSplashKey}`
+
 // GET route for submitted form data from home route
 router.get('/', (req, res) => {
     let userQuery = req.query;
@@ -39,37 +45,55 @@ router.get('/', (req, res) => {
   });
 
   // POST route cars/fav
-  router.post('/fav', (req, res) => {
+  router.post('/fav', async (req, res) => {
     let data = req.body;
-    db.car.findOrCreate({
+    let newCar = await db.car.findOrCreate({
         where: {
             make: data.favecar_make,
             model: data.favecar_model,
         }
     })
-    db.favorite_car.create({
-        carId: 2,
-        userId: parseInt(data.userId)
-    })
-    db.car.update({
-        favcount: 15
-      }, 
-      {
-        where: { 
-            make: data.favecar_make,
-            model: data.favecar_model
+    console.log('AWAIT RESULT', newCar);
+    let newFavCar = await db.favorite_car.findOrCreate({
+        where: {
+            make: newCar[0].make,
+            model: newCar[0].model,
+            carId: newCar[0].id,
+            userId: data.userId
         }
     })
-    .then(response => {
+    console.log('AWAIT NEW FAV CAR INFO', newFavCar);
+    let foundCar = await db.car.findOne({
+        where: { 
+            id: newCar[0].id
+        }
+    })
+    console.log('FOUND CAR AWAIT', foundCar);
+    let currentFavCount = foundCar.favcount;
+    
+    if(newCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
+        console.log('ALREADy IN FAVORITES');
         res.redirect('/');
-        console.log('ADD CAR TO CARS ATTEMPT')
-    })
-    .catch((err) => {
-        console.log('ERROR', err);
-    })
-    .finally(() => {
-        console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
-    });
+    } else {
+        db.car.update({
+            favcount: currentFavCount + 1
+        }, 
+        {
+            where: { 
+                id: foundCar.id
+            }
+        })
+        .then(response => {
+            res.redirect('/');
+            console.log('ADD CAR TO CARS ATTEMPT')
+        })
+        .catch((err) => {
+            console.log('ERROR', err);
+        })
+        .finally(() => {
+            console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
+        });
+    }
   });
 
   // GET route cars/fav

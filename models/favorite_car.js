@@ -11,6 +11,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      models.favorite_car.belongsTo(models.user);
+      models.favorite_car.belongsTo(models.car);
     }
   }
   favorite_car.init({
