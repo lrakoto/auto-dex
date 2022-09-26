@@ -3,8 +3,13 @@ const router = express.Router();
 const passport = require('../config/ppConfig');
 const db = require('../models');
 const axios = require('axios');
-const { request } = require('express');
 const app = express();
+
+require('dotenv').config();
+const layouts = require('express-ejs-layouts');
+const session = require('express-session');
+const flash = require('connect-flash');
+const { application, request } = require('express');
 
 // For Car Data API calls
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
@@ -15,18 +20,37 @@ const allModelsByMake = 'getmodelsformake/'; // needs model name
 const endOfURL = '?format=json';
 
 // Unsplash API Details
-const uSplashSKey = process.env.USPLASHSKEY;
+const uSplashKey = process.env.UKEY;
+const uSplashSKey = process.env.USKEY;
 const uSplashBaseURL = 'https://api.unsplash.com/';
 const allManufacturers = 'getallmanufacturers';
 const uSplashEnd = `client_id=${uSplashKey}`
+
+
 
 // GET route for submitted form data from home route
 router.get('/', (req, res) => {
     let userQuery = req.query;
     axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
     .then((response) => {
-      let data = response.data.Results;
-      res.render('cars', { cars: data, search: userQuery.selectmake });
+    let newData = [];
+    let data = response.data.Results;
+    data.forEach(async (e) => {
+        let makeSearch = e.Make_Name.toLowerCase();
+        let modelSearch = e.Model_Name.toLowerCase();
+        let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
+        .catch(error => {
+            console.log(error);
+        })
+        let imgURL = getCarImage.data.results[0].urls.small;
+        let dataToPush = {};
+        dataToPush.make = makeSearch;
+        dataToPush.model = modelSearch;
+        dataToPush.image = imgURL;
+        newData.push(dataToPush);
+        console.log('DATATEST:', newData)
+        res.render('cars', { cars: data, search: userQuery.selectmake, newData: newData});
+    })
     })
     .catch((err) => {
       console.log(err);
