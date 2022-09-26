@@ -2,7 +2,7 @@
 
 <h3>Search Results for <%= search %> </h3>
 
-<% newData.forEach((c) => { %>
+<% newcars.forEach((c) => { %>
     <p><%= c.model %></p>
     <img src="<%= c.image %>" />
     <form action="cars/fav" method="POST"> 

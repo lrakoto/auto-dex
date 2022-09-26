@@ -32,28 +32,32 @@ const uSplashEnd = `client_id=${uSplashKey}`
 router.get('/', (req, res) => {
     let userQuery = req.query;
     axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
-    .then((response) => {
+    .then(async (response) => {
     let newData = [];
     let data = response.data.Results;
-    data.forEach(async (e) => {
+    let getImgData = await data.forEach(async (e) => {
         let makeSearch = e.Make_Name.toLowerCase();
         let modelSearch = e.Model_Name.toLowerCase();
-        let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
-        .catch(error => {
-            console.log(error);
-        })
-        let imgURL = getCarImage.data.results[0].urls.small;
+        let imgURL = '';
         let dataToPush = {};
+        let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
+        console.log('IMGDATA', getCarImage.data.results[0].urls.small);
+        console.log('NEWCARS', newData);
+        imgURL = getCarImage.data.results[0].urls.small;
         dataToPush.make = makeSearch;
         dataToPush.model = modelSearch;
         dataToPush.image = imgURL;
         newData.push(dataToPush);
-        console.log('DATATEST:', newData)
-        res.render('cars', { cars: data, search: userQuery.selectmake, newData: newData});
+        //console.log('DATATEST:', newData)    
     })
+    function renderPage() {
+        res.render('cars', { newcars: newData, search: userQuery.selectmake});
+        console.log('AFTER', newData)
+    };
+    setTimeout(renderPage, 4000);
     })
     .catch((err) => {
-      console.log(err);
+      console.log('RENDER ERROR:', err);
     })
     .finally(() => {
       console.log('MESSAGE: submitted form data from home route');
