@@ -20,6 +20,9 @@ module.exports = {
       type: {
         type: Sequelize.STRING
       },
+      image: {
+        type: Sequelize.STRING
+      },
       favcount: {
         type: Sequelize.INTEGER,
         defaultValue: 0

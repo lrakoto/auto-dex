@@ -41,6 +41,22 @@ router.get('/', (req, res) => {
         let imgURL = '';
         let dataToPush = {};
         let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
+        .catch((apiLimitReached) => {
+            console.log('UNSPLASH API LIMIT REACHED', apiLimitReached);
+            imgURL = '../public/assets/placeholder.png';
+            dataToPush.make = makeSearch;
+            dataToPush.model = modelSearch;
+            dataToPush.image = imgURL;
+            newData.push(dataToPush);
+            db.car.findOrCreate({
+                where: {
+                    make: makeSearch,
+                    model: modelSearch,
+                    image: imgURL
+                }
+            })
+            res.redirect('../');
+        })
         console.log('IMGDATA', getCarImage.data.results[0].urls.small);
         console.log('NEWCARS', newData);
         imgURL = getCarImage.data.results[0].urls.small;
@@ -48,13 +64,29 @@ router.get('/', (req, res) => {
         dataToPush.model = modelSearch;
         dataToPush.image = imgURL;
         newData.push(dataToPush);
-        //console.log('DATATEST:', newData)    
-    })
+        db.car.findOrCreate({
+            where: {
+                make: makeSearch,
+                model: modelSearch,
+                image: imgURL
+            }
+        })
+        // Replaces image with live image if placeholder image are in tables
+        db.car.update({
+            image: imgURL
+        }, 
+        {
+            where: { 
+                make: makeSearch,
+                model: modelSearch
+            }
+        })
+    }).catch((err) => {console.log('ERROR', err)})
     function renderPage() {
         res.render('cars', { newcars: newData, search: userQuery.selectmake});
-        console.log('AFTER', newData)
+        console.log('AFTER', newData);
     };
-    setTimeout(renderPage, 4000);
+    setInterval(renderPage, 1000);
     })
     .catch((err) => {
       console.log('RENDER ERROR:', err);
@@ -64,12 +96,12 @@ router.get('/', (req, res) => {
     });
   });
 
-  // results
-  router.get('/results', async (req, res) => {
-    let results = await db.favorite_car.findAll();
-    results = results.map((r => r.toJSON()));
-    console.log(results);
-    res.render('cars/results', { results: results});
+  // /favorites
+  router.get('/favorites', async (req, res) => {
+    let favorites = await db.favorite_car.findAll();
+    favorites = favorites.map((r => r.toJSON()));
+    console.log('FAVORITE CARS', favorites);
+    res.render('favorites', { favorites: favorites});
   });
 
   // POST route cars/fav
@@ -86,6 +118,7 @@ router.get('/', (req, res) => {
         where: {
             make: newCar[0].make,
             model: newCar[0].model,
+            image: data.favecar_image,
             carId: newCar[0].id,
             userId: data.userId
         }
