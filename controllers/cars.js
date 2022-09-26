@@ -41,22 +41,6 @@ router.get('/', (req, res) => {
         let imgURL = '';
         let dataToPush = {};
         let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
-        .catch((apiLimitReached) => {
-            console.log('UNSPLASH API LIMIT REACHED', apiLimitReached);
-            imgURL = '../public/assets/placeholder.png';
-            dataToPush.make = makeSearch;
-            dataToPush.model = modelSearch;
-            dataToPush.image = imgURL;
-            newData.push(dataToPush);
-            db.car.findOrCreate({
-                where: {
-                    make: makeSearch,
-                    model: modelSearch,
-                    image: imgURL
-                }
-            })
-            res.redirect('../');
-        })
         console.log('IMGDATA', getCarImage.data.results[0].urls.small);
         console.log('NEWCARS', newData);
         imgURL = getCarImage.data.results[0].urls.small;

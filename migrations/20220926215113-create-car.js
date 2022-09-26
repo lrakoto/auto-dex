@@ -17,15 +17,16 @@ module.exports = {
       year: {
         type: Sequelize.INTEGER
       },
-      type: {
-        type: Sequelize.STRING
-      },
       image: {
         type: Sequelize.STRING
       },
       favcount: {
         type: Sequelize.INTEGER,
         defaultValue: 0
+      },
+      updated_img: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
       },
       createdAt: {
         allowNull: false,
