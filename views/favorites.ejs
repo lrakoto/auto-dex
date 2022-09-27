@@ -1,37 +1,57 @@
-<h1>Favorites</h1>
-
-<% favorites.forEach((f) =>{ %> 
-    <img src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
-    <p><%= f.make %> <%= f.model %></p>
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">
-        Edit Image
-    </button>
+  <section class="jumbotron text-center">
+    <div class="container">
+      <h1 class="jumbotron-heading">Favorites</h1>
+      <p class="lead text-muted">Something short and leading about the collection below—its contents. It's short and sweet, feel free to skip over it entirely.</p>
+    </div>
+  </section>
 
 
+<div class="album py-5 bg-light">
+    <div class="container">  
+      <div class="row">
 
-<!-- Modal -->
-<div class="modal fade" id="exampleModal<%= f.id %>" tabindex="-1" role="dialog" aria-labelledby="exampleModal<%= f.id %>Label" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModal<%= f.id %>Label">Enter new image link for <%= f.make %> <%= f.model %>  below</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form method="POST" action="/cars/favorites/edit/<%= f.id %>" >
-            <div class="form-group">
-              <input class="form-control" id="newimagelink" name="newimagelink" placeholder="<%= f.image %>" required>
-              <input type="hidden" id="favid" name="favid" value="<%= f.id %>">
+        <% favorites.forEach((f) =>{ %>
+        <div class="col-md-4">
+          <div class="card mb-4 box-shadow">
+            <img class="card-img-top imgresp" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
+            <div class="card-body">
+              <p class="card-text"><%= f.make %> <%= f.model %></p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">Edit Image</button>
+                </div>
+                <small class="text-muted">Placeholder</small>
+              </div>
             </div>
-          
-            <input type="submit" class="btn btn-primary">
-          </form>
+          </div>
         </div>
+
+          <!-- Modal -->
+          <div class="modal fade" id="exampleModal<%= f.id %>" tabindex="-1" role="dialog" aria-labelledby="exampleModal<%= f.id %>Label" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModal<%= f.id %>Label">Enter new image link for <%= f.make %> <%= f.model %>  below</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form method="POST" action="/cars/favorites/edit/<%= f.id %>" >
+                    <div class="form-group">
+                      <input class="form-control" id="newimagelink" name="newimagelink" placeholder="<%= f.image %>" required>
+                      <input type="hidden" id="favid" name="favid" value="<%= f.id %>">
+                    </div>
+                  
+                    <input type="submit" class="btn btn-primary">
+                  </form>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        <% }) %>  
         
       </div>
     </div>
   </div>
-
-  <% }) %> 

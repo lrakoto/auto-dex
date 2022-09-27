@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="/css/style.css">
   </head>
   <body class="text-center">
-    <div class="cover-container d-flex h-100 p-3 mx-auto flex-column">
+    <div class="overlay">
+    <main role="main">
       <%- include('partials/alerts') %>
       <header class="masthead mb-auto">
         <div class="inner">
@@ -27,6 +28,8 @@
         </div>
       </header>
       <%- body %> 
+    </main>
+
       <footer class="mastfoot mt-auto">
         <div class="inner">
           <p>&copy; Copyright <%= new Date().getFullYear() %>. All rights reserved.</p>
