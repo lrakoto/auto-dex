@@ -1,10 +1,10 @@
-<form action="/auth/login" method="POST">
-    <label for="auth-email">Email</label>
-    <input id="auth-email" type="email" name="email" required>
+<form class="form-inline" action="/auth/login" method="POST">
+    <label class="sr-only" for="auth-email">Email</label>
+    <input type="email" name="email" class="form-control mb-2 mr-sm-2" id="auth-email" placeholder="Email" required>
 
-    <label for="auth-password">Password</label>
-    <input id="auth-password" type="password" name="password" required>
-
-    <input type="submit" value="Log In">
+    <label class="sr-only" for="auth-email">Email</label>
+    <input type="password" name="password" class="form-control mb-2 mr-sm-2" id="auth-password" placeholder="Password" required>
+  
+    <button type="submit" class="btn btn-primary mb-2">Submit</button>
 </form>
   

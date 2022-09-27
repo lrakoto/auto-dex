@@ -14,7 +14,7 @@
         <div class="inner">
           <h3 class="masthead-brand">AutoDex</h3>
           <nav class="nav nav-masthead justify-content-center">
-            <a class="nav-link active" href="/">Home</a>
+            <a class="nav-link" href="/">Home</a>
             <% if (!currentUser) {%>
               <a class="nav-link" href="/auth/signup">Signup</a>
               <a class="nav-link" href="/auth/login">Login</a>
@@ -29,7 +29,7 @@
       <%- body %> 
       <footer class="mastfoot mt-auto">
         <div class="inner">
-          <p>Cover template for <a href="https://getbootstrap.com/">Bootstrap</a>, by <a href="https://twitter.com/mdo">@mdo</a>.</p>
+          <p>&copy; Copyright <%= new Date().getFullYear() %>. All rights reserved.</p>
         </div>
       </footer>
     </div>
