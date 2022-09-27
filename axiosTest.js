@@ -27,13 +27,21 @@ const uSplashEnd = `client_id=${uSplashKey}`
 //     console.log(err);
 // });
 
-async function searchCar() {
-     let makeSearch = 'bmw';  
-     let modelSearch = 'm3';  
-     let getCarImage = await axios.get(`https://api.unsplash.com/search/photos?page=1&per_page=1&query=tesla+model+s&client_id=LrrjnOtgEIVv224LGCaCcIHGJnJX-uVpq_UApkEu6zc`)
-     .catch((err) => {console.log(err)}); 
-         //let imgURL = getCarImage.searchResults.data.results[0].urls.small; 
-         console.log(getCarImage.data.results[0].urls.small);
-    }
+// async function searchCar() {
+//      let makeSearch = 'bmw';  
+//      let modelSearch = 'm3';  
+//      let getCarImage = await axios.get(`https://api.unsplash.com/search/photos?page=1&per_page=1&query=tesla+model+s&client_id=LrrjnOtgEIVv224LGCaCcIHGJnJX-uVpq_UApkEu6zc`)
+//      .catch((err) => {console.log(err)}); 
+//          //let imgURL = getCarImage.searchResults.data.results[0].urls.small; 
+//          console.log(getCarImage.data.results[0].urls.small);
+//     }
     
-searchCar();
+// searchCar();
+
+let destroyEntry = db.car.destroy({
+    where: {
+        make: 'BUELL'
+    }
+}).then((result) => {
+    console.log('DESTROYED', result, 'DESTROYED ENTRY:', destroyEntry);
+}).catch((err) => {console.log('ERROR', err)})

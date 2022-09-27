@@ -35,7 +35,6 @@ router.get('/', (req, res) => {
     axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
     .then(async (response) => {
       let data = response.data.Results;
-      console.log('MAKE', data, 'MODEL', data)
       let imgData = [];
       data.forEach(async (c) => {
         let findCurrentCar = await db.car.findOne({
@@ -44,9 +43,7 @@ router.get('/', (req, res) => {
                 model: c.Model_Name
             }
         })
-        console.log('FIND CURRENT CAR:', findCurrentCar)
         imgData.push(findCurrentCar);
-        console.log('IMG DATA:', imgData[0].dataValues.image);
       })
       function render() {
         res.render('cars', { search: userQuery.selectmake, carImg: imgData });
@@ -72,20 +69,21 @@ router.get('/', (req, res) => {
   // POST route cars/fav
   router.post('/fav', async (req, res) => {
     let data = req.body;
+    console.log('REQ BODY:', data)
     let newCar = await db.car.findOrCreate({
         where: {
             make: data.favecar_make,
             model: data.favecar_model,
         }
     })
-    console.log('AWAIT RESULT', newCar);
+    console.log('AWAIT RESULT - NEW CAR', newCar);
     let newFavCar = await db.favorite_car.findOrCreate({
         where: {
-            make: newCar[0].make,
-            model: newCar[0].model,
+            make: data.favecar_make,
+            model: data.favecar_model,
             image: data.favecar_image,
             carId: newCar[0].id,
-            userId: data.userId
+            userId: parseInt(data.userId)
         }
     })
     console.log('AWAIT NEW FAV CAR INFO', newFavCar);
@@ -95,14 +93,15 @@ router.get('/', (req, res) => {
         }
     })
     console.log('FOUND CAR AWAIT', foundCar);
-    let currentFavCount = foundCar.favcount;
+    let currentFavCount = parseInt(foundCar.favcount);
     
     if(newCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
         res.redirect('/');
     } else {
         db.car.update({
-            favcount: currentFavCount + 1
+            favcount: currentFavCount + 1,
+            image: data.favecar_image
         }, 
         {
             where: { 

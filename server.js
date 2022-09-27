@@ -42,7 +42,7 @@ async function getCarData() {
         && carMake.Mfr_CommonName !== 'Daimler Trucks ' 
         && carMake.Mfr_CommonName !== 'Volvo (Truck / Bus)' 
         && carMake.Mfr_CommonName !== 'Navistar'
-        && carMake.Mfr_CommonName !== 'Beul'
+        && carMake.Mfr_CommonName !== 'Buel'
         && carMake.Mfr_CommonName !== 'Peterbilt'
       ) {
       let pullCarModelsData = await axios.get(`${baseURL}${allModelsByMake}${carMake.Mfr_CommonName.replaceAll(' ', '%20')}${endOfURL}`)
@@ -76,11 +76,11 @@ async function unsplashImages() {
   .then(async carimg => {
     console.log(carimg[0].dataValues);
     for (let i = 0; i < 50; i++) {
-      let index = carimg[i];
+      let index = carimg[i].dataValues;
       let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
       .catch(err => {console.log(err)})
       let imgURL = getCarImage.data.results[0].urls.small;
-      db.car.update({
+      let addImagesToDatabase = db.car.update({
         updated_img: true,
         image: `${imgURL}`
       },
@@ -91,7 +91,10 @@ async function unsplashImages() {
         }
       })
     }
+    console.log('IMAGES ADDED:', addImagesToDatabase)
   })
+  .catch(err => {console.log(err)})
+  .finally(() => {console.log('ADDING IMAGES COMPLETED')});
 }
 
 //setInterval(unsplashImages, 3700000);
@@ -142,7 +145,7 @@ app.get('/', (req, res) => {
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
-app.use('/cars', require('./controllers/cars'));
+app.use('/cars', isLoggedIn, require('./controllers/cars'));
 
 // Add this above /auth controllers
 app.get('/profile', isLoggedIn, (req, res) => {

@@ -5,11 +5,11 @@
 <% carImg.forEach((c) => { %>
     <img src=<%= c.dataValues.image %> alt="<%= c.dataValues.model %>">
     <p><%= c.dataValues.model %></p>
-    <form action="cars/fav" method="POST" id="carsfavform"> 
+    <form action="cars/fav" method="POST" id="favecar_form"> 
     <input type="hidden" id="favecar_model" name="favecar_model" value="<%= c.dataValues.model %>"/>
     <input type="hidden" id="favecar_make" name="favecar_make" value="<%= c.dataValues.make %>"/>
-    <input type="hidden" id="carimg" name="carimg" value="<%= c.dataValues.image %>"/>
-    <input type="hidden" id="userId" name="userId" value="<%= //currentUser.id %>"/>
+    <input type="hidden" id="favecar_image" name="favecar_image" value="<%= c.dataValues.image %>"/>
+    <input type="hidden" id="userId" name="userId" value="<%= currentUser.id %>"/>
     <button type="submit">Add to Favorites</button>
     </form>
 <% }) %>  
