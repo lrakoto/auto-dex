@@ -4,6 +4,7 @@ const passport = require('../config/ppConfig');
 const db = require('../models');
 const axios = require('axios');
 const app = express();
+const methodOverride = require('method-override');
 
 require('dotenv').config();
 const layouts = require('express-ejs-layouts');
@@ -58,13 +59,30 @@ router.get('/', (req, res) => {
     });
 });
 
-  // /favorites
+  // GET Route for /favorites
   router.get('/favorites', async (req, res) => {
     let favorites = await db.favorite_car.findAll();
     favorites = favorites.map((r => r.toJSON()));
     console.log('FAVORITE CARS', favorites);
     res.render('favorites', { favorites: favorites});
   });
+
+  // PUT Route for /favorites/:id
+  router.post('/favorites/edit/:id', async (req, res) => {
+    let postData = req.body;
+    console.log('POST REQ BODY:', postData)
+    db.favorite_car.update({
+        image: postData.newimagelink
+    },
+    {where:{
+        id: postData.favid
+    }}
+    ).then((response) => {
+        console.log('POST RES:', response)
+        res.redirect('../../favorites')
+    })
+    .catch(err => {console.log('PUT ERROR:', err)})
+  })
 
   // POST route cars/fav
   router.post('/fav', async (req, res) => {
@@ -97,7 +115,7 @@ router.get('/', (req, res) => {
     
     if(newCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
-        res.redirect('/');
+        res.redirect('favorites');
     } else {
         db.car.update({
             favcount: currentFavCount + 1,
@@ -109,7 +127,7 @@ router.get('/', (req, res) => {
             }
         })
         .then(response => {
-            res.redirect('/');
+            res.redirect('favorites');
             console.log('ADD CAR TO CARS ATTEMPT')
         })
         .catch((err) => {

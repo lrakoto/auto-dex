@@ -79,7 +79,7 @@ async function unsplashImages() {
       let index = carimg[i].dataValues;
       let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
       .catch(err => {console.log(err)})
-      let imgURL = getCarImage.data.results[0].urls.small;
+      let imgURL = getCarImage.data.results[0].urls.full;
       let addImagesToDatabase = db.car.update({
         updated_img: true,
         image: `${imgURL}`

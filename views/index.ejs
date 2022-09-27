@@ -1,13 +1,18 @@
-<h2>AutoDex</h2>
-
-<form action="/cars" method="GET">
-    <label for="selectmake">Select Make</label>
-    <select name="selectmake" id="selectmake">
-    <% data.forEach(element => { %>
-        <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
-        <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
-        <% } %>
-    <% }); %>
-    </select>
-    <button type="submit">Search</button>
-</form>
+      <main role="main" class="inner cover">
+        <h1 class="cover-heading">AutoDex</h1>
+        <p class="lead">Find and add your favorite cars using the form below. This application uses NHTSA API and Unsplash API in tandem.</p>
+        <p class="lead">
+          <a href="#" class="btn btn-lg btn-secondary">Learn more</a>
+        </p>
+        <form action="/cars" method="GET">
+            <label for="selectmake">Select Make</label>
+            <select class="form-control form-control-lg" name="selectmake" id="selectmake">
+            <% data.forEach(element => { %>
+                <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
+                <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
+                <% } %>
+            <% }); %>
+            </select>
+            <button class="brn btn-lg btn-primary" type="submit">Search</button>
+        </form>
+      </main>
