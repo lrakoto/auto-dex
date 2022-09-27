@@ -10,6 +10,7 @@ const layouts = require('express-ejs-layouts');
 const session = require('express-session');
 const flash = require('connect-flash');
 const { application, request } = require('express');
+const car = require('../models/car');
 
 // For Car Data API calls
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
@@ -33,52 +34,32 @@ router.get('/', (req, res) => {
     let userQuery = req.query;
     axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
     .then(async (response) => {
-    let newData = [];
-    let data = response.data.Results;
-    let getImgData = await data.forEach(async (e) => {
-        let makeSearch = e.Make_Name.toLowerCase();
-        let modelSearch = e.Model_Name.toLowerCase();
-        let imgURL = '';
-        let dataToPush = {};
-        let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${makeSearch}+${modelSearch.replaceAll(' ', '+')}&${uSplashEnd}`)
-        console.log('IMGDATA', getCarImage.data.results[0].urls.small);
-        console.log('NEWCARS', newData);
-        imgURL = getCarImage.data.results[0].urls.small;
-        dataToPush.make = makeSearch;
-        dataToPush.model = modelSearch;
-        dataToPush.image = imgURL;
-        newData.push(dataToPush);
-        db.car.findOrCreate({
+      let data = response.data.Results;
+      console.log('MAKE', data, 'MODEL', data)
+      let imgData = [];
+      data.forEach(async (c) => {
+        let findCurrentCar = await db.car.findOne({
             where: {
-                make: makeSearch,
-                model: modelSearch,
-                image: imgURL
+                make: c.Make_Name,
+                model: c.Model_Name
             }
         })
-        // Replaces image with live image if placeholder image are in tables
-        db.car.update({
-            image: imgURL
-        }, 
-        {
-            where: { 
-                make: makeSearch,
-                model: modelSearch
-            }
-        })
-    }).catch((err) => {console.log('ERROR', err)})
-    function renderPage() {
-        res.render('cars', { newcars: newData, search: userQuery.selectmake});
-        console.log('AFTER', newData);
-    };
-    setInterval(renderPage, 1000);
+        console.log('FIND CURRENT CAR:', findCurrentCar)
+        imgData.push(findCurrentCar);
+        console.log('IMG DATA:', imgData[0].dataValues.image);
+      })
+      function render() {
+        res.render('cars', { search: userQuery.selectmake, carImg: imgData });
+      }
+      setTimeout(render, 2000);
     })
     .catch((err) => {
-      console.log('RENDER ERROR:', err);
+      console.log(err);
     })
     .finally(() => {
       console.log('MESSAGE: submitted form data from home route');
     });
-  });
+});
 
   // /favorites
   router.get('/favorites', async (req, res) => {
