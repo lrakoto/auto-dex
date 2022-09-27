@@ -66,6 +66,36 @@ async function getCarData() {
 
 // getCarData();
 
+// Get images from Unsplash API in increments of 50 per hour
+async function unsplashImages() {
+  db.car.findAll({
+    where: {
+      updated_img: false
+    }
+  })
+  .then(async carimg => {
+    console.log(carimg[0].dataValues);
+    for (let i = 0; i < 50; i++) {
+      let index = carimg[i];
+      let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
+      .catch(err => {console.log(err)})
+      let imgURL = getCarImage.data.results[0].urls.small;
+      db.car.update({
+        updated_img: true,
+        image: `${imgURL}`
+      },
+      {
+        where: {
+          make: index.make,
+          model: index.model
+        }
+      })
+    }
+  })
+}
+
+//setInterval(unsplashImages, 3700000);
+//unsplashImages();
 
 app.set('view engine', 'ejs');
 
