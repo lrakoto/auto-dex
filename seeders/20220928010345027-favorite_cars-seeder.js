@@ -135,6 +135,28 @@ module.exports = {
                         createdAt: "Tue Sep 27 2022 07:43:39 GMT-0700 (Pacific Daylight Time)",
                         updatedAt: "Tue Sep 27 2022 07:43:39 GMT-0700 (Pacific Daylight Time)",
                 },
+                {
+                        id: "13",
+                        make: "MASERATI",
+                        model: "Quattroporte",
+                        year: "",
+                        image: "https://images.unsplash.com/photo-1535360196185-5f8e2a279419?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=MnwzNjY4MDN8MHwxfHNlYXJjaHwxfHxNQVNFUkFUSSUyMFF1YXR0cm9wb3J0ZXxlbnwwfDB8fHwxNjY0MjQyNTkz&amp;ixlib=rb-1.2.1&amp;q=80&amp;w=400",
+                        carId: "7",
+                        userId: "1",
+                        createdAt: "Tue Sep 27 2022 12:43:51 GMT-0700 (Pacific Daylight Time)",
+                        updatedAt: "Tue Sep 27 2022 12:43:51 GMT-0700 (Pacific Daylight Time)",
+                },
+                {
+                        id: "14",
+                        make: "MASERATI",
+                        model: "Quattroporte",
+                        year: "",
+                        image: "https://images.unsplash.com/photo-1535360196185-5f8e2a279419?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;ixid=MnwzNjY4MDN8MHwxfHNlYXJjaHwxfHxNQVNFUkFUSSUyMFF1YXR0cm9wb3J0ZXxlbnwwfDB8fHwxNjY0MjQyNTkz&amp;ixlib=rb-1.2.1&amp;q=80&amp;w=400",
+                        carId: "7",
+                        userId: "2",
+                        createdAt: "Tue Sep 27 2022 12:45:35 GMT-0700 (Pacific Daylight Time)",
+                        updatedAt: "Tue Sep 27 2022 12:45:35 GMT-0700 (Pacific Daylight Time)",
+                },
             ]);
 },
 

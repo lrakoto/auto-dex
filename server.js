@@ -147,21 +147,22 @@ app.get('/', (req, res) => {
   .then((response) => {
     let sorted = [];
     let data = response.data.Results;
-    data.forEach((make) => {
-      sorted.push(make.Mfr_CommonName);
-      sorted.sort();
-      console.log('SORTED:', sorted);
-    })
-    function addToMake() {
-      sorted.forEach((m) => {
-        db.make.findOrCreate({
-          where: {
-            make: m
-          }
-        })
-      })
-    }
-    setTimeout(addToMake, 1000);
+    console.log('DATA', data[0].VehicleTypes)
+    // data.forEach((make) => {
+    //   sorted.push(make.Mfr_CommonName);
+    //   sorted.sort();
+    //   console.log('SORTED:', sorted);
+    // })
+    // function addToMake() {
+    //   sorted.forEach((m) => {
+    //     db.make.findOrCreate({
+    //       where: {
+    //         make: m
+    //       }
+    //     })
+    //   })
+    // }
+    // setTimeout(addToMake, 1000);
     res.render('index', {data: data})
   })
   .catch((err) => {
