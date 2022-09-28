@@ -59756,8 +59756,10 @@ module.exports = {
                         updatedAt: "Mon Sep 26 2022 15:46:08 GMT-0700 (Pacific Daylight Time)",
                 },
             ].map(obj =>{
-                createdAt = new Date(obj.createdAt).toISOString();
-                updatedAt = new Date(obj.updatedAt).toISOString();
+                let createdAt = new Date(obj.createdAt).toISOString();
+                let updatedAt = new Date(obj.updatedAt).toISOString();
+                obj.createdAt = createdAt;
+                obj.updatedAt = updatedAt;
                 return obj;
             }));
 },
