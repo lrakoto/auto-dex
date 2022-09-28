@@ -37,22 +37,20 @@ async function getCarData() {
   let pulledCarMakesData = pullCarMakesData.data.Results;
   pulledCarMakesData.forEach(async (carMake) => {
     if(
-        carMake.Country === 'UNITED STATES (USA)' 
-        && carMake.Mfr_CommonName !== null 
-        && carMake.Mfr_CommonName !== 'Daimler Trucks ' 
-        && carMake.Mfr_CommonName !== 'Volvo (Truck / Bus)' 
-        && carMake.Mfr_CommonName !== 'Navistar'
-        && carMake.Mfr_CommonName !== 'Buel'
-        && carMake.Mfr_CommonName !== 'Peterbilt'
+        //carMake.Country === 'UNITED STATES (USA)' 
+        carMake.Mfr_CommonName !== null 
+        // && carMake.Mfr_CommonName !== 'Daimler Trucks ' 
+        // && carMake.Mfr_CommonName !== 'Volvo (Truck / Bus)' 
+        // && carMake.Mfr_CommonName !== 'Navistar'
+        // && carMake.Mfr_CommonName !== 'Buel'
+        // && carMake.Mfr_CommonName !== 'Peterbilt'
       ) {
       let pullCarModelsData = await axios.get(`${baseURL}${allModelsByMake}${carMake.Mfr_CommonName.replaceAll(' ', '%20')}${endOfURL}`)
       .catch(err => {console.log(err)})
       let pulledCarModelsData = pullCarModelsData.data.Results;
+
       pulledCarModelsData.forEach(carModel => {
-        db.car.update(
-          {
-            favcount: 0
-          },
+        db.car.findOrCreate(
           {
           where: {
             make: `${carModel.Make_Name}`,
@@ -60,11 +58,25 @@ async function getCarData() {
           }
         })
       })
+
+      // UPDATE FAVCOUNT
+      // pulledCarModelsData.forEach(carModel => {
+      //   db.car.update(
+      //     {
+      //       favcount: 0
+      //     },
+      //     {
+      //     where: {
+      //       make: `${carModel.Make_Name}`,
+      //       model: `${carModel.Model_Name}`,
+      //     }
+      //   })
+      // })
     }
   })
 }
 
-// getCarData();
+//getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
@@ -128,11 +140,28 @@ app.use((req, res, next) => {
 
 
 
-// GET Route for Home and search form
+
+// OLD GET Route for Home and search form (Before pulling from tables, pulling directly from API)
 app.get('/', (req, res) => {
   axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
   .then((response) => {
+    let sorted = [];
     let data = response.data.Results;
+    data.forEach((make) => {
+      sorted.push(make.Mfr_CommonName);
+      sorted.sort();
+      console.log('SORTED:', sorted);
+    })
+    function addToMake() {
+      sorted.forEach((m) => {
+        db.make.findOrCreate({
+          where: {
+            make: m
+          }
+        })
+      })
+    }
+    setTimeout(addToMake, 1000);
     res.render('index', {data: data})
   })
   .catch((err) => {
@@ -143,6 +172,27 @@ app.get('/', (req, res) => {
   });
 });
 
+// // OLD GET Route for Home and search form (Before pulling from tables, pulling directly from API)
+// app.get('/', (req, res) => {
+//   axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
+//   .then((response) => {
+//     let sorted = [];
+//     let data = response.data.Results;
+//     data.forEach((make) => {
+//       sorted.push(make.Mfr_CommonName);
+//       sorted.sort();
+//       console.log('SORTED:', sorted);
+//     })
+//     res.render('index', {data: data})
+//   })
+//   .catch((err) => {
+//       console.log(err);
+//   })
+//   .finally(() => {
+//       console.log('HOME ROUTE FOR SELECT FIELDS WORKED');
+//   });
+// });
+
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
 app.use('/cars', isLoggedIn, require('./controllers/cars'));
@@ -151,6 +201,11 @@ app.use('/cars', isLoggedIn, require('./controllers/cars'));
 app.get('/profile', isLoggedIn, (req, res) => {
   const { id, name, email } = req.user.get(); 
   res.render('profile', { id, name, email });
+});
+
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).render('404');
 });
 
 const PORT = process.env.PORT || 3000;

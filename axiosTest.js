@@ -38,9 +38,9 @@ const uSplashEnd = `client_id=${uSplashKey}`
     
 // searchCar();
 
-let destroyEntry = db.car.destroy({
+let destroyEntry = db.make.destroy({
     where: {
-        make: 'BUELL'
+        id: [3,10,4,6,7,8,13,14,16,17,18,19,21,22,23,27,29,30,32,34,36,38,40,46,47,49,50,51,52,53,54,57,58,59,60,62,66,68,71,73,74,75]
     }
 }).then((result) => {
     console.log('DESTROYED', result, 'DESTROYED ENTRY:', destroyEntry);

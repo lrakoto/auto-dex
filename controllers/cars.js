@@ -60,8 +60,13 @@ router.get('/', (req, res) => {
 });
 
   // GET Route for /favorites
-  router.get('/favorites', async (req, res) => {
-    let favorites = await db.favorite_car.findAll();
+  router.get('/favorites/', async (req, res) => {
+    let favorites = await db.favorite_car.findAll({
+      where: {
+        userId: req.user.id
+      }
+    }
+    );
     favorites = favorites.map((r => r.toJSON()));
     console.log('FAVORITE CARS', favorites);
     res.render('favorites', { favorites: favorites});
