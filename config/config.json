@@ -5,7 +5,7 @@
     "dialect": "postgres"
   },
   "test": {
-    "database": "express_auth_test",
+    "database": "autodex",
     "host": "127.0.0.1",
     "dialect": "postgres"
   },
