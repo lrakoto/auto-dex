@@ -13,7 +13,7 @@
             <label class="font-weight-bold mt-2" for="selectmake">Select Make</label>
             <select class="form-control form-control-lg" name="selectmake" id="selectmake">
             <% data.forEach(element => { %>
-                <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null) { %>
+                <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null && element.Mfr_CommonName !== 'Buell' && element.Mfr_CommonName !== 'Volvo (Truck/Bus') { %>
                 <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
                 <% } %>
             <% }); %>
