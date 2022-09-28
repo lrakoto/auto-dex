@@ -429,7 +429,11 @@ module.exports = {
                         createdAt: "Tue Sep 27 2022 17:42:15 GMT-0700 (Pacific Daylight Time)",
                         updatedAt: "Tue Sep 27 2022 17:42:15 GMT-0700 (Pacific Daylight Time)",
                 },
-            ]);
+            ].map(obj =>{
+                createdAt = new Date(obj.createdAt).toISOString();
+                updatedAt = new Date(obj.updatedAt).toISOString();
+                return obj;
+            }));
 },
 
   down: (queryInterface, Sequelize) => {
