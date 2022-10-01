@@ -80,7 +80,7 @@ async function getCarData() {
   })
 }
 
-// getCarData();
+ getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
