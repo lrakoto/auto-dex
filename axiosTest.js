@@ -38,10 +38,54 @@ const uSplashEnd = `client_id=${uSplashKey}`
     
 // searchCar();
 
-let destroyEntry = db.car.destroy({
-    where: {
-        make: 'CLUB CAR'
-    }
-}).then((result) => {
-    console.log('DESTROYED', result, 'DESTROYED ENTRY:', destroyEntry);
-}).catch((err) => {console.log('ERROR', err)})
+
+
+
+
+
+// DELETE CRASHED ROWS
+// let destroyEntry = db.car.destroy({
+//     where: {
+//         make: 'CUSTOM CYCLE STUDIO LLC'
+//     }
+// }).then((result) => {
+//     console.log('DESTROYED', result, 'DESTROYED ENTRY:', destroyEntry);
+// }).catch((err) => {console.log('ERROR', err)})
+
+
+
+
+
+// Get images from Unsplash API in increments of 50 per hour
+async function unsplashImages() {
+    db.car.findAll({
+      where: {
+        updated_img: false
+      }
+    })
+    .then(async carimg => {
+      console.log(carimg[0].dataValues);
+      for (let i = 0; i < 50; i++) {
+        let index = carimg[i].dataValues;
+        let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
+        .catch(err => {console.log('UNSPLASH API PULL ERROR', err)})
+        let imgURL = getCarImage.data.results[0].urls.full;
+        let addImagesToDatabase = db.car.update({
+          updated_img: true,
+          image: `${imgURL}`
+        },
+        {
+          where: {
+            make: index.make,
+            model: index.model
+          }
+        }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
+      }
+      console.log('IMAGES ADDED:', addImagesToDatabase)
+    })
+    .catch(err => {console.log('ERROR', err)})
+    .finally(() => {console.log('ADDING IMAGES COMPLETED')});
+  }
+  
+  //setInterval(unsplashImages, 3700000);
+  unsplashImages();

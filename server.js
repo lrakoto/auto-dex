@@ -33,21 +33,24 @@ const uSplashEnd = `client_id=${uSplashKey}`
 async function getCarData() {
   let carsArray = [];
   let pullCarMakesData = await axios.get(`${baseURL}${allMakes}${endOfURL}`)
-  .catch(err => {console.log(err)})
+  .catch(err => {console.log('INITIAL CAR API PULL ERROR:', err)})
   let pulledCarMakesData = pullCarMakesData.data.Results;
   pulledCarMakesData.forEach(async (carMake) => {
+    let authenticate = true;
     if(
-        //carMake.Country === 'UNITED STATES (USA)' 
-        carMake.Mfr_CommonName !== null 
-        // && carMake.Mfr_CommonName !== 'Daimler Trucks ' 
-        // && carMake.Mfr_CommonName !== 'Volvo (Truck / Bus)' 
-        // && carMake.Mfr_CommonName !== 'Navistar'
-        // && carMake.Mfr_CommonName !== 'Buel'
-        // && carMake.Mfr_CommonName !== 'Peterbilt'
+        // authenticate === true
+        carMake.Country === 'UNITED STATES (USA)' 
+        && carMake.Mfr_CommonName !== null 
+        && carMake.Mfr_CommonName !== 'Daimler Trucks ' 
+        && carMake.Mfr_CommonName !== 'Volvo (Truck / Bus)' 
+        && carMake.Mfr_CommonName !== 'Navistar'
+        && carMake.Mfr_CommonName !== 'Buel'
+        && carMake.Mfr_CommonName !== 'Peterbilt'
       ) {
       let pullCarModelsData = await axios.get(`${baseURL}${allModelsByMake}${carMake.Mfr_CommonName.replaceAll(' ', '%20')}${endOfURL}`)
-      .catch(err => {console.log(err)})
+      .catch(err => {console.log('ANOTHER ERROR', err)})
       let pulledCarModelsData = pullCarModelsData.data.Results;
+      console.log('BIG ERROR', pulledCarModelsData);
 
       pulledCarModelsData.forEach(carModel => {
         db.car.findOrCreate(
@@ -60,23 +63,24 @@ async function getCarData() {
       })
 
       // UPDATE FAVCOUNT
-      // pulledCarModelsData.forEach(carModel => {
-      //   db.car.update(
-      //     {
-      //       favcount: 0
-      //     },
-      //     {
-      //     where: {
-      //       make: `${carModel.Make_Name}`,
-      //       model: `${carModel.Model_Name}`,
-      //     }
-      //   })
-      // })
+      pulledCarModelsData.forEach(carModel => {
+        db.car.update(
+          {
+            favcount: 0
+          },
+          {
+          where: {
+            make: `${carModel.Make_Name}`,
+            model: `${carModel.Model_Name}`,
+            favcount: null
+          }
+        })
+      })
     }
   })
 }
 
-//getCarData();
+// getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
@@ -90,7 +94,7 @@ async function unsplashImages() {
     for (let i = 0; i < 50; i++) {
       let index = carimg[i].dataValues;
       let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
-      .catch(err => {console.log(err)})
+      .catch(err => {console.log('UNSPLASH API PULL ERROR', err)})
       let imgURL = getCarImage.data.results[0].urls.full;
       let addImagesToDatabase = db.car.update({
         updated_img: true,
@@ -101,16 +105,16 @@ async function unsplashImages() {
           make: index.make,
           model: index.model
         }
-      })
+      }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
     }
     console.log('IMAGES ADDED:', addImagesToDatabase)
   })
-  .catch(err => {console.log(err)})
+  .catch(err => {console.log('ERROR', err)})
   .finally(() => {console.log('ADDING IMAGES COMPLETED')});
 }
 
 //setInterval(unsplashImages, 3700000);
-//unsplashImages();
+unsplashImages();
 
 app.set('view engine', 'ejs');
 
@@ -140,7 +144,7 @@ app.use((req, res, next) => {
 
 
 
-
+// Save for future use
 // OLD GET Route for Home and search form (Before pulling from tables, pulling directly from API)
 app.get('/', (req, res) => {
   axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
