@@ -62,6 +62,21 @@ async function getCarData() {
         })
       })
 
+      // UPDATE NULL IMAGE
+      pulledCarModelsData.forEach(carModel => {
+        db.car.update(
+          {
+            image: `https://i.ibb.co/PwkqdSy/placeholder.png`
+          },
+          {
+          where: {
+            make: `${carModel.Make_Name}`,
+            model: `${carModel.Model_Name}`,
+            image: null
+          }
+        })
+      })
+
       // UPDATE FAVCOUNT
       pulledCarModelsData.forEach(carModel => {
         db.car.update(

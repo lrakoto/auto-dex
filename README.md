@@ -1,18 +1,73 @@
-# `Express Authentication`
+# `AutoDex`
 
-## User Stories
+## Introduction
 
-As a user I want to be able to find my favorite cars so that I can build a customized profile of my favorite cars
+AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information and pulls images from the Unsplash API at intervals of 50 per hour due to limits on the free API.
 
-## What it includes
+## Unsplash API pull
 
-* Sequelize user model / migration
-* Settings for PostgreSQL
-* Passport and passport-local for authentication
-* Sessions to keep user logged in between pages
-* Flash messages for errors and successes
-* Passwords that are hashed with BCrypt
-* EJS Templating and EJS Layouts
+``` Javascript
+async function unsplashImages() {
+  db.car.findAll({
+    where: {
+      updated_img: false
+    }
+  })
+  .then(async carimg => {
+    console.log(carimg[0].dataValues);
+    for (let i = 0; i < 50; i++) {
+      let index = carimg[i].dataValues;
+      let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
+      .catch(err => {console.log(err)})
+      let imgURL = getCarImage.data.results[0].urls.full;
+      let addImagesToDatabase = db.car.update({
+        updated_img: true,
+        image: `${imgURL}`
+      },
+      {
+        where: {
+          make: index.make,
+          model: index.model
+        }
+      })
+    }
+    console.log('IMAGES ADDED:', addImagesToDatabase)
+  })
+  .catch(err => {console.log(err)})
+  .finally(() => {console.log('ADDING IMAGES COMPLETED')});
+}
+
+```
+
+## NHTSA API pull
+
+## Instalation instructions
+
+Installations Instructions
+git clone https://github.com/romebell/supreme-engine.git
+cd supreme-engine
+npm install
+touch .env
+and add inside .env file
+SECRET_SESSION=yaaaaaaayayyyyyayyayay
+If there an API key
+go to said webiste and get an API KEY
+put this inside of their .env file
+API_KEY=.......
+create a database
+npm install sequelize-cl
+npx sequelize-cli db:create supreme-engine
+migrate their database
+npx sequelize-cli db:migrate
+if they need to seed data
+npx sequelize-cli db:seed:all
+Start the server
+npm start
+
+## Wireframe
+
+![AutoDex Wireframe](public/assets/wireframe.png)
+
 
 ### User Model
 
