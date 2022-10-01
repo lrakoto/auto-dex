@@ -32,6 +32,7 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 // GET route for submitted form data from home route
 router.get('/', (req, res) => {
+  console.log(uSplashKey);
     let userQuery = req.query;
     axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
     .then(async (response) => {
@@ -71,6 +72,20 @@ router.get('/', (req, res) => {
     console.log('FAVORITE CARS', favorites);
     res.render('favorites', { favorites: favorites});
   });
+
+  // DELETE ROUTE for /fvorites
+  router.delete('/favorites/delete/:id', async (req, res) => {
+    try{
+      let deleteFav = await db.favorite_car.destroy({
+        where: {
+          id: req.params.id
+        }
+      })
+      res.redirect('../../favorites')
+    } catch (error1) {
+      console.log('DELETE ERROR:', error1)
+    }
+  })
 
   // PUT Route for /favorites/:id
   router.post('/favorites/edit/:id', async (req, res) => {
