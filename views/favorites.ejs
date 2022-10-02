@@ -18,7 +18,7 @@
               <p class="card-text"><%= f.make %> <%= f.model %></p>
               <div class="d-flex justify-content-center align-items-center">
                 <div class="btn-group">
-                  <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">Edit Image</button>
+                  <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">Edit</button>
                 </div>
                 <!--<small class="text-muted">Placeholder</small>-->
               </div>
@@ -43,10 +43,10 @@
                       <input type="hidden" id="favid" name="favid" value="<%= f.id %>">
                     </div>
                   
-                    <input type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary">Update Image</button>
                   </form>
-                  <form method="POST" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE">
-                    <button type="submit">Remove</button>
+                  <form method="POST" id="favButtons" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Remove from Favorites</button>
                   </form>
                 </div>
                 

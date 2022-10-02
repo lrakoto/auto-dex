@@ -69,7 +69,6 @@ router.get('/', (req, res) => {
     }
     );
     favorites = favorites.map((r => r.toJSON()));
-    console.log('FAVORITE CARS', favorites);
     res.render('favorites', { favorites: favorites});
   });
 
@@ -107,38 +106,37 @@ router.get('/', (req, res) => {
   // POST route cars/fav
   router.post('/fav', async (req, res) => {
     let data = req.body;
-    console.log('REQ BODY:', data)
-    let newCar = await db.car.findOrCreate({
+    let favCar = await db.car.findAll({
         where: {
             make: data.favecar_make,
             model: data.favecar_model,
         }
     })
-    console.log('AWAIT RESULT - NEW CAR', newCar);
+    console.log('AWAIT RESULT - FAVCAR:', favCar);
     let newFavCar = await db.favorite_car.findOrCreate({
         where: {
             make: data.favecar_make,
             model: data.favecar_model,
             image: data.favecar_image,
-            carId: newCar[0].id,
+            carId: favCar[0].id,
             userId: parseInt(data.userId)
         }
     })
     console.log('AWAIT NEW FAV CAR INFO', newFavCar);
     let foundCar = await db.car.findOne({
         where: { 
-            id: newCar[0].id
+            id: favCar[0].id
         }
     })
     console.log('FOUND CAR AWAIT', foundCar);
     let currentFavCount = parseInt(foundCar.favcount);
     
-    if(newCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
+    if(favCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
         res.redirect('favorites');
     } else {
         db.car.update({
-            favcount: currentFavCount + 1,
+            favcount: currentFavCount += 1,
             image: data.favecar_image
         }, 
         {

@@ -95,7 +95,7 @@ async function getCarData() {
   })
 }
 
- getCarData();
+// getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
@@ -105,22 +105,41 @@ async function unsplashImages() {
     }
   })
   .then(async carimg => {
-    console.log(carimg[0].dataValues);
     for (let i = 0; i < 50; i++) {
       let index = carimg[i].dataValues;
-      let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
-      .catch(err => {console.log('UNSPLASH API PULL ERROR', err)})
-      let imgURL = getCarImage.data.results[0].urls.full;
-      let addImagesToDatabase = db.car.update({
-        updated_img: true,
-        image: `${imgURL}`
-      },
-      {
-        where: {
-          make: index.make,
-          model: index.model
+      if(
+        index.make !== 'SPUDNIK EQUIPMENT COMPANY LLC'
+        || index.make !== 'NUDAWN METAL FABRICATION INC.'
+        || index.make !== 'ATTITUDE CUSTOM CYCLES, INC.'
+        || index.make !== 'MUDDY CREEK MANUFACTURING'
+        || index.make !== 'CUSTOM BIKES OF LAUDERDALE'
+        || index.make !== 'MARAUDER TRAVELERS INCORPORATED'
+        ) 
+        {
+          console.log('INFO TO PUSH:', carimg[i].dataValues);
+          let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
+          .catch(err => {
+            console.log('UNSPLASH API PULL ERROR', err)
+            console.log('REMOVED FROM CARS:', removeMan)
+            let removeMan = err.parent.parameters[3]
+            db.car.destroy({
+              where: {
+                make: removeMan
+              }
+            })
+          })
+          let imgURL = getCarImage.data.results[0].urls.full;
+          db.car.update({
+            updated_img: true,
+            image: `${imgURL}`
+          },
+          {
+            where: {
+              make: index.make,
+              model: index.model
+            }
+          }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
         }
-      }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
     }
     console.log('IMAGES ADDED:', addImagesToDatabase)
   })
