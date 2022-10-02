@@ -87,7 +87,7 @@ router.get('/', (req, res) => {
   })
 
   // PUT Route for /favorites/:id
-  router.post('/favorites/edit/:id', async (req, res) => {
+  router.put('/favorites/edit/:id', async (req, res) => {
     let postData = req.body;
     console.log('POST REQ BODY:', postData)
     db.favorite_car.update({

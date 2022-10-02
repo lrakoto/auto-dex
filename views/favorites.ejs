@@ -37,7 +37,7 @@
                   </button>
                 </div>
                 <div class="modal-body">
-                  <form method="POST" action="/cars/favorites/edit/<%= f.id %>" >
+                  <form method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT" >
                     <div class="form-group">
                       <input class="form-control" id="newimagelink" name="newimagelink" placeholder="<%= f.image %>" required>
                       <input type="hidden" id="favid" name="favid" value="<%= f.id %>">

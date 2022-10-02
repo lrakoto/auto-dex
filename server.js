@@ -147,7 +147,7 @@ async function unsplashImages() {
   .finally(() => {console.log('ADDING IMAGES COMPLETED')});
 }
 
-//setInterval(unsplashImages, 3700000);
+setInterval(unsplashImages, 3700000);
 //unsplashImages();
 
 app.set('view engine', 'ejs');

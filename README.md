@@ -61,7 +61,7 @@ async function getCarData() {
       let pullCarModelsData = await axios.get(`${baseURL}${allModelsByMake}${carMake.Mfr_CommonName.replaceAll(' ', '%20')}${endOfURL}`)
       .catch(err => {console.log('ANOTHER ERROR', err)})
       let pulledCarModelsData = pullCarModelsData.data.Results;
-      console.log('BIG ERROR', pulledCarModelsData);
+      console.log('THIRD ERROR', pulledCarModelsData);
 
       pulledCarModelsData.forEach(carModel => {
         db.car.findOrCreate(
@@ -95,6 +95,9 @@ async function getCarData() {
 | GET | /auth/logout | auth.js | Removes session info |
 | GET | /profile | server.js | Regular User Profile |
 | DELETE | /favorites/delete/id | /controllers/cars.js | Deletes from favorites
+| PUT | /favorites/edit/id | /controllers/cars.js | Updated favorite car image
+
+
 
 ## Installation Instructions
 `1` Git clone https://github.com/lrakoto/auto-dex
@@ -103,23 +106,32 @@ async function getCarData() {
 ```text
 npm install
 ```
-Installations Instructions
-git clone https://github.com/romebell/supreme-engine.git
-cd supreme-engine
-npm install
+
+`3` Create .env file
+```text
 touch .env
-and add inside .env file
-SECRET_SESSION=yaaaaaaayayyyyyayyayay
-If there an API key
-go to said webiste and get an API KEY
-put this inside of their .env file
-API_KEY=.......
-create a database
+```
+
+`4` Add credentials to .env
+```
+SECRET_SESSION="yoursession"
+UKEY="Unsplash.com API key here"
+USKEY="Unsplash.com API Secret key here"
+```
+
+`5` Create database
+```
 npm install sequelize-cl
-npx sequelize-cli db:create supreme-engine
-migrate their database
-npx sequelize-cli db:migrate
-if they need to seed data
-npx sequelize-cli db:seed:all
-Start the server
+npx sequelize-cli db:create "databasename"
+```
+
+`7` Create database
+```
+npm install sequelize-cl
+npx sequelize-cli db:create "databasename"
+```
+
+`8` Start server
+```
 npm start
+```
