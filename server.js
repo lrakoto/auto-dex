@@ -148,7 +148,7 @@ async function unsplashImages() {
 }
 
 setInterval(unsplashImages, 3700000);
-//unsplashImages();
+unsplashImages();
 
 app.set('view engine', 'ejs');
 
