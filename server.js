@@ -95,7 +95,7 @@ async function getCarData() {
   })
 }
 
-// getCarData();
+ getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
@@ -147,8 +147,8 @@ async function unsplashImages() {
   .finally(() => {console.log('ADDING IMAGES COMPLETED')});
 }
 
-setInterval(unsplashImages, 3700000);
-unsplashImages();
+//setInterval(unsplashImages, 3700000);
+//unsplashImages();
 
 app.set('view engine', 'ejs');
 
