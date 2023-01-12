@@ -52,30 +52,30 @@ async function getCarData() {
       let pulledCarModelsData = pullCarModelsData.data.Results;
       console.log('BIG ERROR', pulledCarModelsData);
 
-      // pulledCarModelsData.forEach(carModel => {
-      //   db.car.findOrCreate(
-      //     {
-      //     where: {
-      //       make: `${carModel.Make_Name}`,
-      //       model: `${carModel.Model_Name}`,
-      //     }
-      //   })
-      // })
+       pulledCarModelsData.forEach(carModel => {
+        db.car.findOrCreate(
+          {
+          where: {
+            make: `${carModel.Make_Name}`,
+            model: `${carModel.Model_Name}`,
+          }
+        })
+      })
 
       // UPDATE NULL IMAGE
-      // pulledCarModelsData.forEach(carModel => {
-      //   db.car.update(
-      //     {
-      //       image: `https://i.ibb.co/PwkqdSy/placeholder.png`
-      //     },
-      //     {
-      //     where: {
-      //       make: `${carModel.Make_Name}`,
-      //       model: `${carModel.Model_Name}`,
-      //       image: null
-      //     }
-      //   })
-      // })
+      pulledCarModelsData.forEach(carModel => {
+        db.car.update(
+          {
+            image: `https://i.ibb.co/PwkqdSy/placeholder.png`
+          },
+          {
+          where: {
+            make: `${carModel.Make_Name}`,
+            model: `${carModel.Model_Name}`,
+            image: null
+          }
+        })
+      })
 
       // UPDATE FAVCOUNT
       // pulledCarModelsData.forEach(carModel => {
