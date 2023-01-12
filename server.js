@@ -78,24 +78,24 @@ async function getCarData() {
       })
 
       // UPDATE FAVCOUNT
-      // pulledCarModelsData.forEach(carModel => {
-      //   db.car.update(
-      //     {
-      //       favcount: 0
-      //     },
-      //     {
-      //     where: {
-      //       make: `${carModel.Make_Name}`,
-      //       model: `${carModel.Model_Name}`,
-      //       favcount: null
-      //     }
-      //   })
-      // })
+      pulledCarModelsData.forEach(carModel => {
+        db.car.update(
+          {
+            favcount: 0
+          },
+          {
+          where: {
+            make: `${carModel.Make_Name}`,
+            model: `${carModel.Model_Name}`,
+            favcount: null
+          }
+        })
+      })
     }
   })
 }
 
- getCarData();
+ //getCarData();
 
 // Get images from Unsplash API in increments of 50 per hour
 async function unsplashImages() {
@@ -105,7 +105,7 @@ async function unsplashImages() {
     }
   })
   .then(async carimg => {
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 49; i++) {
       let index = carimg[i].dataValues;
       if(
         index.make !== 'SPUDNIK EQUIPMENT COMPANY LLC'
@@ -147,7 +147,7 @@ async function unsplashImages() {
   .finally(() => {console.log('ADDING IMAGES COMPLETED')});
 }
 
-//setInterval(unsplashImages, 3700000);
+setInterval(unsplashImages, 3700000);
 //unsplashImages();
 
 app.set('view engine', 'ejs');
