@@ -1,0 +1,118 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading">Add a Car</h1>
+    <p class="lead text-muted">Add a car to your personal garage</p>
+  </div>
+</section>
+
+<div class="container" style="max-width: 600px; padding-bottom: 60px;">
+  <form method="POST" action="/garage/add" enctype="multipart/form-data">
+
+    <div class="form-group">
+      <label for="make">Make</label>
+      <select class="form-control" id="makeSelect" name="make" required>
+        <option value="">Loading makes...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="model">Model</label>
+      <select class="form-control" id="modelSelect" name="model" required disabled>
+        <option value="">Select a make first</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="year">Year</label>
+      <select class="form-control" id="yearSelect" name="year" required disabled>
+        <option value="">Select a model first</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Image</label>
+      <div class="mb-2">
+        <input type="url" class="form-control" id="imageUrl" name="imageUrl" placeholder="Paste an image URL (optional)">
+      </div>
+      <div class="text-center text-muted my-1">— or —</div>
+      <div class="mt-2">
+        <input type="file" class="form-control-file" id="carImage" name="carImage" accept="image/jpeg,image/png,image/webp">
+        <small class="text-muted">Upload a photo (JPG, PNG, or WebP)</small>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="notes">Notes <small class="text-muted">(optional)</small></label>
+      <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Mods, color, anything you want to note..."></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">Add to Garage</button>
+    <a href="/garage" class="btn btn-secondary btn-block">Cancel</a>
+  </form>
+</div>
+
+<script>
+  // Populate makes on page load
+  fetch('/garage/makes')
+    .then(r => r.json())
+    .then(makes => {
+      const makeSelect = document.getElementById('makeSelect');
+      makeSelect.innerHTML = '<option value="">Select a make</option>';
+      makes.forEach(make => {
+        const opt = document.createElement('option');
+        opt.value = make;
+        opt.textContent = make;
+        makeSelect.appendChild(opt);
+      });
+    });
+
+  // When make changes, fetch models
+  document.getElementById('makeSelect').addEventListener('change', function() {
+    const make = this.value;
+    const modelSelect = document.getElementById('modelSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    modelSelect.innerHTML = '<option value="">Loading models...</option>';
+    modelSelect.disabled = true;
+    yearSelect.innerHTML = '<option value="">Select a model first</option>';
+    yearSelect.disabled = true;
+
+    if (!make) return;
+
+    fetch(`/garage/models?make=${encodeURIComponent(make)}`)
+      .then(r => r.json())
+      .then(models => {
+        modelSelect.innerHTML = '<option value="">Select a model</option>';
+        models.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model;
+          opt.textContent = model;
+          modelSelect.appendChild(opt);
+        });
+        modelSelect.disabled = false;
+      });
+  });
+
+  // When model changes, fetch years
+  document.getElementById('modelSelect').addEventListener('change', function() {
+    const make = document.getElementById('makeSelect').value;
+    const model = this.value;
+    const yearSelect = document.getElementById('yearSelect');
+    yearSelect.innerHTML = '<option value="">Loading years...</option>';
+    yearSelect.disabled = true;
+
+    if (!model) return;
+
+    fetch(`/garage/years?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`)
+      .then(r => r.json())
+      .then(years => {
+        yearSelect.innerHTML = '<option value="">Select a year</option>';
+        years.forEach(year => {
+          const opt = document.createElement('option');
+          opt.value = year;
+          opt.textContent = year;
+          yearSelect.appendChild(opt);
+        });
+        yearSelect.disabled = false;
+      });
+  });
+</script>

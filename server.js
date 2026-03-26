@@ -6,6 +6,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const passport = require('./config/ppConfig');
 const isLoggedIn = require('./middleware/isLoggedIn');
+const isAdmin = require('./middleware/isAdmin');
 const axios = require('axios');
 const { application } = require('express');
 const methodOverride = require('method-override');
@@ -94,60 +95,57 @@ async function getCarData() {
   })
 }
 
- //getCarData();
+ //getCarData(); // Already seeded — only uncomment to re-seed
 
 // Get images from Unsplash API in increments of 50 per hour
+const PRIORITY_MAKES = ['Tesla', 'Subaru', 'Mitsubishi', 'Chrysler', 'Nissan', 'Audi', 'Toyota', 'Mercedes-Benz'];
+
 async function unsplashImages() {
-  db.car.findAll({
-    where: {
-      updated_img: false
+  try {
+    // First pass: priority makes. Second pass: everything else.
+    let carimg = await db.car.findAll({
+      where: { updated_img: false, make: PRIORITY_MAKES }
+    });
+    if (carimg.length === 0) {
+      carimg = await db.car.findAll({ where: { updated_img: false } });
     }
-  })
-  .then(async carimg => {
-    for (let i = 0; i < 49; i++) {
-      let index = carimg[i].dataValues;
-      if(
-        index.make !== 'SPUDNIK EQUIPMENT COMPANY LLC'
-        || index.make !== 'NUDAWN METAL FABRICATION INC.'
-        || index.make !== 'ATTITUDE CUSTOM CYCLES, INC.'
-        || index.make !== 'MUDDY CREEK MANUFACTURING'
-        || index.make !== 'CUSTOM BIKES OF LAUDERDALE'
-        || index.make !== 'MARAUDER TRAVELERS INCORPORATED'
-        ) 
-        {
-          console.log('INFO TO PUSH:', carimg[i].dataValues);
-          let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
-          .catch(err => {
-            console.log('UNSPLASH API PULL ERROR', err)
-            console.log('REMOVED FROM CARS:', removeMan)
-            let removeMan = err.parent.parameters[3]
-            db.car.destroy({
-              where: {
-                make: removeMan
-              }
-            })
-          })
-          let imgURL = getCarImage.data.results[0].urls.full;
-          db.car.update({
-            updated_img: true,
-            image: `${imgURL}`
-          },
-          {
-            where: {
-              make: index.make,
-              model: index.model
-            }
-          }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
-        }
+    if (carimg.length === 0) {
+      console.log('All images up to date.');
+      return;
     }
-    console.log('IMAGES ADDED')
-  })
-  .catch(err => {console.log('ERROR', err)})
-  .finally(() => {console.log('ADDING IMAGES COMPLETED')});
+
+    const batch = carimg.slice(0, 50);
+    for (let car of batch) {
+      let index = car.dataValues;
+      try {
+        let getCarImage = await axios.get(
+          `${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`
+        );
+        let results = getCarImage.data.results;
+        let imgURL = results && results.length > 0
+          ? results[0].urls.full
+          : 'https://i.ibb.co/PwkqdSy/placeholder.png';
+        await db.car.update(
+          { updated_img: true, image: imgURL },
+          { where: { make: index.make, model: index.model } }
+        );
+        console.log(`Image updated: ${index.make} ${index.model}`);
+      } catch (err) {
+        console.log(`UNSPLASH ERROR for ${index.make} ${index.model}:`, err.message);
+        await db.car.update(
+          { updated_img: true, image: 'https://i.ibb.co/PwkqdSy/placeholder.png' },
+          { where: { make: index.make, model: index.model } }
+        );
+      }
+    }
+    console.log(`IMAGES ADDED: ${batch.length} processed`);
+  } catch (err) {
+    console.log('ERROR in unsplashImages:', err);
+  }
 }
 
 setInterval(unsplashImages, 3700000);
-//unsplashImages();
+unsplashImages(); // Run once on startup
 
 app.set('view engine', 'ejs');
 
@@ -221,13 +219,8 @@ app.get('/', (req, res) => {
 
 // access to all of our auth routes GET /auth/login, GET /auth/signup POST routes
 app.use('/auth', require('./controllers/auth'));
-app.use('/cars', isLoggedIn, require('./controllers/cars'));
-
-// Add this above /auth controllers
-app.get('/profile', isLoggedIn, (req, res) => {
-  const { id, name, email } = req.user.get(); 
-  res.render('profile', { id, name, email });
-});
+app.use('/cars', require('./controllers/cars'));
+app.use('/garage', isLoggedIn, require('./controllers/garage'));
 
 // 404 Handler
 app.use((req, res, next) => {

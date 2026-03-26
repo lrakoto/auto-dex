@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      models.user.hasMany(models.favorite_car)
+      models.user.hasMany(models.favorite_car);
+      models.user.hasMany(models.user_car, { foreignKey: 'userId' });
     }
   };
   user.init({
@@ -41,6 +42,10 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Password must be between 8 and 99 characters'
         }
       }
+    },
+    isAdmin: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     sequelize,

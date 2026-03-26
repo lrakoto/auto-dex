@@ -1,7 +1,6 @@
 <section class="jumbotron text-center">
     <div class="container">
-      <h1 class="jumbotron-heading">Search Results for <%= search %> </h1>
-      <p class="lead text-muted">Something short and leading about the collection below—its contents. It's short and sweet, feel free to skip over it entirely.</p>
+      <h1 class="jumbotron-heading">Search Results for <%= search %></h1>
     </div>
   </section>
 
@@ -9,23 +8,31 @@
 <div class="album py-5 bg-light">
     <div class="container">  
       <div class="row">
-        <% carImg.forEach((c) => { %>
+        <% carImg.forEach((c, i) => { %>
           <div class="col-md-4">
             <div class="card mb-4 box-shadow">
-              <img class="card-img-top imgresp" src=<%= c.dataValues.image %> alt="<%= c.dataValues.model %>">
+              <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>">
+                <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
+              </a>
               <div class="card-body">
-                <p class="card-text"><%= c.dataValues.model %></p>
-                <form action="cars/fav" method="POST" id="favecar_form"> 
-                  <input type="hidden" id="favecar_model" name="favecar_model" value="<%= c.dataValues.model %>"/>
-                  <input type="hidden" id="favecar_make" name="favecar_make" value="<%= c.dataValues.make %>"/>
-                  <input type="hidden" id="favecar_image" name="favecar_image" value="<%= c.dataValues.image %>"/>
-                  <input type="hidden" id="userId" name="userId" value="<%= currentUser.id %>"/>
-                </form>
+                <p class="card-text">
+                  <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark"><%= c.dataValues.model %></a>
+                </p>
                 <div class="d-flex justify-content-between align-items-center">
                   <div class="btn-group">
-                    <button type="submit" form="favecar_form" class="btn btn-sm btn-outline-secondary">Add To Favorites</button>
+                    <% if (currentUser) { %>
+                      <form action="cars/fav" method="POST" id="favecar_form_<%= i %>">
+                        <input type="hidden" name="favecar_model" value="<%= c.dataValues.model %>"/>
+                        <input type="hidden" name="favecar_make" value="<%= c.dataValues.make %>"/>
+                        <input type="hidden" name="favecar_image" value="<%= c.dataValues.image %>"/>
+                        <input type="hidden" name="userId" value="<%= currentUser.id %>"/>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Add To Favorites</button>
+                      </form>
+                    <% } else { %>
+                      <a href="/auth/login" class="btn btn-sm btn-outline-secondary">Add To Favorites</a>
+                    <% } %>
                   </div>
-                  <small class="text-muted">Favorite Count: <%= c.dataValues.favcount %></small>
+                  <small class="text-muted">&#9825; <%= c.dataValues.favcount %></small>
                 </div>
               </div>
             </div>
