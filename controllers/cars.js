@@ -31,33 +31,36 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 
 // GET route for submitted form data from home route
-router.get('/', (req, res) => {
-  console.log(uSplashKey);
-    let userQuery = req.query;
-    axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`)
-    .then(async (response) => {
-      let data = response.data.Results;
-      let imgData = [];
-      data.forEach(async (c) => {
-        let findCurrentCar = await db.car.findOne({
-            where: {
-                make: c.Make_Name,
-                model: c.Model_Name
-            }
-        })
+router.get('/', async (req, res) => {
+  let userQuery = req.query;
+  try {
+    let response = await axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`);
+    let data = response.data.Results;
+    data.sort((a, b) => a.Model_Name.localeCompare(b.Model_Name));
+    let imgData = [];
+    for (let c of data) {
+      let findCurrentCar = await db.car.findOne({
+        where: { make: c.Make_Name, model: c.Model_Name }
+      });
+      if (findCurrentCar) {
         imgData.push(findCurrentCar);
-      })
-      function render() {
-        res.render('cars', { search: userQuery.selectmake, carImg: imgData });
+      } else {
+        // Car not in DB yet — use NHTSA data with placeholder image
+        imgData.push({
+          dataValues: {
+            make: c.Make_Name,
+            model: c.Model_Name,
+            image: 'https://i.ibb.co/PwkqdSy/placeholder.png',
+            favcount: 0
+          }
+        });
       }
-      setTimeout(render, 2000);
-    })
-    .catch((err) => {
-      console.log(err);
-    })
-    .finally(() => {
-      console.log('MESSAGE: submitted form data from home route');
-    });
+    }
+    res.render('cars', { search: userQuery.selectmake, carImg: imgData });
+  } catch (err) {
+    console.log('SEARCH ERROR:', err);
+    res.status(500).send('Error fetching car data.');
+  }
 });
 
   // GET Route for /favorites
@@ -106,10 +109,15 @@ router.get('/', (req, res) => {
   // POST route cars/fav
   router.post('/fav', async (req, res) => {
     let data = req.body;
-    let favCar = await db.car.findAll({
+    let [favCar] = await db.car.findOrCreate({
         where: {
             make: data.favecar_make,
             model: data.favecar_model,
+        },
+        defaults: {
+            image: data.favecar_image || 'https://i.ibb.co/PwkqdSy/placeholder.png',
+            favcount: 0,
+            updated_img: false
         }
     })
     console.log('AWAIT RESULT - FAVCAR:', favCar);
@@ -118,20 +126,20 @@ router.get('/', (req, res) => {
             make: data.favecar_make,
             model: data.favecar_model,
             image: data.favecar_image,
-            carId: favCar[0].id,
+            carId: favCar.id,
             userId: parseInt(data.userId)
         }
     })
     console.log('AWAIT NEW FAV CAR INFO', newFavCar);
     let foundCar = await db.car.findOne({
-        where: { 
-            id: favCar[0].id
+        where: {
+            id: favCar.id
         }
     })
     console.log('FOUND CAR AWAIT', foundCar);
-    let currentFavCount = parseInt(foundCar.favcount);
-    
-    if(favCar[0].id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
+    let currentFavCount = parseInt(foundCar.favcount) || 0;
+
+    if(favCar.id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
         res.redirect('favorites');
     } else {
@@ -140,7 +148,7 @@ router.get('/', (req, res) => {
             image: data.favecar_image
         }, 
         {
-            where: { 
+            where: {
                 id: foundCar.id
             }
         })

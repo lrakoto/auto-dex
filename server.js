@@ -12,7 +12,6 @@ const methodOverride = require('method-override');
 const db = require('./models');
 
 const SECRET_SESSION = process.env.SECRET_SESSION;
-console.log('INJECTION --->>', SECRET_SESSION);
 
 // For Car Data API calls
 const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
@@ -141,7 +140,7 @@ async function unsplashImages() {
           }).catch(error => {console.log('UNSPLASH API PUSH ERROR:', error)})
         }
     }
-    console.log('IMAGES ADDED:', addImagesToDatabase)
+    console.log('IMAGES ADDED')
   })
   .catch(err => {console.log('ERROR', err)})
   .finally(() => {console.log('ADDING IMAGES COMPLETED')});
@@ -183,24 +182,12 @@ app.use((req, res, next) => {
 app.get('/', (req, res) => {
   axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
   .then((response) => {
-    let sorted = [];
     let data = response.data.Results;
-    console.log('DATA', data[0].VehicleTypes)
-    // data.forEach((make) => {
-    //   sorted.push(make.Mfr_CommonName);
-    //   sorted.sort();
-    //   console.log('SORTED:', sorted);
-    // })
-    // function addToMake() {
-    //   sorted.forEach((m) => {
-    //     db.make.findOrCreate({
-    //       where: {
-    //         make: m
-    //       }
-    //     })
-    //   })
-    // }
-    // setTimeout(addToMake, 1000);
+    data.sort((a, b) => {
+      if (!a.Mfr_CommonName) return 1;
+      if (!b.Mfr_CommonName) return -1;
+      return a.Mfr_CommonName.localeCompare(b.Mfr_CommonName);
+    });
     res.render('index', {data: data})
   })
   .catch((err) => {
