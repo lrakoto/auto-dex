@@ -269,6 +269,7 @@ p { color: var(--text-muted); }
   overflow: hidden;
   will-change: transform, box-shadow;
   position: relative;
+  z-index: 1;
 }
 
 /* Cursor-follow glow — large soft white, tracks --cx/--cy set in JS */
@@ -314,6 +315,7 @@ p { color: var(--text-muted); }
 
 .card:hover {
   transform: translateY(-5px);
+  z-index: 2;
   box-shadow:
     inset 3px 0 0 var(--red),
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
