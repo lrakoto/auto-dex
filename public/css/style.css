@@ -31,6 +31,7 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-align: left;
+  transition: opacity 0.22s ease;
 }
 
 a {
@@ -627,6 +628,29 @@ small, .small { font-size: 0.78rem; }
   .custom-wrap { padding: 80px 1.5rem; }
   .jumbotron { padding: 2.5rem 0; }
   .jumbotron .container { padding: 0 1.5rem; }
+}
+
+
+/* ─── SCROLL PROGRESS BAR ───────────────────────────────────────────────────── */
+#scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(237, 83, 83, 0.7), 0 0 2px rgba(237, 83, 83, 0.9);
+  z-index: 9999;
+  pointer-events: none;
+  transition: width 0.08s linear;
+}
+
+
+/* ─── PAGE TRANSITIONS ───────────────────────────────────────────────────────── */
+body.page-entering {
+  opacity: 0;
+}
+body.page-exit {
+  opacity: 0;
 }
 
 

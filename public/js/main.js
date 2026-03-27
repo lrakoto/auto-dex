@@ -2,6 +2,54 @@
   'use strict';
 
   /* ═══════════════════════════════════════════════════════════════
+     SCROLL PROGRESS BAR
+  ═══════════════════════════════════════════════════════════════ */
+
+  var progressBar = document.createElement('div');
+  progressBar.id = 'scroll-progress';
+  document.body.prepend(progressBar);
+
+  window.addEventListener('scroll', function () {
+    var scrolled = window.scrollY;
+    var total    = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
+  }, { passive: true });
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     PAGE TRANSITIONS
+  ═══════════════════════════════════════════════════════════════ */
+
+  // Fade in on load
+  document.body.classList.add('page-entering');
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      document.body.classList.remove('page-entering');
+    });
+  });
+
+  // Fade out on internal link click
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    // Only intercept internal, non-anchor, non-special links
+    if (
+      !href ||
+      href.startsWith('#') ||
+      href.startsWith('javascript') ||
+      link.target === '_blank' ||
+      e.metaKey || e.ctrlKey || e.shiftKey
+    ) return;
+    if (href.startsWith('http') && !href.includes(location.hostname)) return;
+
+    e.preventDefault();
+    document.body.classList.add('page-exit');
+    setTimeout(function () { location.href = href; }, 230);
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
      CURSOR-INTERACTIVE DOT GRID BACKGROUND
   ═══════════════════════════════════════════════════════════════ */
 
@@ -24,14 +72,38 @@
   var MAX_A     = 1.0;    // dot alpha at cursor (full brightness)
   var LERP      = 0.072;  // mouse smoothing (lower = smoother)
 
-  // Accent color components for interpolation
-  var AC = { r: 237, g: 83, b: 83 };
+  // Accent color — white on homepage, red everywhere else
+  var isHome = !!document.querySelector('.home-overlay');
+  var AC = isHome ? { r: 255, g: 255, b: 255 } : { r: 237, g: 83, b: 83 };
   var BC = { r: 200, g: 200, b: 210 }; // base dot color (cool white)
 
   var mouse  = { x: -9999, y: -9999 };
   var cursor = { x: -9999, y: -9999 }; // smoothed
   var dots   = [];
   var raf;
+
+  /* ── Angled sweep wave ─────────────────────────────────────── */
+  var WAVE_ANGLE_TAN  = Math.tan(14 * Math.PI / 180); // ~0.249
+  var WAVE_HALF_WIDTH = 220;  // px — Gaussian sigma for the wave band
+  var WAVE_STRENGTH   = 0.20; // peak boost added to prox
+  var WAVE_SPEED      = 0.00038; // progress units per ms
+  var WAVE_INTERVAL   = 5500;  // ms between spawns
+
+  var sweepWaves   = [];
+  var lastWaveTime = -WAVE_INTERVAL; // spawn first wave quickly
+
+  function spawnWave(now) {
+    sweepWaves.push({ startTime: now, progress: 0 });
+    lastWaveTime = now;
+  }
+
+  /* ── Page-load shockwave (radial) ──────────────────────────── */
+  var SHOCK_RADIUS_MAX  = 1800; // px — how far the ring expands
+  var SHOCK_HALF_RING   = 80;   // px — Gaussian sigma for ring thickness
+  var SHOCK_STRENGTH    = 0.85;
+  var SHOCK_DURATION    = 2200; // ms
+  var shockwave         = null; // { startTime }
+
 
   function buildDots() {
     dots = [];
@@ -52,32 +124,94 @@
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
-  function draw() {
+  function gaussianFalloff(dist, sigma) {
+    return Math.exp(-0.5 * (dist / sigma) * (dist / sigma));
+  }
+
+  function draw(now) {
     // Smooth cursor
     cursor.x = lerp(cursor.x, mouse.x, LERP);
     cursor.y = lerp(cursor.y, mouse.y, LERP);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // ── Advance / cull sweep waves ──────────────────────────────
+    var w = canvas.width;
+    var h = canvas.height;
+    // The effective-x range spans from leftmost dot (0 + 0*tan) to rightmost dot (w + h*tan)
+    var sweepMin = -(WAVE_HALF_WIDTH * 3);
+    var sweepMax = w + h * WAVE_ANGLE_TAN + (WAVE_HALF_WIDTH * 3);
+
+    sweepWaves = sweepWaves.filter(function (wv) {
+      wv.progress = (now - wv.startTime) * WAVE_SPEED;
+      var frontX = sweepMin + wv.progress * (sweepMax - sweepMin);
+      return frontX < sweepMax + WAVE_HALF_WIDTH * 3;
+    });
+
+    // Spawn new wave at interval
+    if (now - lastWaveTime >= WAVE_INTERVAL) {
+      spawnWave(now);
+    }
+
+    // ── Shockwave ───────────────────────────────────────────────
+    var shockBoostOriginX = 0;
+    var shockBoostOriginY = 0;
+    var shockActive = false;
+    var shockElapsed = 0;
+    if (shockwave) {
+      shockElapsed = now - shockwave.startTime;
+      if (shockElapsed < SHOCK_DURATION) {
+        shockActive = true;
+        shockBoostOriginX = shockwave.originX;
+        shockBoostOriginY = shockwave.originY;
+      } else {
+        shockwave = null;
+      }
+    }
+
+    // ── Draw dots ───────────────────────────────────────────────
     for (var i = 0; i < dots.length; i++) {
       var d  = dots[i];
       var dx = d.x - cursor.x;
       var dy = d.y - cursor.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
-      var prox = Math.max(0, 1 - dist / REACH); // 0–1
+      var prox = Math.max(0, 1 - dist / REACH); // 0–1 cursor influence
 
-      var alpha  = BASE_A + prox * (MAX_A  - BASE_A);
-      var radius = BASE_R + prox * (MAX_R  - BASE_R);
+      // Sweep wave boost
+      var waveBoost = 0;
+      var dotEffX = d.x + d.y * WAVE_ANGLE_TAN;
+      for (var wi = 0; wi < sweepWaves.length; wi++) {
+        var wv = sweepWaves[wi];
+        var frontX = sweepMin + wv.progress * (sweepMax - sweepMin);
+        var waveDist = dotEffX - frontX;
+        waveBoost = Math.max(waveBoost, WAVE_STRENGTH * gaussianFalloff(waveDist, WAVE_HALF_WIDTH));
+      }
 
-      // Color: interpolate base cool-white → accent red near cursor
-      var r = Math.round(lerp(BC.r, AC.r, prox));
-      var g = Math.round(lerp(BC.g, AC.g, prox));
-      var b = Math.round(lerp(BC.b, AC.b, prox));
+      // Shockwave boost
+      var shockBoost = 0;
+      if (shockActive) {
+        var shockRadius = (shockElapsed / SHOCK_DURATION) * SHOCK_RADIUS_MAX;
+        var sdx = d.x - shockBoostOriginX;
+        var sdy = d.y - shockBoostOriginY;
+        var sDist = Math.sqrt(sdx * sdx + sdy * sdy);
+        shockBoost = SHOCK_STRENGTH * gaussianFalloff(sDist - shockRadius, SHOCK_HALF_RING);
+      }
+
+      // Combine: cursor prox + wave + shock, clamped to 1
+      var combined = Math.min(1, prox + waveBoost * (1 - prox) + shockBoost * (1 - Math.max(prox, waveBoost)));
+
+      var alpha  = BASE_A + combined * (MAX_A  - BASE_A);
+      var radius = BASE_R + combined * (MAX_R  - BASE_R);
+
+      // Color: interpolate base cool-white → accent red near cursor/wave
+      var r = Math.round(lerp(BC.r, AC.r, combined));
+      var g = Math.round(lerp(BC.g, AC.g, combined));
+      var b = Math.round(lerp(BC.b, AC.b, combined));
 
       // Glow: only pay the shadowBlur cost for dots near cursor
-      if (prox > 0.05) {
-        ctx.shadowBlur  = prox * 14;
-        ctx.shadowColor = 'rgba(' + AC.r + ',' + AC.g + ',' + AC.b + ',' + (prox * 0.9) + ')';
+      if (combined > 0.05) {
+        ctx.shadowBlur  = combined * 14;
+        ctx.shadowColor = 'rgba(' + AC.r + ',' + AC.g + ',' + AC.b + ',' + (combined * 0.9) + ')';
       } else {
         ctx.shadowBlur = 0;
       }
@@ -116,7 +250,10 @@
   }, { passive: true });
 
   resize();
-  draw();
+  requestAnimationFrame(function (now) {
+    lastWaveTime = now; // start the interval clock from first frame
+    draw(now);
+  });
 
 
   /* ═══════════════════════════════════════════════════════════════
@@ -168,7 +305,7 @@
     revealElements('.auth-wrap');
 
     // ── Glass card interactions ──────────────────────────────────
-    var MAX_TILT = 2.5; // degrees — keep it very subtle
+    var MAX_TILT = 2.0; // degrees — very subtle
     document.querySelectorAll('.card').forEach(function (card) {
       card.addEventListener('mousemove', function (e) {
         var rect = card.getBoundingClientRect();
@@ -189,6 +326,7 @@
         card.style.setProperty('--tilt-y', '0deg');
       }, { passive: true });
     });
+
   });
 
 

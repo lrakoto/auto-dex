@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <circle cx="50" cy="50" r="50" fill="#ed5353"/>
-  <polyline points="20,84 50,14 80,84"
-    stroke="white" stroke-width="13" fill="none"
-    stroke-linejoin="miter" stroke-linecap="round"/>
-  <line x1="32" y1="56" x2="68" y2="56"
-    stroke="white" stroke-width="12" stroke-linecap="round"/>
+  <!-- Road surface: wide at bottom, narrows with a gentle wind toward horizon -->
+  <path d="M 14,98 C 20,72 46,52 46,12 L 54,12 C 54,52 80,72 86,98 Z"
+    fill="white" opacity="0.95"/>
+  <!-- Center dashes -->
+  <line x1="50" y1="88" x2="50" y2="76" stroke="#ed5353" stroke-width="3" stroke-linecap="round"/>
+  <line x1="50" y1="68" x2="50" y2="56" stroke="#ed5353" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="48" x2="50" y2="38" stroke="#ed5353" stroke-width="2" stroke-linecap="round"/>
+  <line x1="50" y1="32" x2="50" y2="24" stroke="#ed5353" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
