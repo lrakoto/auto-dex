@@ -4,44 +4,50 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>AutoDex</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="/css/style.css">
   </head>
-  <body class="text-center">
+  <body>
     <div class="overlay">
     <main role="main">
       <%- include('partials/alerts') %>
-      <header class="masthead mb-auto">
+      <header class="masthead">
         <div class="inner">
-          <h3 class="masthead-brand">AutoDex</h3>
-          <nav class="nav nav-masthead justify-content-center">
+          <a href="/" class="masthead-brand">AutoDex</a>
+          <nav class="nav nav-masthead">
             <a class="nav-link" href="/">Home</a>
-            <% if (!currentUser) {%>
-              <a class="nav-link" href="/auth/signup">Signup</a>
-              <a class="nav-link" href="/auth/login">Login</a>
+            <% if (!currentUser) { %>
+              <a class="nav-link" href="/auth/signup">Sign Up</a>
+              <a class="nav-link" href="/auth/login">Log In</a>
             <% } else { %>
-              <a class="nav-link" href="/">Search Cars</a>
               <a class="nav-link" href="/cars/favorites">Favorites</a>
               <a class="nav-link" href="/garage">My Garage</a>
               <% if (currentUser.isAdmin) { %>
                 <a class="nav-link" href="/garage/admin">Admin</a>
               <% } %>
-              <a class="nav-link" href="/auth/logout">Logout</a>
+              <a class="nav-link" href="/auth/logout">Log Out</a>
             <% } %>
           </nav>
         </div>
       </header>
-      <%- body %> 
+
+      <%- body %>
+
     </main>
 
-      <footer class="mastfoot mt-auto">
-        <div class="inner">
-          <p>&copy; Copyright <%= new Date().getFullYear() %>. All rights reserved. Created by <a href="https://github.com/lrakoto" target="_blank">Lova Rakotomavonandrianina</a>, view <a href="https://github.com/lrakoto/auto-dex" target="_blank">Git Repository</a></p>
-        </div>
-      </footer>
+    <footer class="mastfoot">
+      <div class="inner">
+        <p>&copy; <%= new Date().getFullYear() %> AutoDex &mdash; Created by <a href="https://github.com/lrakoto" target="_blank">Lova Rakotomavonandrianina</a> &nbsp;&middot;&nbsp; <a href="https://github.com/lrakoto/auto-dex" target="_blank">GitHub</a></p>
+      </div>
+    </footer>
+
     </div>
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="/js/main.js"></script>
   </body>
 </html>

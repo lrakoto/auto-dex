@@ -31,9 +31,12 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 
 
+const PAGE_SIZE = 24;
+
 // GET route for submitted form data from home route
 router.get('/', async (req, res) => {
   let userQuery = req.query;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
   try {
     let response = await axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`);
     let data = response.data.Results;
@@ -46,7 +49,6 @@ router.get('/', async (req, res) => {
       if (findCurrentCar) {
         imgData.push(findCurrentCar);
       } else {
-        // Car not in DB yet — use NHTSA data with placeholder image
         imgData.push({
           dataValues: {
             make: c.Make_Name,
@@ -57,7 +59,11 @@ router.get('/', async (req, res) => {
         });
       }
     }
-    res.render('cars', { search: userQuery.selectmake, carImg: imgData });
+    const total = imgData.length;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const pagedCars = imgData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const baseUrl = `/cars?selectmake=${encodeURIComponent(userQuery.selectmake)}&page=`;
+    res.render('cars', { search: userQuery.selectmake, carImg: pagedCars, page, totalPages, total, baseUrl });
   } catch (err) {
     console.log('SEARCH ERROR:', err);
     res.status(500).send('Error fetching car data.');
@@ -132,14 +138,16 @@ router.get('/', async (req, res) => {
 
   // GET Route for /favorites
   router.get('/favorites/', isLoggedIn, async (req, res) => {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const total = await db.favorite_car.count({ where: { userId: req.user.id } });
+    const totalPages = Math.ceil(total / PAGE_SIZE);
     let favorites = await db.favorite_car.findAll({
-      where: {
-        userId: req.user.id
-      }
-    }
-    );
-    favorites = favorites.map((r => r.toJSON()));
-    res.render('favorites', { favorites: favorites});
+      where: { userId: req.user.id },
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE
+    });
+    favorites = favorites.map(r => r.toJSON());
+    res.render('favorites', { favorites, page, totalPages, total, baseUrl: '/cars/favorites/?page=' });
   });
 
   // DELETE ROUTE for /favorites
