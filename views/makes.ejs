@@ -1,17 +1,92 @@
+<%
+const domainMap = {
+  'Acura': 'acura.com',
+  'Alfa Romeo': 'alfaromeo.com',
+  'Aston Martin': 'astonmartin.com',
+  'Audi': 'audi.com',
+  'Bentley': 'bentleymotors.com',
+  'BMW': 'bmw.com',
+  'Buick': 'buick.com',
+  'Cadillac': 'cadillac.com',
+  'Chevrolet': 'chevrolet.com',
+  'Chrysler': 'chrysler.com',
+  'Dodge': 'dodge.com',
+  'Ferrari': 'ferrari.com',
+  'Fiat': 'fiatusa.com',
+  'Ford': 'ford.com',
+  'Genesis': 'genesis.com',
+  'GMC': 'gmc.com',
+  'Honda': 'honda.com',
+  'Hummer': 'gmc.com',
+  'Hyundai': 'hyundai.com',
+  'Infiniti': 'infinitiusa.com',
+  'Jaguar': 'jaguar.com',
+  'Jeep': 'jeep.com',
+  'Kia': 'kia.com',
+  'Lamborghini': 'lamborghini.com',
+  'Land Rover': 'landrover.com',
+  'Lexus': 'lexus.com',
+  'Lincoln': 'lincoln.com',
+  'Lotus': 'lotuscars.com',
+  'Lucid': 'lucidmotors.com',
+  'Maserati': 'maserati.com',
+  'Mazda': 'mazda.com',
+  'McLaren': 'mclaren.com',
+  'Mercedes-Benz': 'mercedes-benz.com',
+  'Mercury': 'ford.com',
+  'MINI': 'miniusa.com',
+  'Mitsubishi': 'mitsubishicars.com',
+  'Nissan': 'nissan.com',
+  'Polestar': 'polestar.com',
+  'Porsche': 'porsche.com',
+  'Ram': 'ramtrucks.com',
+  'Rivian': 'rivian.com',
+  'Rolls-Royce': 'rolls-roycemotorcars.com',
+  'Saturn': 'gm.com',
+  'Scion': 'toyota.com',
+  'Subaru': 'subaru.com',
+  'Tesla': 'tesla.com',
+  'Toyota': 'toyota.com',
+  'Volkswagen': 'vw.com',
+  'Volvo': 'volvocars.com',
+};
+%>
+
 <section class="jumbotron text-center">
   <div class="container">
-    <h1 class="jumbotron-heading">Browse by Make</h1>
-    <p class="lead text-muted"><%= makes.length %> manufacturers in the database</p>
+    <h1 class="jumbotron-heading">Browse Manufacturers</h1>
+    <p class="lead text-muted"><%= makes.length %> manufacturers</p>
   </div>
 </section>
 
 <div class="makes-container">
   <div class="makes-grid">
-    <% makes.forEach(function(m) { %>
-      <a href="/cars?selectmake=<%= encodeURIComponent(m.make) %>" class="make-tile">
-        <span class="make-name"><%= m.make %></span>
-        <span class="make-count"><%= m.modelCount %> models</span>
-      </a>
+    <%
+    const withLogo = makes.filter(m => domainMap[m.make]);
+    const withoutLogo = makes.filter(m => !domainMap[m.make]);
+    const sortedMakes = [...withLogo, ...withoutLogo];
+    sortedMakes.forEach(function(m) {
+      const domain = domainMap[m.make] || null;
+      const initials = m.make.split(/[\s\-]/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    %>
+      <div class="make-tile-wrap">
+        <a href="/cars?selectmake=<%= encodeURIComponent(m.make) %>" class="make-tile">
+          <div class="make-logo-wrap">
+            <span class="make-logo-initials"><%= initials %></span>
+            <% if (domain) { %>
+              <img
+                class="make-logo"
+                src="https://www.google.com/s2/favicons?domain=<%= domain %>&sz=64"
+                alt="<%= m.make %>"
+                referrerpolicy="no-referrer"
+                onerror="this.style.display='none'"
+              >
+            <% } %>
+          </div>
+          <span class="make-name"><%= m.make %></span>
+          <span class="make-count"><%= m.modelCount != null ? m.modelCount + ' models' : 'Browse' %></span>
+        </a>
+      </div>
     <% }); %>
   </div>
 </div>

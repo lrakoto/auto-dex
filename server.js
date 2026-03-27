@@ -178,22 +178,7 @@ app.use((req, res, next) => {
 // Save for future use
 // OLD GET Route for Home and search form (Before pulling from tables, pulling directly from API)
 app.get('/', (req, res) => {
-  axios.get('https://vpic.nhtsa.dot.gov/api/vehicles/getallmanufacturers?format=json')
-  .then((response) => {
-    let data = response.data.Results;
-    data.sort((a, b) => {
-      if (!a.Mfr_CommonName) return 1;
-      if (!b.Mfr_CommonName) return -1;
-      return a.Mfr_CommonName.localeCompare(b.Mfr_CommonName);
-    });
-    res.render('index', {data: data})
-  })
-  .catch((err) => {
-      console.log(err);
-  })
-  .finally(() => {
-      console.log('HOME ROUTE FOR SELECT FIELDS WORKED');
-  });
+  res.render('index');
 });
 
 // // OLD GET Route for Home and search form (Before pulling from tables, pulling directly from API)
@@ -222,18 +207,221 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 
+const KNOWN_MAKES = [
+  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Buick',
+  'Cadillac','Chevrolet','Chrysler','Dodge','Ferrari','Fiat','Ford',
+  'Genesis','GMC','Honda','Hummer','Hyundai','Infiniti','Jaguar','Jeep',
+  'Kia','Lamborghini','Land Rover','Lexus','Lincoln','Lotus','Lucid',
+  'Maserati','Mazda','McLaren','Mercedes-Benz','Mercury','MINI',
+  'Mitsubishi','Nissan','Oldsmobile','Polestar','Pontiac','Porsche',
+  'Ram','Rivian','Rolls-Royce','Saturn','Scion','Smart','Subaru',
+  'Suzuki','Tesla','Toyota','Volkswagen','Volvo',
+].sort((a, b) => a.localeCompare(b));
+
+// ── Trigram fuzzy helpers ──────────────────────────────────────────────────────
+function makeTrigrams(s) {
+  const set = new Set();
+  for (let i = 0; i <= s.length - 3; i++) set.add(s.slice(i, i + 3));
+  return set;
+}
+function trigramSim(a, b) {
+  const ta = makeTrigrams(a), tb = makeTrigrams(b);
+  if (ta.size === 0 || tb.size === 0) return 0; // too short for trigrams — skip
+  let inter = 0;
+  ta.forEach(t => { if (tb.has(t)) inter++; });
+  return (2 * inter) / (ta.size + tb.size);
+}
+function fuzzyScore(query, text) {
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  if (t.includes(q)) return 1;
+  const words = t.split(/[\s\-]+/);
+  return Math.max(trigramSim(q, t), ...words.map(w => trigramSim(q, w)));
+}
+
+// ── Autocomplete suggestions ──────────────────────────────────────────────────
+app.get('/suggest', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json({ makes: [], models: [] });
+  try {
+    const { Op } = require('sequelize');
+
+    // Detect "Make ModelPrefix" pattern (e.g. "Ferrari F", "Honda Civ")
+    const makePrefix = KNOWN_MAKES.find(m =>
+      q.toLowerCase().startsWith(m.toLowerCase() + ' ')
+    );
+    if (makePrefix) {
+      const modelQ = q.slice(makePrefix.length + 1).trim();
+      // Search DB for this make's models matching the model prefix (fuzzy + exact)
+      let dbModels = await db.car.findAll({
+        where: {
+          make: makePrefix,
+          model: { [Op.iLike]: '%' + modelQ + '%' }
+        },
+        attributes: ['make', 'model', 'favcount'],
+        order: [['favcount', 'DESC']],
+        limit: 15
+      });
+      let models = dbModels.map(c => c.toJSON());
+      // Also fuzzy-match within this make's models
+      if (models.length < 15 && modelQ.length >= 2) {
+        const makeCars = await db.car.findAll({
+          where: { make: makePrefix },
+          attributes: ['make', 'model', 'favcount'],
+          order: [['favcount', 'DESC']]
+        });
+        const seen = new Set(models.map(c => c.make + '|' + c.model));
+        const fuzzyHits = makeCars
+          .map(c => { const car = c.toJSON(); return { ...car, _score: fuzzyScore(modelQ, car.model) }; })
+          .filter(c => c._score > 0.45 && !seen.has(c.make + '|' + c.model))
+          .sort((a, b) => b._score - a._score);
+        models = models.concat(fuzzyHits.slice(0, 15 - models.length));
+      }
+      // Fall back to NHTSA if DB has nothing for this make
+      if (models.length === 0) {
+        try {
+          const nhtsaRes = await axios.get(
+            `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(makePrefix)}?format=json`
+          );
+          models = (nhtsaRes.data.Results || [])
+            .filter(r => r.Model_Name && (
+              r.Model_Name.toLowerCase().includes(modelQ.toLowerCase()) ||
+              fuzzyScore(modelQ, r.Model_Name) > 0.45
+            ))
+            .slice(0, 15)
+            .map(r => ({ make: r.Make_Name, model: r.Model_Name }));
+        } catch (_) {}
+      }
+      return res.json({ makes: [], models: models.slice(0, 15) });
+    }
+
+    // Makes: exact substring first, then fuzzy
+    const makes = KNOWN_MAKES
+      .filter(m => fuzzyScore(q, m) > 0.3 || m.toLowerCase().includes(q.toLowerCase()))
+      .sort((a, b) => {
+        const sa = a.toLowerCase().includes(q.toLowerCase()) ? 1 : 0;
+        const sb = b.toLowerCase().includes(q.toLowerCase()) ? 1 : 0;
+        return sb - sa;
+      })
+      .slice(0, 5);
+
+    // Exact case-insensitive substring match from DB
+    let exactCars = await db.car.findAll({
+      where: {
+        [Op.or]: [
+          { model: { [Op.iLike]: '%' + q + '%' } },
+          { make: { [Op.iLike]: '%' + q + '%' } }
+        ]
+      },
+      attributes: ['make', 'model', 'favcount'],
+      order: [['favcount', 'DESC']],
+      limit: 15
+    });
+    let models = exactCars.map(c => c.toJSON());
+    const seen = new Set(models.map(c => c.make + '|' + c.model));
+
+    // Fuzzy pass over entire DB when exact match yields fewer than 15 results
+    if (models.length < 15) {
+      const pool = await db.car.findAll({
+        attributes: ['make', 'model', 'favcount'],
+        order: [['favcount', 'DESC']]
+      });
+      const fuzzyHits = pool
+        .map(c => {
+          const car = c.toJSON();
+          const score = Math.max(
+            fuzzyScore(q, car.model),
+            fuzzyScore(q, car.make + ' ' + car.model)
+          );
+          return { ...car, _score: score };
+        })
+        .filter(c => c._score > 0.45 && !seen.has(c.make + '|' + c.model))
+        .sort((a, b) => b._score - a._score || (b.favcount || 0) - (a.favcount || 0));
+      models = models.concat(fuzzyHits.slice(0, 15 - models.length));
+    }
+
+    // NHTSA fallback when DB has nothing — search known makes in parallel
+    if (models.length === 0 && makes.length === 0) {
+      const nhtsaResults = await Promise.allSettled(
+        KNOWN_MAKES.map(make =>
+          axios.get(`https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`)
+            .then(r => (r.data.Results || [])
+              .filter(m => m.Model_Name && fuzzyScore(q, m.Model_Name) > 0.45)
+              .map(m => ({ make: m.Make_Name, model: m.Model_Name }))
+            )
+        )
+      );
+      for (const r of nhtsaResults) {
+        if (r.status === 'fulfilled') models = models.concat(r.value);
+        if (models.length >= 15) break;
+      }
+    } else if (models.length === 0 && makes.length > 0) {
+      // Make matched — show that make's popular models
+      try {
+        const nhtsaRes = await axios.get(
+          `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(makes[0])}?format=json`
+        );
+        models = (nhtsaRes.data.Results || [])
+          .slice(0, 15)
+          .map(r => ({ make: r.Make_Name, model: r.Model_Name }));
+      } catch (_) {}
+    }
+
+    res.json({ makes, models: models.slice(0, 15) });
+  } catch (err) {
+    res.json({ makes: [], models: [] });
+  }
+});
+
+// ── Smart unified search ───────────────────────────────────────────────────────
+app.get('/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.redirect('/');
+  try {
+    const { Op } = require('sequelize');
+
+    // 1. Exact make match
+    const makeMatch = KNOWN_MAKES.find(m => m.toLowerCase() === q.toLowerCase());
+    if (makeMatch) return res.redirect('/cars?selectmake=' + encodeURIComponent(makeMatch));
+
+    // 2. "Make Model" prefix — e.g. "Toyota Camry"
+    for (const make of KNOWN_MAKES) {
+      if (q.toLowerCase().startsWith(make.toLowerCase() + ' ')) {
+        const modelQ = q.slice(make.length + 1).trim();
+        const exact = await db.car.findOne({
+          where: { make, model: { [Op.like]: modelQ + '%' } },
+          order: [['favcount', 'DESC']]
+        });
+        if (exact) return res.redirect('/cars/car?make=' + encodeURIComponent(exact.make) + '&model=' + encodeURIComponent(exact.model));
+        return res.redirect('/cars?selectmake=' + encodeURIComponent(make));
+      }
+    }
+
+    // 3. Model name fallback
+    return res.redirect('/cars/search?q=' + encodeURIComponent(q));
+  } catch (err) {
+    return res.redirect('/cars/search?q=' + encodeURIComponent(q));
+  }
+});
+
 app.get('/makes', async (req, res) => {
   try {
-    const { Sequelize } = require('sequelize');
-    const makes = await db.car.findAll({
-      attributes: [
-        'make',
-        [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']
-      ],
-      group: ['make'],
-      order: [['make', 'ASC']]
+    const dbMakes = await db.car.findAll({
+      attributes: ['make', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']],
+      group: ['make']
     });
-    res.render('makes', { makes: makes.map(m => m.toJSON()) });
+    const countMap = {};
+    dbMakes.forEach(m => { countMap[m.make] = parseInt(m.getDataValue('modelCount')); });
+
+    // Union of curated list + any DB makes not in the list
+    const allNames = new Set(KNOWN_MAKES);
+    Object.keys(countMap).forEach(m => allNames.add(m));
+    const makes = Array.from(allNames).sort((a, b) => a.localeCompare(b)).map(name => ({
+      make: name,
+      modelCount: countMap[name] != null ? countMap[name] : null
+    }));
+
+    res.render('makes', { makes });
   } catch (err) {
     console.log('MAKES ERROR:', err);
     res.redirect('/');

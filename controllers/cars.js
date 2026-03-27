@@ -6,6 +6,7 @@ const axios = require('axios');
 const isLoggedIn = require('../middleware/isLoggedIn');
 const app = express();
 const methodOverride = require('method-override');
+const { upload } = require('../config/cloudinary');
 
 require('dotenv').config();
 const layouts = require('express-ejs-layouts');
@@ -39,7 +40,12 @@ router.get('/search', async (req, res) => {
   try {
     const { Op } = require('sequelize');
     const results = await db.car.findAll({
-      where: { model: { [Op.like]: '%' + q + '%' } },
+      where: {
+        [Op.or]: [
+          { model: { [Op.iLike]: '%' + q + '%' } },
+          { make: { [Op.iLike]: '%' + q + '%' } }
+        ]
+      },
       limit: 48,
       order: [['favcount', 'DESC']]
     });
@@ -81,7 +87,12 @@ router.get('/', async (req, res) => {
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const pagedCars = imgData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     const baseUrl = `/cars?selectmake=${encodeURIComponent(userQuery.selectmake)}&page=`;
-    res.render('cars', { search: userQuery.selectmake, carImg: pagedCars, page, totalPages, total, baseUrl });
+    const viewData = { search: userQuery.selectmake, carImg: pagedCars, page, totalPages, total, baseUrl };
+    if (req.query.partial === '1') {
+      res.locals.layout = false;
+      return res.render('partials/car-grid', viewData);
+    }
+    res.render('cars', viewData);
   } catch (err) {
     console.log('SEARCH ERROR:', err);
     res.status(500).send('Error fetching car data.');
@@ -264,21 +275,19 @@ router.get('/', async (req, res) => {
     }
   })
 
-  // PUT Route for /favorites/:id
-  router.put('/favorites/edit/:id', isLoggedIn, async (req, res) => {
-    let postData = req.body;
-    console.log('POST REQ BODY:', postData)
-    db.favorite_car.update({
-        image: postData.newimagelink
-    },
-    {where:{
-        id: postData.favid
-    }}
-    ).then((response) => {
-        console.log('POST RES:', response)
-        res.redirect('../../favorites')
-    })
-    .catch(err => {console.log('PUT ERROR:', err)})
+  // PUT Route for /favorites/:id — handles URL or file upload
+  router.put('/favorites/edit/:id', isLoggedIn, upload.single('newimage'), async (req, res) => {
+    try {
+      const imageUrl = req.file ? req.file.path : req.body.newimagelink;
+      await db.favorite_car.update(
+        { image: imageUrl },
+        { where: { id: req.body.favid } }
+      );
+      res.redirect('../../favorites');
+    } catch (err) {
+      console.log('PUT ERROR:', err);
+      res.redirect('../../favorites');
+    }
   })
 
   // POST route cars/fav

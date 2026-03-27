@@ -1,7 +1,15 @@
 <section class="jumbotron text-center">
   <div class="container">
     <h1 class="jumbotron-heading">Results for "<%= q %>"</h1>
-    <p class="lead text-muted"><%= cars.length %> model<%= cars.length !== 1 ? 's' : '' %> found</p>
+    <p class="lead text-muted" style="text-align:center;"><%= cars.length %> vehicle<%= cars.length !== 1 ? 's' : '' %> found</p>
+    <form action="/search" method="GET" class="d-flex justify-content-center align-items-end mt-4" style="gap:0.75rem;flex-wrap:wrap;max-width:480px;margin:1.5rem auto 0;">
+      <div class="search-input-wrap" style="flex:1;min-width:200px;text-align:left;">
+        <label for="q" style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:0.35rem;display:block;">Make or Model</label>
+        <input type="text" class="form-control form-control-lg" name="q" id="q" value="<%= q %>" placeholder="e.g. Toyota, Camry…" autocomplete="off">
+        <div class="suggest-dropdown"></div>
+      </div>
+      <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.5rem;white-space:nowrap;">Search &rarr;</button>
+    </form>
   </div>
 </section>
 
@@ -19,14 +27,31 @@
         <% cars.forEach(function(c, i) { %>
           <div class="col-md-4 card-col">
             <div class="card mb-4">
-              <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
-                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
-              </a>
+              <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
               <div class="card-body">
                 <p class="card-text mb-0">
-                  <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark"><%= c.model %></a>
+                  <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark card-cover"><%= c.model %></a>
                 </p>
-                <p style="font-size:0.72rem; color:var(--text-subtle); margin:0.2rem 0 0;"><%= c.make %></p>
+                <div class="card-actions">
+                  <div class="btn-group">
+                    <% if (currentUser) { %>
+                      <form action="/cars/fav" method="POST" id="search_fav_<%= i %>" class="fav-form">
+                        <input type="hidden" name="favecar_model" value="<%= c.model %>"/>
+                        <input type="hidden" name="favecar_make" value="<%= c.make %>"/>
+                        <input type="hidden" name="favecar_image" value="<%= c.image %>"/>
+                        <input type="hidden" name="userId" value="<%= currentUser.id %>"/>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary fav-text-btn">Add To Favorites</button>
+                      </form>
+                    <% } else { %>
+                      <a href="/auth/login" class="btn btn-sm btn-outline-secondary login-to-fav">Add To Favorites</a>
+                    <% } %>
+                  </div>
+                  <% if (currentUser) { %>
+                    <button type="submit" form="search_fav_<%= i %>" class="heart-btn fav-heart">&#9825; <%= c.favcount || 0 %></button>
+                  <% } else { %>
+                    <a href="/auth/login" class="heart-btn login-to-fav">&#9825; <%= c.favcount || 0 %></a>
+                  <% } %>
+                </div>
               </div>
             </div>
           </div>

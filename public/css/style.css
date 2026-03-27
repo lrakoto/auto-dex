@@ -5,7 +5,7 @@
   --surface-2:    #101828;
   --border:       #182438;
   --border-hover: #253a58;
-  --glass-bg:     rgba(8, 13, 26, 0.72);
+  --glass-bg:     rgba(8, 13, 26, 0.52);
   --glass-border: rgba(255, 255, 255, 0.07);
   --text:         #fafafa;
   --text-muted:   #71717a;
@@ -25,6 +25,11 @@
 
 body {
   background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% 0%,   rgba(80, 100, 220, 0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 45% at 85% 100%,  rgba(140, 60, 200, 0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 35% at 75% 20%,   rgba(237, 83, 83, 0.07) 0%, transparent 60%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 15px;
@@ -57,6 +62,8 @@ p { color: var(--text-muted); }
 .overlay {
   background: transparent;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ─── NAV ───────────────────────────────────────────────────────────────────── */
@@ -66,8 +73,8 @@ p { color: var(--text-muted); }
   z-index: 200;
   /* Thicker, closer glass — higher blur + brightness lift */
   background: var(--grain) repeat, rgba(6, 10, 22, 0.72);
-  backdrop-filter: blur(32px) saturate(210%) brightness(112%);
-  -webkit-backdrop-filter: blur(32px) saturate(210%) brightness(112%);
+  backdrop-filter: blur(14px) saturate(190%) brightness(108%);
+  -webkit-backdrop-filter: blur(14px) saturate(190%) brightness(108%);
   border-bottom: none;
   box-shadow:
     /* Top edge — ambient light catch */
@@ -131,13 +138,14 @@ p { color: var(--text-muted); }
 .jumbotron {
   /* Thinner, further glass panel — less blur than nav, more transparent */
   background: var(--grain) repeat, rgba(5, 8, 20, 0.56);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
   border-bottom: none;
   border-radius: 0;
   margin-bottom: 0;
   padding: 4rem 0 3.5rem;
-  text-align: left;
+  z-index: 10 !important; /* must clear subsequent main sections so suggest-dropdown is clickable */
+  overflow: visible !important;
   position: relative;
   /* Catches the nav's glow on its top surface + inner luminosity */
   box-shadow:
@@ -260,8 +268,8 @@ p { color: var(--text-muted); }
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   color: var(--text);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(6px) saturate(148%);
+  -webkit-backdrop-filter: blur(6px) saturate(148%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     0 4px 20px rgba(0, 0, 0, 0.35);
@@ -273,25 +281,20 @@ p { color: var(--text-muted); }
   z-index: 1;
 }
 
-/* Cursor-follow glow — large soft white, tracks --cx/--cy set in JS */
+/* Cursor-follow glow */
 .card::before {
   content: '';
   position: absolute;
   inset: 0;
   opacity: 0;
   pointer-events: none;
-  background: radial-gradient(
-    280px circle at var(--cx, 50%) var(--cy, 50%),
-    rgba(255, 255, 255, 0.07),
-    transparent 70%
-  );
+  background: radial-gradient(280px circle at var(--cx, 50%) var(--cy, 50%), rgba(255,255,255,0.06), transparent 70%);
   transition: opacity 0.35s ease;
   z-index: 0;
   border-radius: inherit;
 }
 
-/* Hover overlays — red left border strip + overhead specular, both at z-index:2
-   so they render above the image (card children are z-index:1) */
+/* Red left border accent on hover */
 .card::after {
   content: '';
   position: absolute;
@@ -299,11 +302,7 @@ p { color: var(--text-muted); }
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
-  background:
-    linear-gradient(to right, var(--red) 3px, transparent 3px),
-    radial-gradient(ellipse 70% 55% at var(--cx-pct, 50%) -10%,
-      rgba(255, 255, 255, 0.11),
-      transparent 70%);
+  background: linear-gradient(to right, var(--red) 3px, transparent 3px);
   z-index: 2;
   border-radius: var(--radius);
 }
@@ -327,7 +326,46 @@ p { color: var(--text-muted); }
 /* Remove hover dim on card title links */
 .card-body .card-text a:hover {
   opacity: 1;
-  color: var(--text);
+  color: var(--text) !important;
+}
+
+/* Full-card cover link — stretches the title link to fill the whole card */
+.card-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Card actions row sits above the cover link */
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  margin-top: 0.65rem;
+}
+
+/* Heart / fav count button */
+.heart-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  transition: color var(--ease);
+}
+.heart-btn:hover { color: var(--red); opacity: 1; }
+
+/* Jumbotron subheadings centered — !important beats body { text-align: left } */
+.jumbotron p, .jumbotron .lead {
+  text-align: center !important;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ── Card column glow — lives on the wrapper so overflow:hidden doesn't clip it */
@@ -394,6 +432,8 @@ p { color: var(--text-muted); }
   transition: all var(--ease);
   border-width: 1px;
 }
+/* Prevent global a:hover opacity from bleeding onto button links */
+.btn:hover { opacity: 1; }
 
 .btn-primary {
   background: var(--text);
@@ -409,15 +449,16 @@ p { color: var(--text-muted); }
 .btn-outline-secondary {
   background: transparent;
   color: var(--text-muted);
-  border-color: var(--border);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 .btn-outline-secondary:hover {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border-hover);
 }
-/* Add to Favorites button inside cards gets accent on hover */
-.card-body .btn-outline-secondary:hover {
+/* Favorite / login buttons get accent on hover */
+.card-body .btn-outline-secondary:hover,
+.detail-actions .btn:hover {
   background: var(--red);
   border-color: var(--red);
   color: #fff;
@@ -522,13 +563,32 @@ label {
 /* ─── MODALS ────────────────────────────────────────────────────────────────── */
 .modal-content {
   background: var(--grain) repeat, var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(9px) saturate(148%);
+  -webkit-backdrop-filter: blur(9px) saturate(148%);
   border: 1px solid var(--glass-border);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 24px 60px rgba(0,0,0,0.6);
   border-radius: var(--radius);
   color: var(--text);
+  position: relative;
+  overflow: hidden;
 }
+.modal-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    320px circle at var(--cx, 50%) var(--cy, 50%),
+    rgba(255, 255, 255, 0.06),
+    transparent 70%
+  );
+  transition: opacity 0.35s ease;
+  z-index: 0;
+  border-radius: inherit;
+}
+.modal-content:hover::before { opacity: 1; }
+.modal-header, .modal-body, .modal-footer { position: relative; z-index: 1; }
 
 .modal-header {
   border-bottom: 1px solid var(--border);
@@ -551,6 +611,44 @@ label {
   font-size: 1.5rem;
 }
 .close:hover { color: var(--text); }
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+}
+
+/* Image source tabs inside modal */
+.img-source-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.img-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.45rem 0;
+  cursor: pointer;
+  transition: border-color var(--ease), color var(--ease), background var(--ease);
+}
+.img-tab-btn.active {
+  border-color: var(--red);
+  color: var(--text);
+  background: var(--red-dim);
+}
+.img-tab-pane { margin-top: 0.25rem; }
+.form-control-file {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  width: 100%;
+  padding: 0.5rem 0;
+}
 
 /* ─── ALERTS (flash messages) ───────────────────────────────────────────────── */
 .alert {
@@ -603,9 +701,11 @@ small, .small { font-size: 0.78rem; }
 
 /* ─── FOOTER ────────────────────────────────────────────────────────────────── */
 .mastfoot {
-  border-top: 1px solid var(--border);
-  padding: 2rem 0;
-  background: var(--surface);
+  border-top: 1px solid var(--glass-border);
+  padding: 1.5rem 0;
+  background: rgba(6, 10, 22, 0.60);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
 }
 
 .mastfoot .inner {
@@ -615,12 +715,23 @@ small, .small { font-size: 0.78rem; }
 }
 
 .mastfoot p, .mastfoot a {
-  color: var(--text-subtle);
+  color: var(--text-muted);
   font-size: 0.78rem;
   margin: 0;
 }
 
-.mastfoot a:hover { color: var(--text-muted); opacity: 1; }
+.mastfoot a {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(237, 83, 83, 0.5);
+  padding-bottom: 1px;
+  transition: color var(--ease), border-color var(--ease);
+}
+
+.mastfoot a:hover {
+  color: var(--red);
+  border-color: var(--red);
+  opacity: 1;
+}
 
 /* ─── RESPONSIVE ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -679,15 +790,20 @@ body::after {
   );
 }
 
-/* Content must sit above canvas and glow */
+/* Content must sit above canvas and glow — NO z-index so Bootstrap modal backdrop
+   (injected into <body> at z-index:1040) resolves in root stacking context above the modal */
 .overlay {
   position: relative;
-  z-index: 1;
 }
+
+main[role="main"] { flex: 1; }
 
 /* Nav and main content above canvas */
 .masthead { z-index: 200; }
+.mastfoot { position: relative; z-index: 10; }
 main > *:not(#bg-canvas) { position: relative; z-index: 2; }
+/* Albums/content sections must NOT create a stacking context so Bootstrap modals (z-index:1050) escape above the jumbotron (z-index:10) */
+.album { z-index: auto !important; }
 
 
 /* ─── ACCENT COLOR ──────────────────────────────────────────────────────────── */
@@ -698,11 +814,29 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--red);
   text-decoration: none;
   display: inline-block;
+  background: linear-gradient(
+    90deg,
+    var(--red) 0%, var(--red) 28%,
+    rgba(255, 160, 160, 0.8) 39%,
+    rgba(255, 255, 255, 1.0) 48%,
+    rgba(255, 255, 255, 1.0) 52%,
+    rgba(255, 160, 160, 0.8) 61%,
+    var(--red) 72%, var(--red) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% center;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--red);
 }
-.masthead-brand:hover { opacity: 0.8; color: var(--red); text-decoration: none; }
+.masthead-brand:hover { text-decoration: none; animation: brand-shimmer 0.5s ease forwards; }
+@keyframes brand-shimmer {
+  from { background-position: 100% center; }
+  to   { background-position:   0% center; }
+}
 
 /* Nav link active indicator */
 .nav-masthead .nav-link.active,
@@ -802,6 +936,79 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
   to   { opacity: 1; transform: none; }
 }
 
+/* ── Nav search ── */
+.nav-search-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  transition: color var(--ease), background var(--ease);
+  margin-left: 0.25rem;
+}
+.nav-search-btn:hover { color: var(--text); background: var(--surface-2); }
+.nav-search-btn svg { display: block; }
+
+.nav-search-overlay {
+  position: fixed;
+  top: 56px;
+  left: 0; right: 0;
+  z-index: 250;
+  background: rgba(6, 10, 22, 0.82);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.1rem 2rem 1.3rem;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.nav-search-overlay.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+.nav-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 640px;
+  margin: 0 auto;
+  position: relative;
+}
+.nav-search-input-wrap {
+  flex: 1;
+  position: relative;
+}
+.nav-search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.05rem;
+  font-family: inherit;
+  padding: 0.3rem 0;
+  outline: none;
+}
+.nav-search-input::placeholder { color: var(--text-subtle); }
+.nav-search-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  flex-shrink: 0;
+  transition: color var(--ease);
+}
+.nav-search-close:hover { color: var(--text); }
+
 /* ── Nav scrolled state ── */
 .masthead.scrolled {
   background: rgba(5, 8, 18, 0.82);
@@ -850,9 +1057,9 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
 .nav-masthead .nav-link:hover::after { transform: scaleX(1); }
 
 /* ── Detail page section fade ── */
-.detail-section {
-  animation: fadeUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
-}
+/* .detail-section fade handled by scroll-reveal (fade-up/is-visible transitions)
+   — no CSS animation here, which would create a persistent compositing layer
+     that traps backdrop-filter on children (spec boxes, media card, cards) */
 
 
 /* ─── PAGINATION ────────────────────────────────────────────────────────────── */
@@ -880,8 +1087,8 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
   letter-spacing: 0.04em;
   text-decoration: none;
   transition: background var(--ease), border-color var(--ease), color var(--ease), box-shadow var(--ease);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .pg-btn:hover {
@@ -936,6 +1143,55 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
 }
 
 /* ─── TOAST ─────────────────────────────────────────────────────────────────── */
+/* ─── SEARCH AUTOCOMPLETE DROPDOWN ─────────────────────────────────────────── */
+.search-input-wrap {
+  position: relative;
+}
+.suggest-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: rgba(8, 13, 26, 0.97);
+  backdrop-filter: blur(9px) saturate(148%);
+  -webkit-backdrop-filter: blur(9px) saturate(148%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  z-index: 500;
+  overflow: hidden;
+}
+.suggest-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  padding: 0.55rem 0.9rem 0.2rem;
+}
+.suggest-item {
+  display: block;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background var(--ease);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.suggest-item:hover {
+  background: rgba(255,255,255,0.07);
+  color: var(--text);
+  opacity: 1;
+}
+.suggest-make {
+  font-size: 0.72rem;
+  color: var(--text-subtle);
+  margin-right: 0.4rem;
+}
+
 .toast-notification {
   position: fixed;
   bottom: 2rem;
@@ -980,32 +1236,148 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
 }
 .makes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
 }
+@media (max-width: 768px) {
+  .makes-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .makes-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Underglow wrapper — same pattern as .card-col */
+.make-tile-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+.make-tile-wrap::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 12px;
+  right: 12px;
+  height: 40px;
+  background: rgba(80, 120, 255, 1);
+  filter: blur(22px);
+  opacity: 0.08;
+  pointer-events: none;
+  transition: opacity 0.22s ease, filter 0.22s ease;
+  border-radius: var(--radius);
+}
+.make-tile-wrap:hover::before {
+  opacity: 0.38;
+  filter: blur(28px);
+}
+
 .make-tile {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 1rem 1.1rem;
-  background: var(--grain) repeat, var(--glass-bg);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding: 1.4rem 1rem 1.2rem;
+  width: 100%;
+  min-height: 140px;
+  background: var(--grain) repeat, rgba(8, 13, 26, 0.52);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   text-decoration: none;
-  transition: border-color var(--ease), background var(--ease);
+  backdrop-filter: blur(6px) saturate(148%);
+  -webkit-backdrop-filter: blur(6px) saturate(148%);
+  transition: border-color var(--ease), background var(--ease), box-shadow var(--ease), transform 0.12s ease;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  will-change: transform;
+  transform: perspective(900px) rotateX(0deg) rotateY(0deg);
+}
+.make-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    220px circle at var(--cx, 50%) var(--cy, 50%),
+    rgba(255, 255, 255, 0.07),
+    transparent 70%
+  );
+  transition: opacity 0.35s ease;
+  z-index: 0;
+  border-radius: inherit;
+}
+.make-tile:hover::before { opacity: 1; }
+
+.make-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background:
+    linear-gradient(to right, var(--red) 3px, transparent 3px),
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,255,255,0.08), transparent 70%);
+  border-radius: var(--radius);
+  z-index: 0;
 }
 .make-tile:hover {
   border-color: var(--border-hover);
-  background: var(--grain) repeat, rgba(12, 20, 40, 0.82);
+  background: var(--grain) repeat, rgba(12, 20, 40, 0.62);
+  opacity: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 0 0 1px var(--border-hover),
+    0 8px 24px rgba(0,0,0,0.45);
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+}
+.make-tile:hover::after {
   opacity: 1;
 }
+.make-tile > * { position: relative; z-index: 1; }
+
+.make-logo-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 0.35rem;
+  flex-shrink: 0;
+}
+.make-logo-initials {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+.make-logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(255,255,255,0.92);
+}
 .make-name {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
 }
 .make-count {
-  font-size: 0.7rem;
+  font-size: 0.67rem;
   color: var(--text-subtle);
   letter-spacing: 0.04em;
 }
@@ -1020,12 +1392,33 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  background: var(--grain) repeat, rgba(10,16,30,0.52);
-  border: 1px solid var(--border);
+  background: var(--grain) repeat, rgba(10, 16, 30, 0.45);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   padding: 0.65rem 1rem;
   min-width: 90px;
+  backdrop-filter: blur(6px) saturate(148%);
+  -webkit-backdrop-filter: blur(6px) saturate(148%);
+  position: relative;
+  overflow: hidden;
 }
+.spec-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    160px circle at var(--cx, 50%) var(--cy, 50%),
+    rgba(255, 255, 255, 0.09),
+    transparent 70%
+  );
+  transition: opacity 0.3s ease;
+  z-index: 0;
+  border-radius: inherit;
+}
+.spec-item:hover::before { opacity: 1; }
+.spec-label, .spec-value { position: relative; z-index: 1; }
 .spec-label {
   font-size: 0.64rem;
   font-weight: 700;

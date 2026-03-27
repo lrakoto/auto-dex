@@ -26,7 +26,7 @@
           <a href="/" class="masthead-brand">AutoDex</a>
           <nav class="nav nav-masthead">
             <a class="nav-link" href="/">Home</a>
-            <a class="nav-link" href="/makes">Makes</a>
+            <a class="nav-link" href="/makes">Browse Manufacturers</a>
             <% if (!currentUser) { %>
               <a class="nav-link" href="/auth/signup">Sign Up</a>
               <a class="nav-link" href="/auth/login">Log In</a>
@@ -39,6 +39,12 @@
               <a class="nav-link" href="/auth/logout">Log Out</a>
             <% } %>
           </nav>
+          <button id="nav-search-btn" class="nav-search-btn" aria-label="Search">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6.5" cy="6.5" r="4.5"/>
+              <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -48,10 +54,20 @@
 
     <footer class="mastfoot">
       <div class="inner">
-        <p>&copy; <%= new Date().getFullYear() %> AutoDex &mdash; Created by <a href="https://github.com/lrakoto" target="_blank">Lova Rakotomavonandrianina</a> &nbsp;&middot;&nbsp; <a href="https://github.com/lrakoto/auto-dex" target="_blank">GitHub</a></p>
+        <p>&copy; <%= new Date().getFullYear() %> AutoDex &mdash; Created by <a href="http://threeohfivestudios.com/" target="_blank">305 Studios</a> &nbsp;&middot;&nbsp; <a href="https://github.com/lrakoto/auto-dex" target="_blank">GitHub</a></p>
       </div>
     </footer>
 
+    <!-- Nav search overlay: lives outside <main> to escape z-index stacking contexts -->
+    <div id="nav-search-overlay" class="nav-search-overlay" aria-hidden="true">
+      <div class="nav-search-inner">
+        <div class="nav-search-input-wrap search-input-wrap">
+          <input type="text" name="q" id="nav-search-input" class="nav-search-input" placeholder="Search makes and models…" autocomplete="off" aria-label="Search">
+          <div class="suggest-dropdown"></div>
+        </div>
+        <button class="nav-search-close" aria-label="Close search">&times;</button>
+      </div>
+    </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>

@@ -8,15 +8,26 @@ router.get("/signup", (req, res) => {
 });
 
 router.get("/login", (req, res) => {
+  if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
   res.render("auth/login");
 });
 
-router.post('/login', passport.authenticate('local', {
-  successRedirect: '/',
-  failureRedirect: '/auth/login',
-  successFlash: 'Welcome back ...',
-  failureFlash: 'Either email or password is incorrect' 
-}));
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) return next(err);
+    if (!user) {
+      req.flash('error', 'Either email or password is incorrect');
+      return res.redirect('/auth/login');
+    }
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      req.flash('success', 'Welcome back...');
+      const returnTo = req.session.returnTo || '/';
+      delete req.session.returnTo;
+      res.redirect(returnTo);
+    });
+  })(req, res, next);
+});
 
 router.get('/logout', (req, res) => {
   req.logOut(() => {

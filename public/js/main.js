@@ -68,7 +68,7 @@
   var BASE_R    = 1;      // base dot radius
   var MAX_R     = 3;      // radius at cursor
   var REACH     = 200;    // cursor influence radius in px
-  var BASE_A    = 0.08;   // base dot alpha (subtle grid)
+  var BASE_A    = 0.14;   // base dot alpha
   var MAX_A     = 1.0;    // dot alpha at cursor (full brightness)
   var LERP      = 0.072;  // mouse smoothing (lower = smoother)
 
@@ -85,7 +85,7 @@
   /* ── Angled sweep wave ─────────────────────────────────────── */
   var WAVE_ANGLE_TAN  = Math.tan(14 * Math.PI / 180); // ~0.249
   var WAVE_HALF_WIDTH = 220;  // px — Gaussian sigma for the wave band
-  var WAVE_STRENGTH   = 0.20; // peak boost added to prox
+  var WAVE_STRENGTH   = 0.38; // peak boost added to prox
   var WAVE_SPEED      = 0.00038; // progress units per ms
   var WAVE_INTERVAL   = 5500;  // ms between spawns
 
@@ -301,31 +301,107 @@
     revealGrid('.related-row');
     revealGrid('.garage-grid');
     revealElements('.media-card');
-    revealElements('.detail-section');
+    // NOTE: .detail-section intentionally NOT added to revealElements.
+    // Adding fade-up (opacity:0 + transform) to it creates a compositing layer
+    // that traps backdrop-filter on child spec-items and the media-card,
+    // preventing them from frosting against the ambient background.
     revealElements('.auth-wrap');
+
+    // ── Auto-dismiss flash alerts ────────────────────────────────
+    document.querySelectorAll('.alert').forEach(function (alert) {
+      setTimeout(function () {
+        alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        alert.style.opacity = '0';
+        alert.style.transform = 'translateY(-8px)';
+        setTimeout(function () { alert.remove(); }, 500);
+      }, 3000);
+    });
 
     // ── Glass card interactions ──────────────────────────────────
     var MAX_TILT = 2.0; // degrees — very subtle
-    document.querySelectorAll('.card').forEach(function (card) {
-      card.addEventListener('mousemove', function (e) {
-        var rect = card.getBoundingClientRect();
-        var x = e.clientX - rect.left;
-        var y = e.clientY - rect.top;
-        card.style.setProperty('--cx',     x + 'px');
-        card.style.setProperty('--cy',     y + 'px');
-        card.style.setProperty('--cx-pct', (x / rect.width * 100).toFixed(1) + '%');
-        // Tilt: cursor offset from card centre, normalised to -1..1
-        var tiltY = ((x - rect.width  / 2) / (rect.width  / 2) * MAX_TILT).toFixed(2);
-        var tiltX = ((y - rect.height / 2) / (rect.height / 2) * MAX_TILT).toFixed(2);
-        card.style.setProperty('--tilt-x', (-tiltX) + 'deg');
-        card.style.setProperty('--tilt-y',   tiltY  + 'deg');
-      }, { passive: true });
 
-      card.addEventListener('mouseleave', function () {
-        card.style.setProperty('--tilt-x', '0deg');
-        card.style.setProperty('--tilt-y', '0deg');
-      }, { passive: true });
+    function applyGlowTilt(el, e, withTilt) {
+      var rect = el.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      el.style.setProperty('--cx',     x + 'px');
+      el.style.setProperty('--cy',     y + 'px');
+      el.style.setProperty('--cx-pct', (x / rect.width * 100).toFixed(1) + '%');
+      if (withTilt) {
+        var normX = (x - rect.width  / 2) / (rect.width  / 2); // -1..1
+        var normY = (y - rect.height / 2) / (rect.height / 2); // -1..1
+        var tiltY = (normX * MAX_TILT).toFixed(2);
+        var tiltX = (normY * MAX_TILT).toFixed(2);
+        el.style.setProperty('--tilt-x', (-tiltX) + 'deg');
+        el.style.setProperty('--tilt-y',   tiltY  + 'deg');
+      }
+    }
+
+    function resetTilt(el) {
+      el.style.setProperty('--tilt-x', '0deg');
+      el.style.setProperty('--tilt-y', '0deg');
+    }
+
+    document.querySelectorAll('.card').forEach(function (card) {
+      card.addEventListener('mousemove', function (e) { applyGlowTilt(card, e, true); }, { passive: true });
+      card.addEventListener('mouseleave', function () { resetTilt(card); }, { passive: true });
     });
+
+    // Make tiles — tilt + glow
+    document.querySelectorAll('.make-tile').forEach(function (tile) {
+      tile.addEventListener('mousemove', function (e) { applyGlowTilt(tile, e, true); }, { passive: true });
+      tile.addEventListener('mouseleave', function () { resetTilt(tile); }, { passive: true });
+    });
+
+    // Spec items — glow only (too small to tilt)
+    document.querySelectorAll('.spec-item').forEach(function (item) {
+      item.addEventListener('mousemove', function (e) { applyGlowTilt(item, e, false); }, { passive: true });
+    });
+
+    // Modal content — glow only (cursor follow, no tilt)
+    document.querySelectorAll('.modal-content').forEach(function (modal) {
+      modal.addEventListener('mousemove', function (e) { applyGlowTilt(modal, e, false); }, { passive: true });
+    });
+
+    // ── Nav search ──────────────────────────────────────────────
+    var navSearchBtn     = document.getElementById('nav-search-btn');
+    var navSearchOverlay = document.getElementById('nav-search-overlay');
+    var navSearchInput   = document.getElementById('nav-search-input');
+    var navSearchClose   = document.querySelector('.nav-search-close');
+
+    if (navSearchBtn && navSearchOverlay && navSearchInput) {
+      function openNavSearch() {
+        navSearchOverlay.classList.add('open');
+        navSearchOverlay.setAttribute('aria-hidden', 'false');
+        navSearchInput.focus();
+      }
+      function closeNavSearch() {
+        navSearchOverlay.classList.remove('open');
+        navSearchOverlay.setAttribute('aria-hidden', 'true');
+        navSearchInput.value = '';
+        var dd = navSearchOverlay.querySelector('.suggest-dropdown');
+        if (dd) dd.style.display = 'none';
+      }
+
+      navSearchBtn.addEventListener('click', openNavSearch);
+      if (navSearchClose) navSearchClose.addEventListener('click', closeNavSearch);
+
+      navSearchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          var q = navSearchInput.value.trim();
+          if (q) window.location.href = '/search?q=' + encodeURIComponent(q);
+        }
+        if (e.key === 'Escape') closeNavSearch();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeNavSearch();
+      });
+
+      navSearchOverlay.addEventListener('click', function (e) {
+        if (e.target === navSearchOverlay) closeNavSearch();
+      });
+    }
 
     // ── Recently Viewed ──────────────────────────────────────────
     var rvWrap = document.getElementById('recently-viewed');
@@ -389,6 +465,61 @@
       });
     }
 
+    // ── Search autocomplete ───────────────────────────────────────────
+    document.querySelectorAll('.search-input-wrap').forEach(function(wrap) {
+      var input    = wrap.querySelector('input[name="q"]');
+      var dropdown = wrap.querySelector('.suggest-dropdown');
+      if (!input || !dropdown) return;
+
+      var debounce, reqId = 0;
+
+      function hide() { dropdown.style.display = 'none'; }
+      function show() { if (dropdown.innerHTML.trim()) dropdown.style.display = 'block'; }
+
+      input.addEventListener('input', function() {
+        clearTimeout(debounce);
+        var q = this.value.trim();
+        if (q.length < 2) { hide(); return; }
+        var id = ++reqId;
+        debounce = setTimeout(function() {
+          fetch('/suggest?q=' + encodeURIComponent(q))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (id !== reqId) return; // discard stale response
+              var html = '';
+              if (data.makes.length) {
+                html += '<div class="suggest-label">Makes</div>';
+                data.makes.forEach(function(m) {
+                  html += '<a class="suggest-item" href="/cars?selectmake=' + encodeURIComponent(m) + '">' + m + '</a>';
+                });
+              }
+              if (data.models.length) {
+                html += '<div class="suggest-label">Models</div>';
+                data.models.forEach(function(c) {
+                  html += '<a class="suggest-item" href="/cars/car?make=' + encodeURIComponent(c.make) + '&model=' + encodeURIComponent(c.model) + '"><span class="suggest-make">' + c.make + '</span>' + c.model + '</a>';
+                });
+              }
+              if (!html) { hide(); return; }
+              dropdown.innerHTML = html;
+              show();
+            })
+            .catch(hide);
+        }, 200);
+      });
+
+      // Prevent blur when clicking inside dropdown (fixes "only first item clickable")
+      dropdown.addEventListener('mousedown', function(e) { e.preventDefault(); });
+
+      // Close when clicking outside the wrap
+      document.addEventListener('click', function(e) {
+        if (!wrap.contains(e.target)) hide();
+      });
+
+      input.addEventListener('focus', function() {
+        if (this.value.trim().length >= 2) show();
+      });
+    });
+
   });
 
 
@@ -401,6 +532,124 @@
     window.addEventListener('scroll', function () {
       masthead.classList.toggle('scrolled', window.scrollY > 20);
     }, { passive: true });
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     FAVORITES MODAL — image source tabs + update button
+  ═══════════════════════════════════════════════════════════════ */
+
+  // Tab switching
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.img-tab-btn');
+    if (!btn) return;
+    var targetId = btn.dataset.tab;
+    var modal = btn.closest('.modal-content');
+    modal.querySelectorAll('.img-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    modal.querySelectorAll('.img-tab-pane').forEach(function(p) { p.style.display = 'none'; });
+    btn.classList.add('active');
+    document.getElementById(targetId).style.display = '';
+  });
+
+  // Update Image button — submits the active form
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.fav-update-btn');
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var modal = btn.closest('.modal-content');
+    var activeTab = modal.querySelector('.img-tab-btn.active');
+    var tabId = activeTab ? activeTab.dataset.tab : ('url-' + id);
+    var isUpload = tabId.startsWith('upload-');
+    var form = document.getElementById((isUpload ? 'upload-form-' : 'url-form-') + id);
+    if (form) form.submit();
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     LOGIN RETURN URL — auto-append returnTo to all login links
+  ═══════════════════════════════════════════════════════════════ */
+
+  var currentPath = window.location.pathname + window.location.search;
+  document.querySelectorAll('a[href="/auth/login"], a.login-to-fav').forEach(function(link) {
+    link.href = '/auth/login?returnTo=' + encodeURIComponent(currentPath);
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     AJAX FAVORITES — submit fav form without page reload
+  ═══════════════════════════════════════════════════════════════ */
+
+  function initFavForms(container) {
+    (container || document).querySelectorAll('.fav-form').forEach(function(form) {
+      if (form.dataset.favBound) return;
+      form.dataset.favBound = '1';
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var card = this.closest('.card');
+        fetch(this.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: new URLSearchParams(new FormData(this))
+        })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+          var textBtn = card.querySelector('.fav-text-btn');
+          var heartBtn = card.querySelector('.fav-heart');
+          if (textBtn) {
+            var a = document.createElement('a');
+            a.href = '/cars/favorites';
+            a.className = textBtn.className.replace('fav-text-btn', '');
+            a.innerHTML = '&#9829; View Favorites';
+            textBtn.parentNode.replaceChild(a, textBtn);
+          }
+          if (heartBtn) {
+            var count = parseInt(heartBtn.textContent.replace(/[^\d]/g, '')) || 0;
+            heartBtn.innerHTML = '&#9829; ' + (count + 1);
+            heartBtn.disabled = true;
+          }
+        })
+        .catch(function() { form.submit(); });
+      });
+    });
+  }
+
+  initFavForms();
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     AJAX PAGINATION — updates just the grid, no full page reload
+  ═══════════════════════════════════════════════════════════════ */
+
+  var carsGrid = document.getElementById('cars-grid');
+  if (carsGrid) {
+    carsGrid.addEventListener('click', function (e) {
+      var link = e.target.closest('a.pg-btn');
+      if (!link || link.classList.contains('disabled')) return;
+      e.preventDefault();
+
+      var url = link.getAttribute('href');
+      var partialUrl = url + (url.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
+
+      carsGrid.style.opacity = '0.4';
+      carsGrid.style.transition = 'opacity 0.15s ease';
+
+      fetch(partialUrl)
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          carsGrid.innerHTML = html;
+          carsGrid.style.opacity = '1';
+          window.history.pushState({}, '', url);
+          initFavForms(carsGrid);
+          carsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .catch(function () {
+          carsGrid.style.opacity = '1';
+          window.location.href = url;
+        });
+    });
   }
 
 

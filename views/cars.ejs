@@ -1,53 +1,20 @@
 <section class="jumbotron text-center">
     <div class="container">
       <h1 class="jumbotron-heading">Search Results for <%= search %></h1>
+      <form action="/search" method="GET" class="d-flex justify-content-center align-items-end mt-4" style="gap:0.75rem;flex-wrap:wrap;max-width:480px;margin:1.5rem auto 0;">
+        <div class="search-input-wrap" style="flex:1;min-width:200px;text-align:left;">
+          <label for="q" style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:0.35rem;display:block;">Make or Model</label>
+          <input type="text" class="form-control form-control-lg" name="q" id="q" value="<%= search %>" placeholder="e.g. Toyota, Camry…" autocomplete="off">
+          <div class="suggest-dropdown"></div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.5rem;white-space:nowrap;">Search &rarr;</button>
+      </form>
     </div>
   </section>
 
 
 <div class="album py-5 bg-light">
-    <div class="container">  
-      <div class="row">
-        <% if (carImg.length === 0) { %>
-          <div class="empty-state">
-            <div class="empty-icon">⊘</div>
-            <h3>No models found</h3>
-            <p>We don't have any models on record for <strong><%= search %></strong> yet.</p>
-            <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
-          </div>
-        <% } else { %>
-          <% carImg.forEach((c, i) => { %>
-            <div class="col-md-4 card-col">
-              <div class="card mb-4 box-shadow">
-                <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>">
-                  <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
-                </a>
-                <div class="card-body">
-                  <p class="card-text">
-                    <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark"><%= c.dataValues.model %></a>
-                  </p>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div class="btn-group">
-                      <% if (currentUser) { %>
-                        <form action="cars/fav" method="POST" id="favecar_form_<%= i %>">
-                          <input type="hidden" name="favecar_model" value="<%= c.dataValues.model %>"/>
-                          <input type="hidden" name="favecar_make" value="<%= c.dataValues.make %>"/>
-                          <input type="hidden" name="favecar_image" value="<%= c.dataValues.image %>"/>
-                          <input type="hidden" name="userId" value="<%= currentUser.id %>"/>
-                          <button type="submit" class="btn btn-sm btn-outline-secondary">Add To Favorites</button>
-                        </form>
-                      <% } else { %>
-                        <a href="/auth/login" class="btn btn-sm btn-outline-secondary">Add To Favorites</a>
-                      <% } %>
-                    </div>
-                    <small class="text-muted">&#9825; <%= c.dataValues.favcount %></small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% }) %>
-        <% } %>
-      </div>
-      <%- include('partials/pagination') %>
-    </div>
+  <div class="container" id="cars-grid">
+    <%- include('partials/car-grid') %>
   </div>
+</div>

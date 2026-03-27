@@ -1,0 +1,44 @@
+<div class="row" id="cars-row">
+  <% if (carImg.length === 0) { %>
+    <div class="empty-state">
+      <div class="empty-icon">⊘</div>
+      <h3>No models found</h3>
+      <p>We don't have any models on record for <strong><%= search %></strong> yet.</p>
+      <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
+    </div>
+  <% } else { %>
+    <% carImg.forEach((c, i) => { %>
+      <div class="col-md-4 card-col">
+        <div class="card mb-4 box-shadow">
+          <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
+          <div class="card-body">
+            <p class="card-text mb-0">
+              <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark card-cover"><%= c.dataValues.model %></a>
+            </p>
+            <div class="card-actions">
+              <div class="btn-group">
+                <% if (currentUser) { %>
+                  <form action="cars/fav" method="POST" id="favecar_form_<%= i %>" class="fav-form">
+                    <input type="hidden" name="favecar_model" value="<%= c.dataValues.model %>"/>
+                    <input type="hidden" name="favecar_make" value="<%= c.dataValues.make %>"/>
+                    <input type="hidden" name="favecar_image" value="<%= c.dataValues.image %>"/>
+                    <input type="hidden" name="userId" value="<%= currentUser.id %>"/>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary fav-text-btn">Add To Favorites</button>
+                  </form>
+                <% } else { %>
+                  <a href="/auth/login" class="btn btn-sm btn-outline-secondary login-to-fav">Add To Favorites</a>
+                <% } %>
+              </div>
+              <% if (currentUser) { %>
+                <button type="submit" form="favecar_form_<%= i %>" class="heart-btn fav-heart">&#9825; <%= c.dataValues.favcount %></button>
+              <% } else { %>
+                <a href="/auth/login" class="heart-btn login-to-fav">&#9825; <%= c.dataValues.favcount %></a>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  <% } %>
+</div>
+<%- include('pagination') %>
