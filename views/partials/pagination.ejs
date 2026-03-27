@@ -1,0 +1,44 @@
+<% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+<div class="pagination-wrap">
+
+  <%/* Prev arrow */%>
+  <% if (page > 1) { %>
+    <a href="<%= baseUrl %><%= page - 1 %>" class="pg-btn">&larr;</a>
+  <% } else { %>
+    <span class="pg-btn disabled">&larr;</span>
+  <% } %>
+
+  <%/* Page number buttons with ellipsis for large ranges */%>
+  <%
+    var delta = 2;
+    var range = [];
+    for (var i = Math.max(1, page - delta); i <= Math.min(totalPages, page + delta); i++) {
+      range.push(i);
+    }
+    var showLeftDots  = range[0] > 2;
+    var showRightDots = range[range.length - 1] < totalPages - 1;
+  %>
+
+  <% if (range[0] > 1) { %>
+    <a href="<%= baseUrl %>1" class="pg-btn<%= page === 1 ? ' active' : '' %>">1</a>
+  <% } %>
+  <% if (showLeftDots) { %><span class="pg-ellipsis">&hellip;</span><% } %>
+
+  <% range.forEach(function(p) { %>
+    <a href="<%= baseUrl %><%= p %>" class="pg-btn<%= p === page ? ' active' : '' %>"><%= p %></a>
+  <% }); %>
+
+  <% if (showRightDots) { %><span class="pg-ellipsis">&hellip;</span><% } %>
+  <% if (range[range.length - 1] < totalPages) { %>
+    <a href="<%= baseUrl %><%= totalPages %>" class="pg-btn<%= page === totalPages ? ' active' : '' %>"><%= totalPages %></a>
+  <% } %>
+
+  <%/* Next arrow */%>
+  <% if (page < totalPages) { %>
+    <a href="<%= baseUrl %><%= page + 1 %>" class="pg-btn">&rarr;</a>
+  <% } else { %>
+    <span class="pg-btn disabled">&rarr;</span>
+  <% } %>
+
+</div>
+<% } %>

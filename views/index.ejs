@@ -1,23 +1,42 @@
-      <style>
-        body{
-          background: url(https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80);
-          background-size: cover;
-          background-position: center center;
-        }
-      </style>
-      <div class="custom-wrap">
-        <h1 class="cover-heading">AutoDex</h1>
-        <p class="lead">Find and add your favorite cars using the form below. This application uses NHTSA API to grab vehicle information and Unsplash API to pull vehicle images.</p>
+<style>
+  body {
+    background: url(https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80) center center / cover no-repeat fixed;
+  }
+  .home-overlay {
+    /* Left side at 0.78 so canvas dots are visible on both sides */
+    background: linear-gradient(to right, rgba(3,6,14,0.78) 40%, rgba(3,6,14,0.45) 100%);
+    min-height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+  }
+  .home-inner {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+</style>
 
-        <form action="/cars" method="GET">
-            <label class="font-weight-bold mt-2" for="selectmake">Select Make</label>
-            <select class="form-control form-control-lg" name="selectmake" id="selectmake">
-            <% data.forEach(element => { %>
-                <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null && element.Mfr_CommonName !== 'Buell' && element.Mfr_CommonName !== 'Volvo (Truck/Bus') { %>
-                <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
-                <% } %>
-            <% }); %>
-            </select>
-                <button class="brn btn-lg btn-primary mt-2" type="submit">Search AutoDex</button>
-        </form>
+<div class="home-overlay">
+  <div class="home-inner">
+  <div class="custom-wrap">
+    <p class="eyebrow hero-sub" style="margin-bottom:1.25rem;">Vehicle Explorer</p>
+    <h1 class="cover-heading">Find Your<br>Next Car.</h1>
+    <p class="lead mb-4 hero-sub" style="animation-delay:0.65s;">Browse thousands of makes and models. Search by manufacturer, discover specs, and build your personal garage.</p>
+
+    <form action="/cars" method="GET" class="d-flex align-items-end hero-form" style="gap:0.75rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">
+        <label for="selectmake">Make</label>
+        <select class="form-control form-control-lg" name="selectmake" id="selectmake">
+          <% data.forEach(element => { %>
+            <% if(element.Country === 'UNITED STATES (USA)' && element.Mfr_CommonName !== null && element.Mfr_CommonName !== 'Buell' && element.Mfr_CommonName !== "Volvo (Truck/Bus)") { %>
+              <option value="<%= element.Mfr_CommonName %>"><%= element.Mfr_CommonName %></option>
+            <% } %>
+          <% }); %>
+        </select>
       </div>
+      <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.75rem;white-space:nowrap;">Search &rarr;</button>
+    </form>
+  </div>
+  </div>
+</div>

@@ -11,37 +11,39 @@
 </div>
 
 <!-- Actions Bar -->
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center flex-wrap">
-    <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; Back to <%= make %></a>
-    <div class="d-flex align-items-center">
-      <span class="text-muted mr-3">&#9825; <%= favcount %> favorites</span>
+<div class="detail-container">
+  <div class="detail-actions d-flex justify-content-between align-items-center flex-wrap" style="gap:1rem;">
+    <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; <%= make %></a>
+    <div class="d-flex align-items-center" style="gap:1rem;">
+      <span class="text-muted" style="font-size:0.8rem;">&#9825; <%= favcount %></span>
       <% if (currentUser) { %>
         <form action="/cars/fav" method="POST" class="d-inline">
           <input type="hidden" name="favecar_model" value="<%= model %>"/>
           <input type="hidden" name="favecar_make" value="<%= make %>"/>
           <input type="hidden" name="favecar_image" value="<%= image %>"/>
           <input type="hidden" name="userId" value="<%= currentUser.id %>"/>
-          <button type="submit" class="btn btn-primary btn-sm">+ Add to Favorites</button>
+          <button type="submit" class="btn btn-primary btn-sm">+ Favorite</button>
         </form>
       <% } else { %>
-        <a href="/auth/login" class="btn btn-primary btn-sm">Login to Favorite</a>
+        <a href="/auth/login" class="btn btn-primary btn-sm">Log in to Favorite</a>
       <% } %>
     </div>
   </div>
 </div>
 
-<div class="container pb-5">
-  <div class="row text-left">
+<div class="detail-container py-5 detail-section">
+  <div class="row">
 
     <!-- About -->
-    <div class="col-lg-8">
-      <h2 class="mb-3"><%= make %> <%= model %></h2>
-
+    <div class="col-lg-8 mb-5 mb-lg-0">
+      <div class="accent-line"></div>
+      <h2 class="mb-4" style="font-size:1.75rem;"><%= make %> <span style="font-weight:300;"><%= model %></span></h2>
       <% if (wikiSummary) { %>
-        <p class="lead"><%= wikiSummary %></p>
+        <p class="lead" style="color:#a1a1aa;line-height:1.75;"><%= wikiSummary %></p>
         <% if (wikiUrl) { %>
-          <a href="<%= wikiUrl %>" target="_blank" rel="noopener" class="text-muted small">Read more on Wikipedia &rarr;</a>
+          <a href="<%= wikiUrl %>" target="_blank" rel="noopener" style="font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;color:#52525b;">
+            Wikipedia &rarr;
+          </a>
         <% } %>
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
@@ -49,20 +51,18 @@
     </div>
 
     <!-- Media Links -->
-    <div class="col-lg-4 mt-4 mt-lg-0">
-      <div class="card border-0 bg-light p-3">
-        <h5 class="mb-3">Watch &amp; Read</h5>
-        <p class="text-muted small mb-3">Find <strong><%= make %> <%= model %></strong> content from top automotive channels:</p>
-        <div class="list-group list-group-flush">
-          <% mediaLinks.forEach(link => { %>
-            <a href="<%= link.url %>" target="_blank" rel="noopener"
-               class="list-group-item list-group-item-action d-flex align-items-center px-0 py-2 border-0 bg-transparent">
-              <span class="mr-2" style="font-size:1.2rem;"><%= link.icon %></span>
-              <span><%= link.label %></span>
-              <span class="ml-auto text-muted small">YouTube &rarr;</span>
-            </a>
-          <% }) %>
-        </div>
+    <div class="col-lg-4">
+      <div class="media-card">
+        <h5>Watch &amp; Read</h5>
+        <% mediaLinks.forEach(link => { %>
+          <a href="<%= link.url %>" target="_blank" rel="noopener"
+             class="d-flex align-items-center py-2"
+             style="border-bottom:1px solid #27272a;color:#a1a1aa;font-size:0.85rem;gap:0.6rem;">
+            <span><%= link.icon %></span>
+            <span><%= link.label %></span>
+            <span class="ml-auto" style="font-size:0.72rem;color:#3f3f46;">↗</span>
+          </a>
+        <% }) %>
       </div>
     </div>
 
@@ -70,25 +70,24 @@
 
   <!-- Related Models -->
   <% if (relatedCars.length > 0) { %>
-    <hr class="my-5">
-    <h4 class="mb-3 text-left">More from <%= make %></h4>
-    <div class="row">
-      <% relatedCars.forEach(c => { %>
-        <div class="col-md-4 col-6 mb-4">
-          <div class="card box-shadow h-100">
-            <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
-              <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
-            </a>
-            <div class="card-body py-2 px-3">
-              <p class="card-text mb-0">
-                <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark">
-                  <small><%= c.model %></small>
-                </a>
-              </p>
+    <div style="margin-top:4rem;">
+      <p class="eyebrow" style="margin-bottom:1.25rem;">More from <%= make %></p>
+      <div class="row related-row">
+        <% relatedCars.forEach(c => { %>
+          <div class="col-md-4 col-6 mb-4">
+            <div class="card h-100">
+              <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
+                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+              </a>
+              <div class="card-body">
+                <p class="card-text mb-0">
+                  <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark"><%= c.model %></a>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      <% }) %>
+        <% }) %>
+      </div>
     </div>
   <% } %>
 </div>
@@ -96,7 +95,7 @@
 <style>
   .car-hero {
     width: 100%;
-    height: 460px;
+    height: 480px;
     background-size: cover;
     background-position: center;
     position: relative;
@@ -104,29 +103,35 @@
   .car-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);
+    background: linear-gradient(to top, rgba(3,6,14,0.97) 0%, rgba(3,6,14,0.3) 55%, transparent 100%);
     display: flex;
     align-items: flex-end;
   }
   .car-hero-text {
-    padding: 2rem;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2.5rem 2rem;
     text-align: left;
     color: #fff;
   }
   .car-hero-text h1 {
-    font-size: 2.8rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.35rem;
+    text-shadow: none;
   }
-  .car-hero-text h1 span {
-    font-weight: 300;
-  }
+  .car-hero-text h1 span { font-weight: 300; }
   .car-hero-sub {
-    font-size: 0.85rem;
-    opacity: 0.75;
+    font-size: 0.72rem;
+    color: rgba(250,250,250,0.5);
     margin: 0;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.16em;
   }
+  .detail-container { max-width: 1200px; width: 100%; margin: 0 auto; padding: 0 2rem; }
+  .detail-actions { padding: 1.5rem 0; border-bottom: 1px solid #27272a; }
+  .media-card { background: url('/assets/noise.svg') repeat, rgba(10,16,30,0.52); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 20px rgba(0,0,0,0.35); border-radius: 3px; padding: 1.5rem; }
+  .media-card h5 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; margin-bottom: 1rem; }
 </style>

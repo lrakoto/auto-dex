@@ -1,13 +1,27 @@
-<form action="/auth/signup" method="POST">
-    <label for="new-email">Email</label>
-    <input id="new-email" type="email" name="email" required>
-  
-    <label for="new-name">Name</label>
-    <input id="new-name" type="text" name="name" required>
-  
-    <label for="new-password">Password</label>
-    <input id="new-password" type="password" name="password" required>
-  
-    <input type="submit" value="Sign up">
-</form>
-  
+<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:380px;">
+    <p class="text-uppercase mb-1" style="font-size:0.7rem;letter-spacing:0.16em;color:#52525b;">AutoDex</p>
+    <h2 class="mb-1" style="font-size:1.75rem;">Create an account.</h2>
+    <p class="mb-4" style="font-size:0.88rem;color:#71717a;">Save favorites and build your personal garage.</p>
+
+    <form action="/auth/signup" method="POST">
+      <div class="form-group">
+        <label for="new-name">Name</label>
+        <input id="new-name" type="text" name="name" class="form-control" placeholder="Your name" required>
+      </div>
+      <div class="form-group">
+        <label for="new-email">Email</label>
+        <input id="new-email" type="email" name="email" class="form-control" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label for="new-password">Password</label>
+        <input id="new-password" type="password" name="password" class="form-control" placeholder="Min 8 characters" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block mt-4">Create Account &rarr;</button>
+    </form>
+
+    <p class="mt-4" style="font-size:0.82rem;color:#52525b;">
+      Already have an account? <a href="/auth/login" style="color:#a1a1aa;">Log in</a>
+    </p>
+  </div>
+</div>

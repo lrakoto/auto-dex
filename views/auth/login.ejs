@@ -1,16 +1,23 @@
-<div class="container">
-    <div class="row">
-        <div class="mx-auto p-5 col-md-4">
-            <form action="/auth/login" method="POST">
-                <label class="sr-only" for="auth-email">Email</label>
-                <input type="email" name="email" class="form-control mb-2 mr-sm-2" id="auth-email" placeholder="Email" required>
+<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:380px;">
+    <p class="text-uppercase mb-1" style="font-size:0.7rem;letter-spacing:0.16em;color:#52525b;">AutoDex</p>
+    <h2 class="mb-1" style="font-size:1.75rem;">Welcome back.</h2>
+    <p class="mb-4" style="font-size:0.88rem;color:#71717a;">Log in to save favorites and manage your garage.</p>
 
-                <label class="sr-only" for="auth-email">Email</label>
-                <input type="password" name="password" class="form-control mb-2 mr-sm-2" id="auth-password" placeholder="Password" required>
-            
-                <button type="submit" class="btn btn-primary mb-2">Submit</button>
-            </form>
-        </div>
-    </div>
+    <form action="/auth/login" method="POST">
+      <div class="form-group">
+        <label for="auth-email">Email</label>
+        <input type="email" name="email" class="form-control" id="auth-email" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label for="auth-password">Password</label>
+        <input type="password" name="password" class="form-control" id="auth-password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block mt-4">Log In &rarr;</button>
+    </form>
+
+    <p class="mt-4" style="font-size:0.82rem;color:#52525b;">
+      No account? <a href="/auth/signup" style="color:#a1a1aa;">Sign up</a>
+    </p>
+  </div>
 </div>
-  
