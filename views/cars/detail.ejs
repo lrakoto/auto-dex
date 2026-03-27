@@ -53,11 +53,12 @@
           <div class="accent-line"></div>
           <h5 style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin:1rem 0 1rem;">Specs — <%= carSpecs.year %></h5>
           <div class="specs-row">
-            <% if (carSpecs.type) { %><div class="spec-item"><span class="spec-label">Type</span><span class="spec-value"><%= carSpecs.type %></span></div><% } %>
-            <% if (carSpecs.cylinders) { %><div class="spec-item"><span class="spec-label">Cylinders</span><span class="spec-value"><%= carSpecs.cylinders %></span></div><% } %>
-            <% if (carSpecs.displacement) { %><div class="spec-item"><span class="spec-label">Displacement</span><span class="spec-value"><%= carSpecs.displacement %>L</span></div><% } %>
+            <% if (carSpecs.type) { %><div class="spec-item"><span class="spec-label">Class</span><span class="spec-value"><%= carSpecs.type %></span></div><% } %>
+            <% if (carSpecs.displacement) { %><div class="spec-item"><span class="spec-label">Engine</span><span class="spec-value"><%= carSpecs.displacement %>L<% if (carSpecs.cylinders) { %> &middot; <%= carSpecs.cylinders %>-cyl<% } %></span></div><% } %>
             <% if (carSpecs.transmission) { %><div class="spec-item"><span class="spec-label">Transmission</span><span class="spec-value"><%= carSpecs.transmission %></span></div><% } %>
             <% if (carSpecs.drive) { %><div class="spec-item"><span class="spec-label">Drive</span><span class="spec-value"><%= carSpecs.drive %></span></div><% } %>
+            <% if (carSpecs.fuel) { %><div class="spec-item"><span class="spec-label">Fuel</span><span class="spec-value"><%= carSpecs.fuel %></span></div><% } %>
+            <% if (carSpecs.cityMpg && carSpecs.hwyMpg) { %><div class="spec-item"><span class="spec-label">MPG</span><span class="spec-value"><%= carSpecs.cityMpg %> city &middot; <%= carSpecs.hwyMpg %> hwy</span></div><% } %>
           </div>
         </div>
       <% } %>

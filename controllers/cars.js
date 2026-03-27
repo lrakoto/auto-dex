@@ -183,29 +183,46 @@ router.get('/', async (req, res) => {
         if (mfr) country = mfr.Country;
       } catch (e) { /* non-critical */ }
 
-      // Car specs from RapidAPI
+      // Car specs from FuelEconomy.gov (free, no key required)
       let carSpecs = null;
-      if (process.env.CKEY) {
-        try {
-          const specsRes = await axios.get(`${CarAPIbaseURI}/cars`, {
-            params: { limit: 5, page: 0, make: make, model: model },
-            headers: {
-              'X-RapidAPI-Key': process.env.CKEY,
-              'X-RapidAPI-Host': 'car-data.p.rapidapi.com'
-            },
+      try {
+        const fuelHeaders = { Accept: 'application/json' };
+        const currentYear = new Date().getFullYear();
+        let vehicleId = null;
+        for (let year = currentYear; year >= currentYear - 8; year--) {
+          try {
+            const optRes = await axios.get('https://www.fueleconomy.gov/ws/rest/vehicle/menu/options', {
+              params: { year, make, model },
+              headers: fuelHeaders,
+              timeout: 4000
+            });
+            const items = optRes.data.menuItem;
+            if (items) {
+              vehicleId = (Array.isArray(items) ? items[0] : items).value;
+              break;
+            }
+          } catch (e) {}
+        }
+        if (vehicleId) {
+          const specsRes = await axios.get(`https://www.fueleconomy.gov/ws/rest/vehicle/${vehicleId}`, {
+            headers: fuelHeaders,
             timeout: 4000
           });
-          if (specsRes.data && specsRes.data.length > 0) {
-            // Sort by year descending, get most recent
-            const sorted = specsRes.data.sort((a, b) => (b.year || 0) - (a.year || 0));
-            carSpecs = sorted[0];
-            // Add year range
-            const years = specsRes.data.map(s => s.year).filter(Boolean);
-            carSpecs.yearMin = Math.min(...years);
-            carSpecs.yearMax = Math.max(...years);
-          }
-        } catch (e) { /* non-critical */ }
-      }
+          const d = specsRes.data;
+          carSpecs = {
+            year:         d.year,
+            type:         d.VClass,
+            cylinders:    d.cylinders,
+            displacement: d.displ,
+            transmission: d.trany,
+            drive:        d.drive,
+            fuel:         d.fuelType1 || d.fuelType,
+            cityMpg:      d.city08,
+            hwyMpg:       d.highway08,
+            combMpg:      d.comb08
+          };
+        }
+      } catch (e) { /* non-critical */ }
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks, carSpecs,
