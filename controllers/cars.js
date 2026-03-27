@@ -109,12 +109,14 @@ router.get('/', async (req, res) => {
       let wikiSummary = null;
       let wikiUrl = null;
 
+      const wikiHeaders = { 'User-Agent': 'AutoDex/1.0 (https://github.com/lrakoto/auto-dex)' };
+
       // Helper: fetch summary for a known title
       async function wikiByTitle(title) {
         try {
           const r = await axios.get(
             `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
-            { timeout: 4000 }
+            { timeout: 4000, headers: wikiHeaders }
           );
           if (r.data.type === 'standard' && r.data.extract) return r.data;
         } catch (e) {}
@@ -146,7 +148,8 @@ router.get('/', async (req, res) => {
               limit: 3,
               format: 'json'
             },
-            timeout: 4000
+            timeout: 4000,
+            headers: wikiHeaders
           });
           const titles = searchRes.data[1] || [];
           for (const title of titles) {

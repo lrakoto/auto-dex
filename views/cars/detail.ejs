@@ -48,7 +48,7 @@
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
       <% } %>
-      <% if (carSpecs) { %>
+      <% if (typeof carSpecs !== 'undefined' && carSpecs) { %>
         <div class="specs-grid" style="margin-top:2rem;">
           <div class="accent-line"></div>
           <h5 style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin:1rem 0 1rem;">Specs — <%= carSpecs.year %></h5>
