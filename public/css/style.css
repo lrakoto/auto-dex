@@ -5,7 +5,7 @@
   --surface-2:    #101828;
   --border:       #182438;
   --border-hover: #253a58;
-  --glass-bg:     rgba(8, 13, 26, 0.52);
+  --glass-bg:     rgba(8, 13, 26, 0.72);
   --glass-border: rgba(255, 255, 255, 0.07);
   --text:         #fafafa;
   --text-muted:   #71717a;
@@ -64,7 +64,7 @@ p { color: var(--text-muted); }
   top: 0;
   z-index: 200;
   /* Thicker, closer glass — higher blur + brightness lift */
-  background: var(--grain) repeat, rgba(6, 10, 22, 0.52);
+  background: var(--grain) repeat, rgba(6, 10, 22, 0.72);
   backdrop-filter: blur(32px) saturate(210%) brightness(112%);
   -webkit-backdrop-filter: blur(32px) saturate(210%) brightness(112%);
   border-bottom: none;
@@ -129,7 +129,7 @@ p { color: var(--text-muted); }
 /* ─── PAGE HEADER / JUMBOTRON ───────────────────────────────────────────────── */
 .jumbotron {
   /* Thinner, further glass panel — less blur than nav, more transparent */
-  background: var(--grain) repeat, rgba(5, 8, 20, 0.36);
+  background: var(--grain) repeat, rgba(5, 8, 20, 0.56);
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
   border-bottom: none;
@@ -288,25 +288,22 @@ p { color: var(--text-muted); }
   border-radius: inherit;
 }
 
-/* Overhead specular — soft elliptical highlight drifts left/right
-   with cursor X position (--cx-pct), like a light source overhead */
+/* Hover overlays — red left border strip + overhead specular, both at z-index:2
+   so they render above the image (card children are z-index:1) */
 .card::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 65%;
+  inset: 0;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.4s ease;
-  background: radial-gradient(
-    ellipse 70% 55% at var(--cx-pct, 50%) -10%,
-    rgba(255, 255, 255, 0.11),
-    transparent 70%
-  );
+  background:
+    linear-gradient(to right, var(--red) 3px, transparent 3px),
+    radial-gradient(ellipse 70% 55% at var(--cx-pct, 50%) -10%,
+      rgba(255, 255, 255, 0.11),
+      transparent 70%);
   z-index: 2;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius);
 }
 
 .card:hover::before { opacity: 1; }
@@ -316,7 +313,6 @@ p { color: var(--text-muted); }
   transform: translateY(-5px);
   z-index: 2;
   box-shadow:
-    inset 3px 0 0 var(--red),
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     0 0 0 1px var(--border-hover),
     0 8px 24px rgba(0, 0, 0, 0.55);
@@ -340,7 +336,7 @@ p { color: var(--text-muted); }
   border-radius: var(--radius);
   background: rgba(80, 120, 255, 1);
   filter: blur(28px);
-  opacity: 0.18;
+  opacity: 0.10;
   pointer-events: none;
   transition: opacity 0.22s ease, filter 0.22s ease;
 }
