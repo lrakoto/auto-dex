@@ -168,6 +168,7 @@
     revealElements('.auth-wrap');
 
     // ── Glass card interactions ──────────────────────────────────
+    var MAX_TILT = 4; // degrees — keep it very subtle
     document.querySelectorAll('.card').forEach(function (card) {
       card.addEventListener('mousemove', function (e) {
         var rect = card.getBoundingClientRect();
@@ -175,8 +176,17 @@
         var y = e.clientY - rect.top;
         card.style.setProperty('--cx',     x + 'px');
         card.style.setProperty('--cy',     y + 'px');
-        // Percentage for the overhead specular position
         card.style.setProperty('--cx-pct', (x / rect.width * 100).toFixed(1) + '%');
+        // Tilt: cursor offset from card centre, normalised to -1..1
+        var tiltY = ((x - rect.width  / 2) / (rect.width  / 2) * MAX_TILT).toFixed(2);
+        var tiltX = ((y - rect.height / 2) / (rect.height / 2) * MAX_TILT).toFixed(2);
+        card.style.setProperty('--tilt-x', (-tiltX) + 'deg');
+        card.style.setProperty('--tilt-y',   tiltY  + 'deg');
+      }, { passive: true });
+
+      card.addEventListener('mouseleave', function () {
+        card.style.setProperty('--tilt-x', '0deg');
+        card.style.setProperty('--tilt-y', '0deg');
       }, { passive: true });
     });
   });
