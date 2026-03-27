@@ -311,7 +311,7 @@ p { color: var(--text-muted); }
 .card:hover::after  { opacity: 1; }
 
 .card:hover {
-  transform: perspective(900px) translateY(-5px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   z-index: 2;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),

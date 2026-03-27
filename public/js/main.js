@@ -168,7 +168,7 @@
     revealElements('.auth-wrap');
 
     // ── Glass card interactions ──────────────────────────────────
-    var MAX_TILT = 4; // degrees — keep it very subtle
+    var MAX_TILT = 2.5; // degrees — keep it very subtle
     document.querySelectorAll('.card').forEach(function (card) {
       card.addEventListener('mousemove', function (e) {
         var rect = card.getBoundingClientRect();
