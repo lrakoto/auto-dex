@@ -566,11 +566,48 @@
 
 
   /* ═══════════════════════════════════════════════════════════════
+     MOBILE NAV — hamburger toggle
+  ═══════════════════════════════════════════════════════════════ */
+
+  var hamburger   = document.getElementById('nav-hamburger');
+  var mobileMenu  = document.getElementById('nav-mobile-menu');
+
+  if (hamburger && mobileMenu) {
+    hamburger.addEventListener('click', function () {
+      var isOpen = mobileMenu.classList.toggle('open');
+      hamburger.classList.toggle('open', isOpen);
+      hamburger.setAttribute('aria-expanded', isOpen);
+      mobileMenu.setAttribute('aria-hidden', !isOpen);
+    });
+
+    // Close on any link click inside the menu
+    mobileMenu.addEventListener('click', function (e) {
+      if (e.target.tagName === 'A') {
+        mobileMenu.classList.remove('open');
+        hamburger.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    // Close on Esc
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
+        mobileMenu.classList.remove('open');
+        hamburger.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
+
+
+  /* ═══════════════════════════════════════════════════════════════
      LOGIN RETURN URL — auto-append returnTo to all login links
   ═══════════════════════════════════════════════════════════════ */
 
   var currentPath = window.location.pathname + window.location.search;
-  document.querySelectorAll('a[href="/auth/login"], a.login-to-fav').forEach(function(link) {
+  document.querySelectorAll('a[href="/auth/login"], a[href="/auth/login"], a.login-to-fav').forEach(function(link) {
     link.href = '/auth/login?returnTo=' + encodeURIComponent(currentPath);
   });
 

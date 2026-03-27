@@ -24,7 +24,7 @@
       <header class="masthead">
         <div class="inner">
           <a href="/" class="masthead-brand">AutoDex</a>
-          <nav class="nav nav-masthead">
+          <nav class="nav nav-masthead" id="nav-masthead">
             <a class="nav-link" href="/">Home</a>
             <a class="nav-link" href="/makes">Browse Manufacturers</a>
             <% if (!currentUser) { %>
@@ -39,12 +39,17 @@
               <a class="nav-link" href="/auth/logout">Log Out</a>
             <% } %>
           </nav>
-          <button id="nav-search-btn" class="nav-search-btn" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="6.5" cy="6.5" r="4.5"/>
-              <line x1="10.5" y1="10.5" x2="14" y2="14"/>
-            </svg>
-          </button>
+          <div class="nav-right">
+            <button id="nav-search-btn" class="nav-search-btn" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6.5" cy="6.5" r="4.5"/>
+                <line x1="10.5" y1="10.5" x2="14" y2="14"/>
+              </svg>
+            </button>
+            <button id="nav-hamburger" class="nav-hamburger" aria-label="Toggle menu" aria-expanded="false">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -58,6 +63,22 @@
       </div>
     </footer>
 
+    <!-- Mobile nav menu -->
+    <div id="nav-mobile-menu" class="nav-mobile-menu" aria-hidden="true">
+      <a class="nav-link" href="/">Home</a>
+      <a class="nav-link" href="/makes">Browse Manufacturers</a>
+      <% if (!currentUser) { %>
+        <a class="nav-link" href="/auth/signup">Sign Up</a>
+        <a class="nav-link" href="/auth/login">Log In</a>
+      <% } else { %>
+        <a class="nav-link" href="/cars/favorites">Favorites</a>
+        <a class="nav-link" href="/garage">My Garage</a>
+        <% if (currentUser.isAdmin) { %>
+          <a class="nav-link" href="/garage/admin">Admin</a>
+        <% } %>
+        <a class="nav-link" href="/auth/logout">Log Out</a>
+      <% } %>
+    </div>
     <!-- Nav search overlay: lives outside <main> to escape z-index stacking contexts -->
     <div id="nav-search-overlay" class="nav-search-overlay" aria-hidden="true">
       <div class="nav-search-inner">
