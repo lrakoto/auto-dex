@@ -222,6 +222,24 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 
+app.get('/makes', async (req, res) => {
+  try {
+    const { Sequelize } = require('sequelize');
+    const makes = await db.car.findAll({
+      attributes: [
+        'make',
+        [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']
+      ],
+      group: ['make'],
+      order: [['make', 'ASC']]
+    });
+    res.render('makes', { makes: makes.map(m => m.toJSON()) });
+  } catch (err) {
+    console.log('MAKES ERROR:', err);
+    res.redirect('/');
+  }
+});
+
 // 404 Handler
 app.use((req, res, next) => {
   res.status(404).render('404');

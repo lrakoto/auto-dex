@@ -327,6 +327,68 @@
       }, { passive: true });
     });
 
+    // ── Recently Viewed ──────────────────────────────────────────
+    var rvWrap = document.getElementById('recently-viewed');
+    if (rvWrap) {
+      try {
+        var recent = JSON.parse(localStorage.getItem('autodex_recent') || '[]');
+        if (recent.length > 0) {
+          var row = rvWrap.querySelector('.recently-viewed-row');
+          recent.forEach(function(c) {
+            var col = document.createElement('div');
+            col.className = 'col-md-2 col-4 mb-3 card-col';
+            col.innerHTML = '<div class="card h-100">' +
+              '<a href="' + c.url + '"><img class="card-img-top imgresp" src="' + c.image + '" alt="' + c.model + '" style="height:90px;"></a>' +
+              '<div class="card-body" style="padding:0.5rem;">' +
+              '<p class="card-text mb-0" style="font-size:0.72rem;"><a href="' + c.url + '" class="text-dark">' + c.model + '</a></p>' +
+              '</div></div>';
+            row.appendChild(col);
+          });
+          rvWrap.style.display = 'block';
+        }
+      } catch(e) {}
+    }
+
+    // ── Toast ────────────────────────────────────────────────────
+    function showToast(msg) {
+      var t = document.createElement('div');
+      t.className = 'toast-notification';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      requestAnimationFrame(function() { t.classList.add('toast-show'); });
+      setTimeout(function() {
+        t.classList.remove('toast-show');
+        setTimeout(function() { t.remove(); }, 300);
+      }, 2600);
+    }
+
+    // ── Favorite form AJAX intercept ─────────────────────────────
+    document.addEventListener('submit', function(e) {
+      var form = e.target;
+      if (!form.action || !form.action.includes('/fav')) return;
+      e.preventDefault();
+      var params = new URLSearchParams(new FormData(form));
+      fetch(form.action, {
+        method: 'POST',
+        body: params,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).then(function(r) { return r.json(); })
+        .then(function() { showToast('Added to favorites ♥'); })
+        .catch(function() { showToast('Could not add — try again.'); });
+    });
+
+    // ── Search form loading state ─────────────────────────────────
+    var heroForm = document.querySelector('.hero-form');
+    if (heroForm) {
+      heroForm.addEventListener('submit', function() {
+        var btn = heroForm.querySelector('button[type="submit"]');
+        if (btn) { btn.textContent = 'Searching…'; btn.disabled = true; }
+      });
+    }
+
   });
 
 

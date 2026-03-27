@@ -1,0 +1,17 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading">Browse by Make</h1>
+    <p class="lead text-muted"><%= makes.length %> manufacturers in the database</p>
+  </div>
+</section>
+
+<div class="makes-container">
+  <div class="makes-grid">
+    <% makes.forEach(function(m) { %>
+      <a href="/cars?selectmake=<%= encodeURIComponent(m.make) %>" class="make-tile">
+        <span class="make-name"><%= m.make %></span>
+        <span class="make-count"><%= m.modelCount %> models</span>
+      </a>
+    <% }); %>
+  </div>
+</div>

@@ -4,6 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>AutoDex</title>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : 'AutoDex' %>">
+    <meta property="og:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : 'Browse thousands of car makes and models.' %>">
+    <% if (typeof ogImage !== 'undefined' && ogImage) { %>
+      <meta property="og:image" content="<%= ogImage %>">
+    <% } %>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +26,7 @@
           <a href="/" class="masthead-brand">AutoDex</a>
           <nav class="nav nav-masthead">
             <a class="nav-link" href="/">Home</a>
+            <a class="nav-link" href="/makes">Makes</a>
             <% if (!currentUser) { %>
               <a class="nav-link" href="/auth/signup">Sign Up</a>
               <a class="nav-link" href="/auth/login">Log In</a>

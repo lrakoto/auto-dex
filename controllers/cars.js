@@ -33,6 +33,24 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 const PAGE_SIZE = 12;
 
+router.get('/search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.redirect('/');
+  try {
+    const { Op } = require('sequelize');
+    const results = await db.car.findAll({
+      where: { model: { [Op.like]: '%' + q + '%' } },
+      limit: 48,
+      order: [['favcount', 'DESC']]
+    });
+    const cars = results.map(r => r.toJSON());
+    res.render('cars/search', { q, cars });
+  } catch (err) {
+    console.log('MODEL SEARCH ERROR:', err);
+    res.redirect('/');
+  }
+});
+
 // GET route for submitted form data from home route
 router.get('/', async (req, res) => {
   let userQuery = req.query;
@@ -87,26 +105,59 @@ router.get('/', async (req, res) => {
         .filter(c => c.model !== model)
         .slice(0, 6);
 
-      // Wikipedia summary — try "Make_Model" then "Model" as fallback
+      // Wikipedia summary
       let wikiSummary = null;
       let wikiUrl = null;
-      const wikiTitles = [
-        `${make}_${model}`.replace(/\s+/g, '_'),
-        model.replace(/\s+/g, '_'),
-        `${make}_${model.split(' ')[0]}`.replace(/\s+/g, '_')
-      ];
-      for (const title of wikiTitles) {
+
+      // Helper: fetch summary for a known title
+      async function wikiByTitle(title) {
         try {
-          const wikiRes = await axios.get(
+          const r = await axios.get(
             `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
             { timeout: 4000 }
           );
-          if (wikiRes.data.type === 'standard' && wikiRes.data.extract) {
-            wikiSummary = wikiRes.data.extract;
-            wikiUrl = wikiRes.data.content_urls?.desktop?.page || null;
-            break;
+          if (r.data.type === 'standard' && r.data.extract) return r.data;
+        } catch (e) {}
+        return null;
+      }
+
+      // 1. Try direct title guesses
+      const wikiTitles = [
+        `${make} ${model}`,
+        model,
+        `${make} ${model.split(' ')[0]}`
+      ];
+      for (const title of wikiTitles) {
+        const result = await wikiByTitle(title.replace(/\s+/g, '_'));
+        if (result) {
+          wikiSummary = result.extract;
+          wikiUrl = result.content_urls?.desktop?.page || null;
+          break;
+        }
+      }
+
+      // 2. If nothing found, fall back to Wikipedia search API
+      if (!wikiSummary) {
+        try {
+          const searchRes = await axios.get('https://en.wikipedia.org/w/api.php', {
+            params: {
+              action: 'opensearch',
+              search: `${make} ${model} automobile`,
+              limit: 3,
+              format: 'json'
+            },
+            timeout: 4000
+          });
+          const titles = searchRes.data[1] || [];
+          for (const title of titles) {
+            const result = await wikiByTitle(title.replace(/\s+/g, '_'));
+            if (result) {
+              wikiSummary = result.extract;
+              wikiUrl = result.content_urls?.desktop?.page || null;
+              break;
+            }
           }
-        } catch (e) { /* try next title */ }
+        } catch (e) { /* non-critical */ }
       }
 
       // YouTube search links for media section
@@ -129,7 +180,36 @@ router.get('/', async (req, res) => {
         if (mfr) country = mfr.Country;
       } catch (e) { /* non-critical */ }
 
-      res.render('cars/detail', { make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks });
+      // Car specs from RapidAPI
+      let carSpecs = null;
+      if (process.env.CKEY) {
+        try {
+          const specsRes = await axios.get(`${CarAPIbaseURI}/cars`, {
+            params: { limit: 5, page: 0, make: make, model: model },
+            headers: {
+              'X-RapidAPI-Key': process.env.CKEY,
+              'X-RapidAPI-Host': 'car-data.p.rapidapi.com'
+            },
+            timeout: 4000
+          });
+          if (specsRes.data && specsRes.data.length > 0) {
+            // Sort by year descending, get most recent
+            const sorted = specsRes.data.sort((a, b) => (b.year || 0) - (a.year || 0));
+            carSpecs = sorted[0];
+            // Add year range
+            const years = specsRes.data.map(s => s.year).filter(Boolean);
+            carSpecs.yearMin = Math.min(...years);
+            carSpecs.yearMax = Math.max(...years);
+          }
+        } catch (e) { /* non-critical */ }
+      }
+
+      res.render('cars/detail', {
+        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks, carSpecs,
+        ogTitle: make + ' ' + model + ' — AutoDex',
+        ogDescription: wikiSummary ? wikiSummary.slice(0, 160) : make + ' ' + model + ' on AutoDex.',
+        ogImage: image
+      });
     } catch (err) {
       console.log('CAR DETAIL ERROR:', err);
       res.status(500).send('Error loading car details.');
@@ -216,19 +296,21 @@ router.get('/', async (req, res) => {
 
     if(favCar.id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
-        res.redirect('favorites');
+        if (req.get('X-Requested-With') === 'XMLHttpRequest') { return res.json({ success: true }); }
+        return res.redirect('favorites');
     } else {
         db.car.update({
             favcount: currentFavCount += 1,
             image: data.favecar_image
-        }, 
+        },
         {
             where: {
                 id: foundCar.id
             }
         })
         .then(response => {
-            res.redirect('favorites');
+            const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
+            if (isAjax) { res.json({ success: true }); } else { res.redirect('favorites'); }
             console.log('ADD CAR TO CARS ATTEMPT')
         })
         .catch((err) => {

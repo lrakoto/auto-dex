@@ -48,6 +48,19 @@
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
       <% } %>
+      <% if (carSpecs) { %>
+        <div class="specs-grid" style="margin-top:2rem;">
+          <div class="accent-line"></div>
+          <h5 style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin:1rem 0 1rem;">Specs — <%= carSpecs.year %></h5>
+          <div class="specs-row">
+            <% if (carSpecs.type) { %><div class="spec-item"><span class="spec-label">Type</span><span class="spec-value"><%= carSpecs.type %></span></div><% } %>
+            <% if (carSpecs.cylinders) { %><div class="spec-item"><span class="spec-label">Cylinders</span><span class="spec-value"><%= carSpecs.cylinders %></span></div><% } %>
+            <% if (carSpecs.displacement) { %><div class="spec-item"><span class="spec-label">Displacement</span><span class="spec-value"><%= carSpecs.displacement %>L</span></div><% } %>
+            <% if (carSpecs.transmission) { %><div class="spec-item"><span class="spec-label">Transmission</span><span class="spec-value"><%= carSpecs.transmission %></span></div><% } %>
+            <% if (carSpecs.drive) { %><div class="spec-item"><span class="spec-label">Drive</span><span class="spec-value"><%= carSpecs.drive %></span></div><% } %>
+          </div>
+        </div>
+      <% } %>
     </div>
 
     <!-- Media Links -->
@@ -135,3 +148,17 @@
   .media-card { background: url('/assets/noise.svg') repeat, rgba(10,16,30,0.52); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 20px rgba(0,0,0,0.35); border-radius: 3px; padding: 1.5rem; }
   .media-card h5 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; margin-bottom: 1rem; }
 </style>
+
+<script>
+(function() {
+  try {
+    var key = 'autodex_recent';
+    var entry = { make: '<%= make.replace(/'/g, "\\'") %>', model: '<%= model.replace(/'/g, "\\'") %>', image: '<%= image.replace(/'/g, "\\'") %>', url: window.location.href };
+    var list = JSON.parse(localStorage.getItem(key) || '[]');
+    list = list.filter(function(c) { return !(c.make === entry.make && c.model === entry.model); });
+    list.unshift(entry);
+    if (list.length > 6) list = list.slice(0, 6);
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch(e) {}
+})();
+</script>

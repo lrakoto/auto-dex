@@ -10,50 +10,59 @@
     <div class="container">  
       <div class="row">
 
-        <% favorites.forEach((f) =>{ %>
-        <div class="col-md-4 card-col">
-          <div class="card mb-4 box-shadow">
-            <img class="card-img-top imgresp" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
-            <div class="card-body">
-              <p class="card-text"><%= f.make %> <%= f.model %></p>
-              <div class="d-flex justify-content-center align-items-center">
-                <div class="btn-group">
-                  <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">Edit</button>
+        <% if (favorites.length === 0) { %>
+          <div class="empty-state">
+            <div class="empty-icon">♡</div>
+            <h3>No favorites yet</h3>
+            <p>Browse cars and hit <strong>+ Favorite</strong> to save them here.</p>
+            <a href="/" class="btn btn-outline-secondary mt-3">Explore Cars</a>
+          </div>
+        <% } else { %>
+          <% favorites.forEach((f) =>{ %>
+          <div class="col-md-4 card-col">
+            <div class="card mb-4 box-shadow">
+              <img class="card-img-top imgresp" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
+              <div class="card-body">
+                <p class="card-text"><%= f.make %> <%= f.model %></p>
+                <div class="d-flex justify-content-center align-items-center">
+                  <div class="btn-group">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#exampleModal<%= f.id %>">Edit</button>
+                  </div>
+                  <!--<small class="text-muted">Placeholder</small>-->
                 </div>
-                <!--<small class="text-muted">Placeholder</small>-->
               </div>
             </div>
           </div>
-        </div>
 
-          <!-- Modal -->
-          <div class="modal fade" id="exampleModal<%= f.id %>" tabindex="-1" role="dialog" aria-labelledby="exampleModal<%= f.id %>Label" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="exampleModal<%= f.id %>Label">Enter new image link for <%= f.make %> <%= f.model %>  below</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
+            <!-- Modal -->
+            <div class="modal fade" id="exampleModal<%= f.id %>" tabindex="-1" role="dialog" aria-labelledby="exampleModal<%= f.id %>Label" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModal<%= f.id %>Label">Enter new image link for <%= f.make %> <%= f.model %>  below</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT" >
+                      <div class="form-group">
+                        <input class="form-control" id="newimagelink" name="newimagelink" placeholder="<%= f.image %>" required>
+                        <input type="hidden" id="favid" name="favid" value="<%= f.id %>">
+                      </div>
+
+                      <button type="submit" class="btn btn-primary">Update Image</button>
+                    </form>
+                    <form method="POST" id="favButtons" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE">
+                      <button type="submit" class="btn btn-sm btn-outline-secondary">Remove from Favorites</button>
+                    </form>
+                  </div>
+
                 </div>
-                <div class="modal-body">
-                  <form method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT" >
-                    <div class="form-group">
-                      <input class="form-control" id="newimagelink" name="newimagelink" placeholder="<%= f.image %>" required>
-                      <input type="hidden" id="favid" name="favid" value="<%= f.id %>">
-                    </div>
-                  
-                    <button type="submit" class="btn btn-primary">Update Image</button>
-                  </form>
-                  <form method="POST" id="favButtons" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE">
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">Remove from Favorites</button>
-                  </form>
-                </div>
-                
               </div>
             </div>
-          </div>
-        <% }) %>
+          <% }) %>
+        <% } %>
 
       </div>
       <%- include('partials/pagination') %>

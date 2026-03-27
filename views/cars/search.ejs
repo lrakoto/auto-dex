@@ -1,0 +1,37 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading">Results for "<%= q %>"</h1>
+    <p class="lead text-muted"><%= cars.length %> model<%= cars.length !== 1 ? 's' : '' %> found</p>
+  </div>
+</section>
+
+<div class="album py-5 bg-light">
+  <div class="container">
+    <% if (cars.length === 0) { %>
+      <div class="empty-state">
+        <div class="empty-icon">⊘</div>
+        <h3>No results</h3>
+        <p>No models matched "<strong><%= q %></strong>".</p>
+        <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
+      </div>
+    <% } else { %>
+      <div class="row">
+        <% cars.forEach(function(c, i) { %>
+          <div class="col-md-4 card-col">
+            <div class="card mb-4">
+              <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
+                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+              </a>
+              <div class="card-body">
+                <p class="card-text mb-0">
+                  <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark"><%= c.model %></a>
+                </p>
+                <p style="font-size:0.72rem; color:var(--text-subtle); margin:0.2rem 0 0;"><%= c.make %></p>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
