@@ -31,7 +31,7 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 12;
 
 // GET route for submitted form data from home route
 router.get('/', async (req, res) => {
