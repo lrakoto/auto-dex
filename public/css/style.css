@@ -263,11 +263,10 @@ p { color: var(--text-muted); }
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    0 4px 20px rgba(0, 0, 0, 0.35),
-    0 16px 60px 4px rgba(80, 120, 255, 0.32);
+    0 4px 20px rgba(0, 0, 0, 0.35);
   transition: transform 0.22s ease, box-shadow 0.22s ease;
   overflow: hidden;
-  will-change: transform, box-shadow;
+  will-change: transform;
   position: relative;
   z-index: 1;
 }
@@ -320,14 +319,39 @@ p { color: var(--text-muted); }
     inset 3px 0 0 var(--red),
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     0 0 0 1px var(--border-hover),
-    0 8px 24px rgba(0, 0, 0, 0.55),
-    0 20px 80px 6px rgba(80, 120, 255, 0.50),
-    0 8px 30px rgba(80, 120, 255, 0.25);
+    0 8px 24px rgba(0, 0, 0, 0.55);
 }
 
 /* Ensure card content sits above pseudo-element overlays */
 .card-body,
 .card a { position: relative; z-index: 1; }
+
+/* ── Card column glow — lives on the wrapper so overflow:hidden doesn't clip it */
+.card-col {
+  position: relative;
+}
+.card-col::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  bottom: -8px;
+  left: 22px;
+  right: 22px;
+  border-radius: var(--radius);
+  background: rgba(80, 120, 255, 1);
+  filter: blur(28px);
+  opacity: 0.18;
+  pointer-events: none;
+  transition: opacity 0.22s ease, filter 0.22s ease;
+}
+.card-col:hover::before {
+  opacity: 0.40;
+  filter: blur(34px);
+}
+.card-col .card {
+  position: relative;
+  z-index: 1;
+}
 
 .box-shadow { box-shadow: none; }
 

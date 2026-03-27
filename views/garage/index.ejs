@@ -17,7 +17,7 @@
   <% } else { %>
     <div class="row">
       <% myCars.forEach(car => { %>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-4 card-col">
           <div class="card box-shadow">
             <img class="card-img-top imgresp" src="<%= car.image %>" alt="<%= car.year %> <%= car.make %> <%= car.model %>">
             <div class="card-body text-left">
@@ -43,7 +43,7 @@
   <% } else { %>
     <div class="row">
       <% favorites.forEach(f => { %>
-        <div class="col-md-4 mb-4">
+        <div class="col-md-4 mb-4 card-col">
           <div class="card box-shadow">
             <img class="card-img-top imgresp" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
             <div class="card-body text-left">

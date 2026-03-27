@@ -74,7 +74,7 @@
       <p class="eyebrow" style="margin-bottom:1.25rem;">More from <%= make %></p>
       <div class="row related-row">
         <% relatedCars.forEach(c => { %>
-          <div class="col-md-4 col-6 mb-4">
+          <div class="col-md-4 col-6 mb-4 card-col">
             <div class="card h-100">
               <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
                 <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
