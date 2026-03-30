@@ -7,6 +7,30 @@
 
 <div class="container pb-5">
 
+  <% if (unverifiedUsers && unverifiedUsers.length > 0) { %>
+    <h2 class="mb-3">Unverified Users <span class="badge badge-warning"><%= unverifiedUsers.length %></span></h2>
+    <div class="table-responsive mb-5">
+      <table class="table table-dark table-sm">
+        <thead><tr><th>Name</th><th>Email</th><th>Signed Up</th><th></th></tr></thead>
+        <tbody>
+          <% unverifiedUsers.forEach(u => { %>
+            <tr>
+              <td><%= u.name %></td>
+              <td><%= u.email %></td>
+              <td style="font-size:0.78rem;color:#71717a;"><%= new Date(u.createdAt).toLocaleDateString() %></td>
+              <td>
+                <form method="POST" action="/garage/admin/verify-user/<%= u.id %>" style="margin:0;">
+                  <button type="submit" class="btn btn-sm btn-outline-success">Verify</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <hr class="mb-5">
+  <% } %>
+
   <% if (proposals && proposals.length > 0) { %>
     <h2 class="mb-3">Pending Image Proposals <span class="badge badge-danger"><%= proposals.length %></span></h2>
     <div class="row mb-5">

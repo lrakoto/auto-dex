@@ -19,5 +19,16 @@
     <p class="mt-4" style="font-size:0.82rem;color:#52525b;">
       No account? <a href="/auth/signup" style="color:#a1a1aa;">Sign up</a>
     </p>
+    <details style="margin-top:1.5rem;">
+      <summary style="font-size:0.78rem;color:#52525b;cursor:pointer;">Didn't receive a verification email?</summary>
+      <form action="/auth/resend-verification" method="POST" style="margin-top:0.75rem;">
+        <div class="input-group input-group-sm">
+          <input type="email" name="email" class="form-control" placeholder="your@email.com" required>
+          <div class="input-group-append">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Resend</button>
+          </div>
+        </div>
+      </form>
+    </details>
   </div>
 </div>

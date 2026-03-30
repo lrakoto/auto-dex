@@ -1,15 +1,17 @@
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
+const crypto  = require('crypto');
 const passport = require('../config/ppConfig');
 const db = require('../models');
+const { sendVerificationEmail } = require('../config/email');
 
-router.get("/signup", (req, res) => {
-  res.render("auth/signup");
+router.get('/signup', (req, res) => {
+  res.render('auth/signup');
 });
 
-router.get("/login", (req, res) => {
+router.get('/login', (req, res) => {
   if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
-  res.render("auth/login");
+  res.render('auth/login');
 });
 
 router.post('/login', (req, res, next) => {
@@ -17,6 +19,10 @@ router.post('/login', (req, res, next) => {
     if (err) return next(err);
     if (!user) {
       req.flash('error', 'Either email or password is incorrect');
+      return res.redirect('/auth/login');
+    }
+    if (!user.emailVerified) {
+      req.flash('error', 'Please verify your email before logging in. Check your inbox.');
       return res.redirect('/auth/login');
     }
     req.logIn(user, (err) => {
@@ -30,43 +36,76 @@ router.post('/login', (req, res, next) => {
 });
 
 router.get('/logout', (req, res) => {
-  req.logOut(() => {
-    console.log('I am logged out');
-  }
-  ); // logs the user out of the session
+  req.logOut(() => {});
   req.flash('success', 'Logging out... See you next time!');
   res.redirect('/');
 });
 
 router.post('/signup', async (req, res) => {
-  // we now have access to the user info (req.body);
-  const { email, name, password } = req.body; // goes and us access to whatever key/value inside of the object
+  const { email, name, password } = req.body;
   try {
+    const token = crypto.randomBytes(32).toString('hex');
     const [user, created] = await db.user.findOrCreate({
-        where: { email },
-        defaults: { name, password }
+      where: { email },
+      defaults: { name, password, emailVerified: false, verificationToken: token }
     });
 
     if (created) {
-        // if created, success and we will redirect back to / page
-        console.log(`----- ${user.name} was created -----`);
-        const successObject = {
-            successRedirect: '/',
-            successFlash: `Welcome ${user.name}. Account was created and logging in...`
-        }
-        // 
-        passport.authenticate('local', successObject)(req, res);
+      console.log(`----- ${user.name} was created -----`);
+      try {
+        await sendVerificationEmail(email, name, token);
+      } catch (emailErr) {
+        console.log('EMAIL SEND ERROR:', emailErr);
+      }
+      req.flash('success', `Welcome ${user.name}! Check your email to verify your account before logging in.`);
+      res.redirect('/auth/login');
     } else {
-      // Send back email already exists
       req.flash('error', 'Email already exists');
-      res.redirect('/auth/signup'); // redirect the user back to sign up page to try again
+      res.redirect('/auth/signup');
     }
   } catch (error) {
-        // There was an error that came back; therefore, we just have the user try again
-        console.log('**************Error');
-        console.log(error);
-        req.flash('error', 'Either email or password is incorrect. Please try again.');
-        res.redirect('/auth/signup');
+    console.log('SIGNUP ERROR:', error);
+    req.flash('error', 'Something went wrong. Please try again.');
+    res.redirect('/auth/signup');
+  }
+});
+
+// GET /auth/verify/:token
+router.get('/verify/:token', async (req, res) => {
+  try {
+    const user = await db.user.findOne({ where: { verificationToken: req.params.token } });
+    if (!user) {
+      req.flash('error', 'Verification link is invalid or has already been used.');
+      return res.redirect('/auth/login');
+    }
+    await user.update({ emailVerified: true, verificationToken: null });
+    req.flash('success', 'Email verified! You can now log in.');
+    res.redirect('/auth/login');
+  } catch (err) {
+    console.log('VERIFY ERROR:', err);
+    req.flash('error', 'Something went wrong. Please try again.');
+    res.redirect('/auth/login');
+  }
+});
+
+// POST /auth/resend-verification
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await db.user.findOne({ where: { email } });
+    if (!user || user.emailVerified) {
+      req.flash('error', 'No unverified account found for that email.');
+      return res.redirect('/auth/login');
+    }
+    const token = crypto.randomBytes(32).toString('hex');
+    await user.update({ verificationToken: token });
+    await sendVerificationEmail(email, user.name, token);
+    req.flash('success', 'Verification email resent. Check your inbox.');
+    res.redirect('/auth/login');
+  } catch (err) {
+    console.log('RESEND ERROR:', err);
+    req.flash('error', 'Could not resend. Please try again.');
+    res.redirect('/auth/login');
   }
 });
 

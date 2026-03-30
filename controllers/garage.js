@@ -163,6 +163,11 @@ router.get('/admin', isAdmin, async (req, res) => {
       order: [['make', 'ASC'], ['model', 'ASC']],
       limit: 100
     });
+    const unverifiedUsers = await db.user.findAll({
+      where: { emailVerified: false },
+      attributes: ['id', 'name', 'email', 'createdAt'],
+      order: [['createdAt', 'DESC']]
+    });
     const proposals = await db.image_proposal.findAll({
       where: { status: 'pending' },
       include: [
@@ -173,12 +178,28 @@ router.get('/admin', isAdmin, async (req, res) => {
     });
     res.render('garage/admin', {
       cars: cars.map(c => c.toJSON()),
-      proposals: proposals.map(p => p.toJSON())
+      proposals: proposals.map(p => p.toJSON()),
+      unverifiedUsers: unverifiedUsers.map(u => u.toJSON())
     });
   } catch (err) {
     console.log('ADMIN ERROR:', err);
     res.status(500).send('Error loading admin page.');
   }
+});
+
+// POST /garage/admin/verify-user/:id — manually verify a user's email
+router.post('/admin/verify-user/:id', isAdmin, async (req, res) => {
+  try {
+    await db.user.update(
+      { emailVerified: true, verificationToken: null },
+      { where: { id: req.params.id } }
+    );
+    req.flash('success', 'User verified.');
+  } catch (err) {
+    console.log('VERIFY USER ERROR:', err);
+    req.flash('error', 'Failed to verify user.');
+  }
+  res.redirect('/garage/admin');
 });
 
 // POST /garage/admin/proposal/:id/approve
