@@ -27,7 +27,9 @@
         <% cars.forEach(function(c, i) { %>
           <div class="col-md-4 card-col">
             <div class="card mb-4">
-              <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+              <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
+                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+              </a>
               <div class="card-body">
                 <p class="card-text mb-0">
                   <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="text-dark card-cover"><%= c.model %></a>

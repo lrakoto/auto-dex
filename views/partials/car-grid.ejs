@@ -10,7 +10,9 @@
     <% carImg.forEach((c, i) => { %>
       <div class="col-md-4 card-col">
         <div class="card mb-4 box-shadow">
-          <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
+          <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>">
+            <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
+          </a>
           <div class="card-body">
             <p class="card-text mb-0">
               <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark card-cover"><%= c.dataValues.model %></a>
