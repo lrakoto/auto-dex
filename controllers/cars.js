@@ -106,7 +106,7 @@ router.get('/', async (req, res) => {
     try {
       // Get this car from DB
       let car = await db.car.findOne({ where: { make, model } });
-      const image = car ? car.image : 'https://i.ibb.co/PwkqdSy/placeholder.png';
+      const image = req.query.image || (car ? car.image : 'https://i.ibb.co/PwkqdSy/placeholder.png');
       const favcount = car ? car.favcount : 0;
 
       // Get other models from the same make (up to 6, excluding current model)
@@ -235,8 +235,19 @@ router.get('/', async (req, res) => {
         }
       } catch (e) { /* non-critical */ }
 
+      // Check if current user has this car in favorites
+      let userFavorite = null;
+      if (req.user) {
+        userFavorite = await db.favorite_car.findOne({
+          where: { userId: req.user.id, make, model }
+        });
+        if (userFavorite) userFavorite = userFavorite.toJSON();
+      }
+
       res.render('cars/detail', {
-        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks, carSpecs,
+        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks, carSpecs, userFavorite,
+        carDbId: car ? car.id : null,
+        carUpdatedImg: car ? !!car.updated_img : false,
         ogTitle: make + ' ' + model + ' — AutoDex',
         ogDescription: wikiSummary ? wikiSummary.slice(0, 160) : make + ' ' + model + ' on AutoDex.',
         ogImage: image
@@ -247,31 +258,23 @@ router.get('/', async (req, res) => {
     }
   });
 
-  // GET Route for /favorites
-  router.get('/favorites/', isLoggedIn, async (req, res) => {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const total = await db.favorite_car.count({ where: { userId: req.user.id } });
-    const totalPages = Math.ceil(total / PAGE_SIZE);
-    let favorites = await db.favorite_car.findAll({
-      where: { userId: req.user.id },
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE
-    });
-    favorites = favorites.map(r => r.toJSON());
-    res.render('favorites', { favorites, page, totalPages, total, baseUrl: '/cars/favorites/?page=' });
-  });
+  // GET /favorites → redirect to garage
+  router.get('/favorites/', isLoggedIn, (req, res) => res.redirect('/garage'));
 
   // DELETE ROUTE for /favorites
   router.delete('/favorites/delete/:id', isLoggedIn, async (req, res) => {
-    try{
-      let deleteFav = await db.favorite_car.destroy({
-        where: {
-          id: req.params.id
-        }
-      })
-      res.redirect('../../favorites')
+    try {
+      await db.favorite_car.destroy({ where: { id: req.params.id } });
+      if (req.get('X-Requested-With') === 'XMLHttpRequest') {
+        return res.json({ success: true });
+      }
+      res.redirect('/garage');
     } catch (error1) {
-      console.log('DELETE ERROR:', error1)
+      console.log('DELETE ERROR:', error1);
+      if (req.get('X-Requested-With') === 'XMLHttpRequest') {
+        return res.status(500).json({ success: false });
+      }
+      res.redirect('/garage');
     }
   })
 
@@ -283,10 +286,10 @@ router.get('/', async (req, res) => {
         { image: imageUrl },
         { where: { id: req.body.favid } }
       );
-      res.redirect('../../favorites');
+      res.redirect('/garage');
     } catch (err) {
       console.log('PUT ERROR:', err);
-      res.redirect('../../favorites');
+      res.redirect('/garage');
     }
   })
 
@@ -307,11 +310,13 @@ router.get('/', async (req, res) => {
     console.log('AWAIT RESULT - FAVCAR:', favCar);
     let newFavCar = await db.favorite_car.findOrCreate({
         where: {
-            make: data.favecar_make,
-            model: data.favecar_model,
-            image: data.favecar_image,
             carId: favCar.id,
             userId: parseInt(data.userId)
+        },
+        defaults: {
+            make: data.favecar_make,
+            model: data.favecar_model,
+            image: data.favecar_image
         }
     })
     console.log('AWAIT NEW FAV CAR INFO', newFavCar);
@@ -325,7 +330,7 @@ router.get('/', async (req, res) => {
 
     if(favCar.id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
-        if (req.get('X-Requested-With') === 'XMLHttpRequest') { return res.json({ success: true }); }
+        if (req.get('X-Requested-With') === 'XMLHttpRequest') { return res.json({ success: true, favId: newFavCar[0].id, alreadyFavorited: true }); }
         return res.redirect('favorites');
     } else {
         db.car.update({
@@ -339,7 +344,7 @@ router.get('/', async (req, res) => {
         })
         .then(response => {
             const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
-            if (isAjax) { res.json({ success: true }); } else { res.redirect('favorites'); }
+            if (isAjax) { res.json({ success: true, favId: newFavCar[0].id }); } else { res.redirect('favorites'); }
             console.log('ADD CAR TO CARS ATTEMPT')
         })
         .catch((err) => {
@@ -349,6 +354,25 @@ router.get('/', async (req, res) => {
             console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
         });
     }
+  });
+
+  // POST /cars/propose-image — user submits an image proposal for a car
+  router.post('/propose-image', isLoggedIn, async (req, res) => {
+    const { carId, imageUrl } = req.body;
+    if (!carId || !imageUrl || !imageUrl.trim()) return res.redirect('back');
+    try {
+      await db.image_proposal.create({
+        carId: parseInt(carId),
+        userId: req.user.id,
+        imageUrl: imageUrl.trim(),
+        status: 'pending'
+      });
+      req.flash('success', 'Image proposed — thanks! An admin will review it.');
+    } catch (err) {
+      console.log('PROPOSE ERROR:', err);
+      req.flash('error', 'Could not submit proposal.');
+    }
+    res.redirect('back');
   });
 
   // GET route cars/fav

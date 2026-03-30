@@ -397,6 +397,30 @@ p { color: var(--text-muted); }
 
 .box-shadow { box-shadow: none; }
 
+.card-badge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 2;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  pointer-events: none;
+}
+.card-badge--garage {
+  background: rgba(237, 83, 83, 0.18);
+  color: var(--red);
+  border: 1px solid rgba(237, 83, 83, 0.35);
+}
+.card-badge--favorite {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .card-body { padding: 1rem 1.1rem 1.25rem; }
 
 .card-text {

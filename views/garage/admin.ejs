@@ -6,6 +6,33 @@
 </section>
 
 <div class="container pb-5">
+
+  <% if (proposals && proposals.length > 0) { %>
+    <h2 class="mb-3">Pending Image Proposals <span class="badge badge-danger"><%= proposals.length %></span></h2>
+    <div class="row mb-5">
+      <% proposals.forEach(p => { %>
+        <div class="col-md-4 mb-4">
+          <div class="card box-shadow">
+            <img class="card-img-top imgresp" src="<%= p.imageUrl %>" alt="Proposed image" onerror="this.src='https://i.ibb.co/PwkqdSy/placeholder.png'">
+            <div class="card-body text-left">
+              <h6 class="card-title mb-1"><%= p.car.make %> <%= p.car.model %></h6>
+              <p class="text-muted mb-2" style="font-size:0.75rem;">By <%= p.user.name %> &middot; <%= new Date(p.createdAt).toLocaleDateString() %></p>
+              <div class="d-flex" style="gap:0.5rem;">
+                <form method="POST" action="/garage/admin/proposal/<%= p.id %>/approve" style="margin:0;">
+                  <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                </form>
+                <form method="POST" action="/garage/admin/proposal/<%= p.id %>/reject" style="margin:0;">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+    <hr class="mb-5">
+  <% } %>
+
   <% if (cars.length === 0) { %>
     <div class="alert alert-success">All cars have custom images. Nothing to update!</div>
   <% } else { %>

@@ -28,6 +28,13 @@
     });
   });
 
+  // When browser restores page from bfcache (back/forward), clear any exit state
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      document.body.classList.remove('page-exit', 'page-entering');
+    }
+  });
+
   // Fade out on internal link click
   document.addEventListener('click', function (e) {
     var link = e.target.closest('a[href]');
@@ -242,6 +249,20 @@
     mouse.x = -9999;
     mouse.y = -9999;
   });
+
+  // On touch/mobile: drive dot wave origin from scroll position
+  var isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  if (isTouchDevice) {
+    mouse.x = window.innerWidth * 0.5;
+    mouse.y = window.innerHeight * 0.4;
+    window.addEventListener('scroll', function () {
+      var total = document.documentElement.scrollHeight - window.innerHeight;
+      var progress = total > 0 ? window.scrollY / total : 0;
+      // Gentle sine drift on X, scroll progress on Y
+      mouse.x = window.innerWidth  * (0.5 + Math.sin(progress * Math.PI * 3) * 0.25);
+      mouse.y = window.innerHeight * (0.15 + progress * 0.7);
+    }, { passive: true });
+  }
 
   var resizeTimer;
   window.addEventListener('resize', function () {
@@ -551,7 +572,7 @@
     document.getElementById(targetId).style.display = '';
   });
 
-  // Update Image button — submits the active form
+  // Update Image button — submits the active form (favorites)
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.fav-update-btn');
     if (!btn) return;
@@ -561,6 +582,19 @@
     var tabId = activeTab ? activeTab.dataset.tab : ('url-' + id);
     var isUpload = tabId.startsWith('upload-');
     var form = document.getElementById((isUpload ? 'upload-form-' : 'url-form-') + id);
+    if (form) form.submit();
+  });
+
+  // Save Changes button — submits the active form (garage my cars)
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.garage-update-btn');
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var modal = btn.closest('.modal-content');
+    var activeTab = modal.querySelector('.img-tab-btn.active');
+    var tabId = activeTab ? activeTab.dataset.tab : ('car-url-' + id);
+    var isUpload = tabId.startsWith('car-upload-');
+    var form = document.getElementById((isUpload ? 'car-upload-form-' : 'car-url-form-') + id);
     if (form) form.submit();
   });
 
@@ -637,7 +671,7 @@
           var heartBtn = card.querySelector('.fav-heart');
           if (textBtn) {
             var a = document.createElement('a');
-            a.href = '/cars/favorites';
+            a.href = '/garage';
             a.className = textBtn.className.replace('fav-text-btn', '');
             a.innerHTML = '&#9829; View Favorites';
             textBtn.parentNode.replaceChild(a, textBtn);
@@ -654,6 +688,72 @@
   }
 
   initFavForms();
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     DETAIL PAGE — live favorite / remove without reload
+  ═══════════════════════════════════════════════════════════════ */
+
+  var detailFavArea  = document.getElementById('detail-fav-area');
+  var detailFavCount = document.getElementById('detail-fav-count');
+
+  function adjustFavCount(delta) {
+    if (!detailFavCount) return;
+    var n = parseInt(detailFavCount.textContent.replace(/[^\d]/g, '')) || 0;
+    detailFavCount.textContent = '\u2665 ' + Math.max(0, n + delta);
+  }
+
+  function bindDetailFavForm() {
+    var form = detailFavArea && detailFavArea.querySelector('.detail-fav-form');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var params = new URLSearchParams(new FormData(this));
+      fetch(this.action, {
+        method: 'POST',
+        body: params,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
+        detailFavArea.innerHTML =
+          '<button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#detailEditFavModal">Edit Favorite</button>' +
+          '<form class="detail-remove-form d-inline" style="margin:0;" data-fav-id="' + data.favId + '">' +
+          '<button type="submit" class="btn btn-outline-danger btn-sm">Remove</button></form>';
+        bindDetailRemoveForm();
+        if (!data.alreadyFavorited) adjustFavCount(1);
+        showToast('Added to favorites \u2665');
+      })
+      .catch(function() { form.submit(); });
+    });
+  }
+
+  function bindDetailRemoveForm() {
+    var form = detailFavArea && detailFavArea.querySelector('.detail-remove-form');
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var favId = this.dataset.favId;
+      fetch('/cars/favorites/delete/' + favId + '?_method=DELETE', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
+        var tmpl = document.getElementById('detail-fav-template');
+        detailFavArea.innerHTML = tmpl ? tmpl.innerHTML : '';
+        bindDetailFavForm();
+        adjustFavCount(-1);
+        showToast('Removed from favorites');
+      })
+      .catch(function() { window.location.reload(); });
+    });
+  }
+
+  bindDetailFavForm();
+  bindDetailRemoveForm();
 
 
   /* ═══════════════════════════════════════════════════════════════

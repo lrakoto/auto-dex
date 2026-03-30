@@ -117,6 +117,24 @@ router.post('/add', upload.single('carImage'), async (req, res) => {
   }
 });
 
+// PUT /garage/car/:id — update a user car's image and/or notes
+router.put('/car/:id', upload.single('carImage'), async (req, res) => {
+  try {
+    const updates = {};
+    if (req.file) {
+      updates.image = req.file.path;
+    } else if (req.body.imageUrl && req.body.imageUrl.trim()) {
+      updates.image = req.body.imageUrl.trim();
+    }
+    if (req.body.notes !== undefined) updates.notes = req.body.notes || null;
+    await db.user_car.update(updates, { where: { id: req.params.id, userId: req.user.id } });
+    res.redirect('/garage');
+  } catch (err) {
+    console.log('EDIT CAR ERROR:', err);
+    res.redirect('/garage');
+  }
+});
+
 // DELETE /garage/car/:id — remove a user car
 router.delete('/car/:id', async (req, res) => {
   try {
@@ -132,7 +150,7 @@ router.delete('/car/:id', async (req, res) => {
 
 // ─── ADMIN IMAGE MANAGEMENT ───────────────────────────────────────────────────
 
-// GET /garage/admin — view all cars with placeholder images
+// GET /garage/admin — view all cars with placeholder images + pending proposals
 router.get('/admin', isAdmin, async (req, res) => {
   try {
     const { Op } = require('sequelize');
@@ -145,11 +163,52 @@ router.get('/admin', isAdmin, async (req, res) => {
       order: [['make', 'ASC'], ['model', 'ASC']],
       limit: 100
     });
-    res.render('garage/admin', { cars: cars.map(c => c.toJSON()) });
+    const proposals = await db.image_proposal.findAll({
+      where: { status: 'pending' },
+      include: [
+        { model: db.car,  attributes: ['id', 'make', 'model', 'image'] },
+        { model: db.user, attributes: ['id', 'name', 'email'] }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+    res.render('garage/admin', {
+      cars: cars.map(c => c.toJSON()),
+      proposals: proposals.map(p => p.toJSON())
+    });
   } catch (err) {
     console.log('ADMIN ERROR:', err);
     res.status(500).send('Error loading admin page.');
   }
+});
+
+// POST /garage/admin/proposal/:id/approve
+router.post('/admin/proposal/:id/approve', isAdmin, async (req, res) => {
+  try {
+    const proposal = await db.image_proposal.findByPk(req.params.id);
+    if (!proposal) return res.redirect('/garage/admin');
+    await db.car.update(
+      { image: proposal.imageUrl, updated_img: true },
+      { where: { id: proposal.carId } }
+    );
+    await proposal.update({ status: 'approved' });
+    req.flash('success', 'Image approved and applied.');
+  } catch (err) {
+    console.log('APPROVE ERROR:', err);
+    req.flash('error', 'Failed to approve.');
+  }
+  res.redirect('/garage/admin');
+});
+
+// POST /garage/admin/proposal/:id/reject
+router.post('/admin/proposal/:id/reject', isAdmin, async (req, res) => {
+  try {
+    const proposal = await db.image_proposal.findByPk(req.params.id);
+    if (proposal) await proposal.update({ status: 'rejected' });
+    req.flash('success', 'Proposal rejected.');
+  } catch (err) {
+    console.log('REJECT ERROR:', err);
+  }
+  res.redirect('/garage/admin');
 });
 
 // PUT /garage/admin/car/:id — update a car's default image
