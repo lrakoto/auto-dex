@@ -98,7 +98,14 @@ async function getCarData() {
  //getCarData(); // Already seeded — only uncomment to re-seed
 
 // Get images from Unsplash API in increments of 50 per hour
-const PRIORITY_MAKES = ['Tesla', 'Subaru', 'Mitsubishi', 'Chrysler', 'Nissan', 'Audi', 'Toyota', 'Mercedes-Benz'];
+const PRIORITY_MAKES = [
+  'Tesla', 'Subaru', 'Mitsubishi', 'Chrysler', 'Nissan', 'Audi', 'Toyota', 'Mercedes-Benz',
+  'BMW', 'Volkswagen', 'Porsche', 'Ferrari', 'Lamborghini', 'McLaren', 'Bugatti',
+  'Rolls-Royce', 'Bentley', 'Maserati', 'Pagani', 'Aston Martin',
+  'Renault', 'Peugeot', 'Citroën', 'Volvo', 'Saab', 'Lotus',
+  'Jaguar', 'Land Rover', 'Alfa Romeo', 'Fiat', 'Lancia',
+  'Mazda', 'Honda', 'Hyundai', 'Kia', 'Genesis', 'Suzuki', 'Isuzu', 'Daihatsu',
+];
 
 async function unsplashImages() {
   try {
@@ -146,6 +153,39 @@ async function unsplashImages() {
 
 setInterval(unsplashImages, 3700000);
 unsplashImages(); // Run once on startup
+
+// Seed all makes from the international list into the DB so Unsplash can pick them up.
+// Runs once on startup in the background — skips makes already in DB, adds a small
+// delay between makes to avoid hammering NHTSA.
+async function seedAllMakes() {
+  try {
+    const makes = await carquery.getMakes();
+    console.log(`Seed: checking ${makes.length} makes...`);
+    for (const make of makes) {
+      const existing = await db.car.count({ where: { make: make.display } });
+      if (existing > 0) continue; // already seeded
+      try {
+        const models = await carquery.getModels(make.display);
+        for (const m of models) {
+          await db.car.findOrCreate({
+            where: { make: m.make, model: m.model },
+            defaults: { image: 'https://i.ibb.co/PwkqdSy/placeholder.png', favcount: 0, updated_img: false }
+          });
+        }
+        console.log(`Seed: added ${models.length} models for ${make.display}`);
+      } catch (err) {
+        console.log(`Seed error for ${make.display}:`, err.message);
+      }
+      await new Promise(r => setTimeout(r, 600)); // 600ms between makes
+    }
+    console.log('Seed: complete');
+  } catch (err) {
+    console.log('Seed error:', err.message);
+  }
+}
+
+// Run after a short delay so the server is fully up first
+setTimeout(seedAllMakes, 5000);
 
 app.set('view engine', 'ejs');
 
