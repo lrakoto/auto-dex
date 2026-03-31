@@ -207,16 +207,12 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 
-const KNOWN_MAKES = [
-  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Buick',
-  'Cadillac','Chevrolet','Chrysler','Dodge','Ferrari','Fiat','Ford',
-  'Genesis','GMC','Honda','Hummer','Hyundai','Infiniti','Jaguar','Jeep',
-  'Kia','Lamborghini','Land Rover','Lexus','Lincoln','Lotus','Lucid',
-  'Maserati','Mazda','McLaren','Mercedes-Benz','Mercury','MINI',
-  'Mitsubishi','Nissan','Oldsmobile','Polestar','Pontiac','Porsche',
-  'Ram','Rivian','Rolls-Royce','Saturn','Scion','Smart','Subaru',
-  'Suzuki','Tesla','Toyota','Volkswagen','Volvo',
-].sort((a, b) => a.localeCompare(b));
+const carquery = require('./config/carquery');
+
+async function getKnownMakes() {
+  const makes = await carquery.getMakes();
+  return makes.map(m => m.display);
+}
 
 // ── Trigram fuzzy helpers ──────────────────────────────────────────────────────
 function makeTrigrams(s) {
@@ -245,6 +241,7 @@ app.get('/suggest', async (req, res) => {
   if (q.length < 2) return res.json({ makes: [], models: [] });
   try {
     const { Op } = require('sequelize');
+    const KNOWN_MAKES = await getKnownMakes();
 
     // Detect "Make ModelPrefix" pattern (e.g. "Ferrari F", "Honda Civ")
     const makePrefix = KNOWN_MAKES.find(m =>
@@ -252,18 +249,13 @@ app.get('/suggest', async (req, res) => {
     );
     if (makePrefix) {
       const modelQ = q.slice(makePrefix.length + 1).trim();
-      // Search DB for this make's models matching the model prefix (fuzzy + exact)
       let dbModels = await db.car.findAll({
-        where: {
-          make: makePrefix,
-          model: { [Op.iLike]: '%' + modelQ + '%' }
-        },
+        where: { make: makePrefix, model: { [Op.iLike]: '%' + modelQ + '%' } },
         attributes: ['make', 'model', 'favcount'],
         order: [['favcount', 'DESC']],
         limit: 15
       });
       let models = dbModels.map(c => c.toJSON());
-      // Also fuzzy-match within this make's models
       if (models.length < 15 && modelQ.length >= 2) {
         const makeCars = await db.car.findAll({
           where: { make: makePrefix },
@@ -277,20 +269,12 @@ app.get('/suggest', async (req, res) => {
           .sort((a, b) => b._score - a._score);
         models = models.concat(fuzzyHits.slice(0, 15 - models.length));
       }
-      // Fall back to NHTSA if DB has nothing for this make
+      // Fall back to CarQuery if DB has nothing for this make
       if (models.length === 0) {
-        try {
-          const nhtsaRes = await axios.get(
-            `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(makePrefix)}?format=json`
-          );
-          models = (nhtsaRes.data.Results || [])
-            .filter(r => r.Model_Name && (
-              r.Model_Name.toLowerCase().includes(modelQ.toLowerCase()) ||
-              fuzzyScore(modelQ, r.Model_Name) > 0.45
-            ))
-            .slice(0, 15)
-            .map(r => ({ make: r.Make_Name, model: r.Model_Name }));
-        } catch (_) {}
+        const cqModels = await carquery.getModels(makePrefix);
+        models = cqModels
+          .filter(m => m.model.toLowerCase().includes(modelQ.toLowerCase()) || fuzzyScore(modelQ, m.model) > 0.45)
+          .slice(0, 15);
       }
       return res.json({ makes: [], models: models.slice(0, 15) });
     }
@@ -305,12 +289,12 @@ app.get('/suggest', async (req, res) => {
       })
       .slice(0, 5);
 
-    // Exact case-insensitive substring match from DB
+    // Exact DB match
     let exactCars = await db.car.findAll({
       where: {
         [Op.or]: [
           { model: { [Op.iLike]: '%' + q + '%' } },
-          { make: { [Op.iLike]: '%' + q + '%' } }
+          { make:  { [Op.iLike]: '%' + q + '%' } }
         ]
       },
       attributes: ['make', 'model', 'favcount'],
@@ -320,51 +304,20 @@ app.get('/suggest', async (req, res) => {
     let models = exactCars.map(c => c.toJSON());
     const seen = new Set(models.map(c => c.make + '|' + c.model));
 
-    // Fuzzy pass over entire DB when exact match yields fewer than 15 results
+    // Fuzzy DB pass
     if (models.length < 15) {
-      const pool = await db.car.findAll({
-        attributes: ['make', 'model', 'favcount'],
-        order: [['favcount', 'DESC']]
-      });
+      const pool = await db.car.findAll({ attributes: ['make', 'model', 'favcount'], order: [['favcount', 'DESC']] });
       const fuzzyHits = pool
-        .map(c => {
-          const car = c.toJSON();
-          const score = Math.max(
-            fuzzyScore(q, car.model),
-            fuzzyScore(q, car.make + ' ' + car.model)
-          );
-          return { ...car, _score: score };
-        })
+        .map(c => { const car = c.toJSON(); return { ...car, _score: Math.max(fuzzyScore(q, car.model), fuzzyScore(q, car.make + ' ' + car.model)) }; })
         .filter(c => c._score > 0.45 && !seen.has(c.make + '|' + c.model))
         .sort((a, b) => b._score - a._score || (b.favcount || 0) - (a.favcount || 0));
       models = models.concat(fuzzyHits.slice(0, 15 - models.length));
     }
 
-    // NHTSA fallback when DB has nothing — search known makes in parallel
-    if (models.length === 0 && makes.length === 0) {
-      const nhtsaResults = await Promise.allSettled(
-        KNOWN_MAKES.map(make =>
-          axios.get(`https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(make)}?format=json`)
-            .then(r => (r.data.Results || [])
-              .filter(m => m.Model_Name && fuzzyScore(q, m.Model_Name) > 0.45)
-              .map(m => ({ make: m.Make_Name, model: m.Model_Name }))
-            )
-        )
-      );
-      for (const r of nhtsaResults) {
-        if (r.status === 'fulfilled') models = models.concat(r.value);
-        if (models.length >= 15) break;
-      }
-    } else if (models.length === 0 && makes.length > 0) {
-      // Make matched — show that make's popular models
-      try {
-        const nhtsaRes = await axios.get(
-          `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(makes[0])}?format=json`
-        );
-        models = (nhtsaRes.data.Results || [])
-          .slice(0, 15)
-          .map(r => ({ make: r.Make_Name, model: r.Model_Name }));
-      } catch (_) {}
+    // CarQuery fallback when DB has nothing
+    if (models.length === 0 && makes.length > 0) {
+      const cqModels = await carquery.getModels(makes[0]);
+      models = cqModels.slice(0, 15);
     }
 
     res.json({ makes, models: models.slice(0, 15) });
@@ -379,12 +332,11 @@ app.get('/search', async (req, res) => {
   if (!q) return res.redirect('/');
   try {
     const { Op } = require('sequelize');
+    const KNOWN_MAKES = await getKnownMakes();
 
-    // 1. Exact make match
     const makeMatch = KNOWN_MAKES.find(m => m.toLowerCase() === q.toLowerCase());
     if (makeMatch) return res.redirect('/cars?selectmake=' + encodeURIComponent(makeMatch));
 
-    // 2. "Make Model" prefix — e.g. "Toyota Camry"
     for (const make of KNOWN_MAKES) {
       if (q.toLowerCase().startsWith(make.toLowerCase() + ' ')) {
         const modelQ = q.slice(make.length + 1).trim();
@@ -397,7 +349,6 @@ app.get('/search', async (req, res) => {
       }
     }
 
-    // 3. Model name fallback
     return res.redirect('/cars/search?q=' + encodeURIComponent(q));
   } catch (err) {
     return res.redirect('/cars/search?q=' + encodeURIComponent(q));
@@ -406,15 +357,18 @@ app.get('/search', async (req, res) => {
 
 app.get('/makes', async (req, res) => {
   try {
-    const dbMakes = await db.car.findAll({
-      attributes: ['make', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']],
-      group: ['make']
-    });
+    const [dbMakes, cqMakes] = await Promise.all([
+      db.car.findAll({
+        attributes: ['make', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']],
+        group: ['make']
+      }),
+      carquery.getMakes()
+    ]);
     const countMap = {};
     dbMakes.forEach(m => { countMap[m.make] = parseInt(m.getDataValue('modelCount')); });
 
-    // Union of curated list + any DB makes not in the list
-    const allNames = new Set(KNOWN_MAKES);
+    // Union of CarQuery makes + any DB makes not already included
+    const allNames = new Set(cqMakes.map(m => m.display));
     Object.keys(countMap).forEach(m => allNames.add(m));
     const makes = Array.from(allNames).sort((a, b) => a.localeCompare(b)).map(name => ({
       make: name,

@@ -62,21 +62,20 @@ router.get('/', async (req, res) => {
   let userQuery = req.query;
   const page = Math.max(1, parseInt(req.query.page) || 1);
   try {
-    let response = await axios.get(`${baseURL}${allModelsByMake}${userQuery.selectmake}${endOfURL}`);
-    let data = response.data.Results;
-    data.sort((a, b) => a.Model_Name.localeCompare(b.Model_Name));
+    const { getModels } = require('../config/carquery');
+    const cqModels = await getModels(userQuery.selectmake);
     let imgData = [];
-    for (let c of data) {
+    for (let c of cqModels) {
       let findCurrentCar = await db.car.findOne({
-        where: { make: c.Make_Name, model: c.Model_Name }
+        where: { make: c.make, model: c.model }
       });
       if (findCurrentCar) {
         imgData.push(findCurrentCar);
       } else {
         imgData.push({
           dataValues: {
-            make: c.Make_Name,
-            model: c.Model_Name,
+            make: c.make,
+            model: c.model,
             image: 'https://i.ibb.co/PwkqdSy/placeholder.png',
             favcount: 0
           }

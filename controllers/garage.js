@@ -30,13 +30,9 @@ router.get('/', async (req, res) => {
 // GET /garage/makes — returns all makes as JSON for the add-car dropdown
 router.get('/makes', async (req, res) => {
   try {
-    const response = await axios.get(`${baseURL}getallmanufacturers${endOfURL}`);
-    const makes = response.data.Results
-      .filter(m => m.Mfr_CommonName && m.Country === 'UNITED STATES (USA)')
-      .map(m => m.Mfr_CommonName)
-      .filter((v, i, a) => a.indexOf(v) === i) // dedupe
-      .sort();
-    res.json(makes);
+    const { getMakes } = require('../config/carquery');
+    const makes = await getMakes();
+    res.json(makes.map(m => m.display));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch makes' });
   }
@@ -47,12 +43,9 @@ router.get('/models', async (req, res) => {
   try {
     const make = req.query.make;
     if (!make) return res.status(400).json({ error: 'make is required' });
-    const response = await axios.get(`${baseURL}getmodelsformake/${encodeURIComponent(make)}${endOfURL}`);
-    const models = response.data.Results
-      .map(m => m.Model_Name)
-      .filter((v, i, a) => a.indexOf(v) === i)
-      .sort();
-    res.json(models);
+    const { getModels } = require('../config/carquery');
+    const models = await getModels(make);
+    res.json(models.map(m => m.model));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch models' });
   }
