@@ -188,6 +188,7 @@ async function seedAllMakes() {
 setTimeout(seedAllMakes, 5000);
 
 app.set('view engine', 'ejs');
+app.set('trust proxy', 1); // Required for secure cookies behind nginx
 
 app.use(require('morgan')('dev'));
 app.use(methodOverride('_method'));
