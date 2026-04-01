@@ -161,6 +161,28 @@ router.get('/admin', isAdmin, async (req, res) => {
       attributes: ['id', 'name', 'email', 'createdAt'],
       order: [['createdAt', 'DESC']]
     });
+
+    const allUsers = await db.user.findAll({
+      attributes: ['id', 'name', 'email', 'isAdmin', 'emailVerified', 'createdAt', 'lastLoginAt'],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Attach activity counts
+    const userIds = allUsers.map(u => u.id);
+    const [favCounts, garageCounts, proposalCounts] = await Promise.all([
+      db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
+      db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
+      db.image_proposal.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] })
+    ]);
+    const toMap = rows => { const m = {}; rows.forEach(r => { m[r.userId] = parseInt(r.getDataValue('count')); }); return m; };
+    const favMap = toMap(favCounts), garageMap = toMap(garageCounts), proposalMap = toMap(proposalCounts);
+
+    const usersWithActivity = allUsers.map(u => ({
+      ...u.toJSON(),
+      favorites: favMap[u.id] || 0,
+      garageCars: garageMap[u.id] || 0,
+      proposals: proposalMap[u.id] || 0
+    }));
     const proposals = await db.image_proposal.findAll({
       where: { status: 'pending' },
       include: [
@@ -172,7 +194,8 @@ router.get('/admin', isAdmin, async (req, res) => {
     res.render('garage/admin', {
       cars: cars.map(c => c.toJSON()),
       proposals: proposals.map(p => p.toJSON()),
-      unverifiedUsers: unverifiedUsers.map(u => u.toJSON())
+      unverifiedUsers: unverifiedUsers.map(u => u.toJSON()),
+      allUsers: usersWithActivity
     });
   } catch (err) {
     console.log('ADMIN ERROR:', err);

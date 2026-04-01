@@ -27,6 +27,7 @@ router.post('/login', (req, res, next) => {
     }
     req.logIn(user, (err) => {
       if (err) return next(err);
+      db.user.update({ lastLoginAt: new Date() }, { where: { id: user.id } }).catch(() => {});
       req.flash('success', 'Welcome back...');
       const returnTo = req.session.returnTo || '/';
       delete req.session.returnTo;
