@@ -263,7 +263,7 @@ router.get('/', async (req, res) => {
   // DELETE ROUTE for /favorites
   router.delete('/favorites/delete/:id', isLoggedIn, async (req, res) => {
     try {
-      await db.favorite_car.destroy({ where: { id: req.params.id } });
+      await db.favorite_car.destroy({ where: { id: req.params.id, userId: req.user.id } });
       if (req.get('X-Requested-With') === 'XMLHttpRequest') {
         return res.json({ success: true });
       }
@@ -283,7 +283,7 @@ router.get('/', async (req, res) => {
       const imageUrl = req.file ? req.file.path : req.body.newimagelink;
       await db.favorite_car.update(
         { image: imageUrl },
-        { where: { id: req.body.favid } }
+        { where: { id: req.params.id, userId: req.user.id } }
       );
       res.redirect('/garage');
     } catch (err) {
@@ -310,7 +310,7 @@ router.get('/', async (req, res) => {
     let newFavCar = await db.favorite_car.findOrCreate({
         where: {
             carId: favCar.id,
-            userId: parseInt(data.userId)
+            userId: req.user.id
         },
         defaults: {
             make: data.favecar_make,
@@ -327,7 +327,7 @@ router.get('/', async (req, res) => {
     console.log('FOUND CAR AWAIT', foundCar);
     let currentFavCount = parseInt(foundCar.favcount) || 0;
 
-    if(favCar.id === newFavCar[0].carId && parseInt(data.userId) === newFavCar[0].userId) {
+    if(favCar.id === newFavCar[0].carId && req.user.id === newFavCar[0].userId) {
         console.log('ALREADy IN FAVORITES');
         if (req.get('X-Requested-With') === 'XMLHttpRequest') { return res.json({ success: true, favId: newFavCar[0].id, alreadyFavorited: true }); }
         return res.redirect('favorites');

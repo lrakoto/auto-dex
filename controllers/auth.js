@@ -4,6 +4,15 @@ const crypto  = require('crypto');
 const passport = require('../config/ppConfig');
 const db = require('../models');
 const { sendVerificationEmail } = require('../config/email');
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per window
+  message: 'Too many login attempts. Please try again in 15 minutes.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 router.get('/signup', (req, res) => {
   res.render('auth/signup');
@@ -14,7 +23,7 @@ router.get('/login', (req, res) => {
   res.render('auth/login');
 });
 
-router.post('/login', (req, res, next) => {
+router.post('/login', loginLimiter, (req, res, next) => {
   passport.authenticate('local', (err, user, info) => {
     if (err) return next(err);
     if (!user) {
