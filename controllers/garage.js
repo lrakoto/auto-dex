@@ -169,9 +169,10 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
+    const PLACEHOLDER = 'https://i.ibb.co/PwkqdSy/placeholder.png';
     const [totalCars, unsplashRemaining, favCounts, garageCounts, proposalCounts] = await Promise.all([
       db.car.count(),
-      db.car.count({ where: { updated_img: false } }),
+      db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER }] } }),
       db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.image_proposal.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] })
@@ -248,6 +249,23 @@ router.post('/admin/proposal/:id/reject', isAdmin, async (req, res) => {
     req.flash('success', 'Proposal rejected.');
   } catch (err) {
     console.log('REJECT ERROR:', err);
+  }
+  res.redirect('/garage/admin');
+});
+
+// POST /garage/admin/reset-unsplash-queue — reset updated_img for placeholder cars so Unsplash retries them
+router.post('/admin/reset-unsplash-queue', isAdmin, async (req, res) => {
+  try {
+    const PLACEHOLDER = 'https://i.ibb.co/PwkqdSy/placeholder.png';
+    const { Op } = require('sequelize');
+    const [count] = await db.car.update(
+      { updated_img: false },
+      { where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER }] } }
+    );
+    req.flash('success', `Queue reset — ${count} cars will be retried on the next Unsplash run.`);
+  } catch (err) {
+    console.log('RESET QUEUE ERROR:', err);
+    req.flash('error', 'Failed to reset queue.');
   }
   res.redirect('/garage/admin');
 });
