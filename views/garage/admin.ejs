@@ -2,6 +2,16 @@
   <div class="container">
     <h1 class="jumbotron-heading">Admin: Default Car Images</h1>
     <p class="lead text-muted">Cars still using placeholder images — update them below</p>
+    <div class="d-inline-block mt-3 px-4 py-3 rounded" style="background:#1f1f1f;border:1px solid #333;">
+      <div class="text-muted mb-1" style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;">Unsplash Queue</div>
+      <div style="font-size:1.6rem;font-weight:700;color:#f8fafc;">
+        <%= unsplashRemaining.toLocaleString() %>
+        <span style="font-size:1rem;font-weight:400;color:#71717a;">/ <%= totalCars.toLocaleString() %></span>
+      </div>
+      <div class="text-muted mt-1" style="font-size:0.78rem;">
+        cars remaining &middot; ~<%= Math.ceil(unsplashRemaining / 50) %> runs at 50/hr
+      </div>
+    </div>
   </div>
 </section>
 

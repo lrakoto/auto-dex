@@ -169,7 +169,9 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
-    const [favCounts, garageCounts, proposalCounts] = await Promise.all([
+    const [totalCars, unsplashRemaining, favCounts, garageCounts, proposalCounts] = await Promise.all([
+      db.car.count(),
+      db.car.count({ where: { updated_img: false } }),
       db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.image_proposal.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] })
@@ -195,7 +197,9 @@ router.get('/admin', isAdmin, async (req, res) => {
       cars: cars.map(c => c.toJSON()),
       proposals: proposals.map(p => p.toJSON()),
       unverifiedUsers: unverifiedUsers.map(u => u.toJSON()),
-      allUsers: usersWithActivity
+      allUsers: usersWithActivity,
+      totalCars,
+      unsplashRemaining
     });
   } catch (err) {
     console.log('ADMIN ERROR:', err);
