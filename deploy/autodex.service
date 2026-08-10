@@ -1,0 +1,30 @@
+[Unit]
+Description=AutoDex Node.js app
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=autodex
+Group=autodex
+WorkingDirectory=/opt/autodex
+EnvironmentFile=/opt/autodex/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+# Give it time to finish DB calls during startup
+TimeoutStartSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autodex
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

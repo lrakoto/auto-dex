@@ -135,3 +135,51 @@ npx sequelize-cli db:create "databasename"
 ```
 npm start
 ```
+
+## Deployment
+
+AutoDex runs behind nginx on a Hetzner (or any Ubuntu/Debian) VM. The `deploy/` directory contains a one-shot setup script that installs everything from scratch.
+
+### First-time server setup
+
+1. Create a new server on Hetzner Cloud (Ubuntu 22.04 LTS, CX22 or larger).
+2. Point DNS for `autodx.io` and `www.autodx.io` (A records) to the new server's IP.
+3. SSH in as root and run:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/lrakoto/auto-dex/main/deploy/setup.sh)
+```
+
+This installs Node.js, PostgreSQL, nginx, certbot (Let's Encrypt), UFW, and fail2ban; clones the repo to `/opt/autodex`; creates the database, runs migrations, and starts the app via systemd. The local DB password and `DATABASE_URL` are written to `.env` automatically.
+
+4. Fill in the remaining secrets in `.env` (see `.env.example`):
+
+```bash
+nano /opt/autodex/.env
+```
+
+5. Restart the app to pick up the new env:
+
+```bash
+systemctl restart autodex
+```
+
+### Common operations
+
+```bash
+systemctl status autodex       # app status
+journalctl -u autodex -f       # live app logs
+systemctl restart autodex     # restart after env change
+autodex-update                # pull latest + migrate + restart
+sudo certbot renew --dry-run  # test TLS renewal
+```
+
+### Files
+
+| File | Purpose |
+| ---- | ------- |
+| `deploy/setup.sh`     | One-shot server bootstrap (run once on a fresh VM) |
+| `deploy/update.sh`    | Pull latest code, migrate, restart (run on each deploy) |
+| `deploy/autodex.service` | systemd unit — auto-restarts the app on crash/reboot |
+| `deploy/nginx.conf`   | nginx site: HTTPS, reverse proxy to :3000, security headers |
+| `.env.example`        | Template for all required environment variables |
