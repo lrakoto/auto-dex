@@ -3,6 +3,7 @@ const express = require('express');
 const layouts = require('express-ejs-layouts');
 const app = express();
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const passport = require('./config/ppConfig');
 const isLoggedIn = require('./middleware/isLoggedIn');
@@ -188,7 +189,7 @@ async function seedAllMakes() {
 setTimeout(seedAllMakes, 5000);
 
 app.set('view engine', 'ejs');
-app.set('trust proxy', 1); // Required for secure cookies behind nginx
+app.set('trust proxy', 1); // Required for secure cookies behind a reverse proxy
 
 app.use(require('morgan')('dev'));
 app.use(methodOverride('_method'));
@@ -196,7 +197,21 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(__dirname + '/public'));
 app.use(layouts);
 
+// In production, keep sessions in Postgres so they survive restarts and deploys.
+// The default MemoryStore drops every session on restart and leaks memory.
+const sessionStore = process.env.NODE_ENV === 'production'
+  ? new pgSession({
+      conObject: {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      },
+      tableName: 'session',
+      createTableIfMissing: true
+    })
+  : undefined;
+
 app.use(session({
+  store: sessionStore,
   secret: SECRET_SESSION,
   resave: false,
   saveUninitialized: false,
