@@ -5,6 +5,7 @@
     <p class="mb-4" style="font-size:0.88rem;color:#71717a;">Log in to save favorites and manage your garage.</p>
 
     <form action="/auth/login" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label for="auth-email">Email</label>
         <input type="email" name="email" class="form-control" id="auth-email" placeholder="you@example.com" required>
@@ -22,6 +23,7 @@
     <details style="margin-top:1.5rem;">
       <summary style="font-size:0.78rem;color:#52525b;cursor:pointer;">Didn't receive a verification email?</summary>
       <form action="/auth/resend-verification" method="POST" style="margin-top:0.75rem;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="input-group input-group-sm">
           <input type="email" name="email" class="form-control" placeholder="your@email.com" required>
           <div class="input-group-append">

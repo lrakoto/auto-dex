@@ -31,6 +31,7 @@
               <div class="d-flex" style="gap:0.5rem;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editCarModal<%= car.id %>">Edit</button>
                 <form method="POST" action="/garage/car/<%= car.id %>?_method=DELETE" style="margin:0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                 </form>
               </div>
@@ -56,6 +57,7 @@
 
                 <div id="car-url-<%= car.id %>" class="img-tab-pane">
                   <form id="car-url-form-<%= car.id %>" method="POST" action="/garage/car/<%= car.id %>?_method=PUT">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="carid" value="<%= car.id %>">
                     <input type="text" class="form-control mb-2" name="imageUrl" placeholder="https://…" autocomplete="off">
                     <input type="text" class="form-control" name="notes" placeholder="Notes (optional)" value="<%= car.notes || '' %>">
@@ -63,7 +65,8 @@
                 </div>
 
                 <div id="car-upload-<%= car.id %>" class="img-tab-pane" style="display:none;">
-                  <form id="car-upload-form-<%= car.id %>" method="POST" action="/garage/car/<%= car.id %>?_method=PUT" enctype="multipart/form-data">
+                  <form id="car-upload-form-<%= car.id %>" method="POST" action="/garage/car/<%= car.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="carid" value="<%= car.id %>">
                     <input type="file" class="form-control-file mb-2" name="carImage" accept="image/*">
                     <input type="text" class="form-control" name="notes" placeholder="Notes (optional)" value="<%= car.notes || '' %>">
@@ -99,6 +102,7 @@
               <div class="d-flex" style="gap:0.5rem;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editFavModal<%= f.id %>">Edit</button>
                 <form method="POST" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE" style="margin:0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                 </form>
               </div>
@@ -123,12 +127,14 @@
                 </div>
                 <div id="fav-url-<%= f.id %>" class="img-tab-pane">
                   <form id="fav-url-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="favid" value="<%= f.id %>">
                     <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
                   </form>
                 </div>
                 <div id="fav-upload-<%= f.id %>" class="img-tab-pane" style="display:none;">
-                  <form id="fav-upload-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT" enctype="multipart/form-data">
+                  <form id="fav-upload-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="favid" value="<%= f.id %>">
                     <input type="file" class="form-control-file" name="newimage" accept="image/*">
                   </form>

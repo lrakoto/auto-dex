@@ -2,6 +2,22 @@
   'use strict';
 
   /* ═══════════════════════════════════════════════════════════════
+     IMG ERROR FALLBACKS — replaces inline onerror handlers (CSP-safe).
+     Error events don't bubble, so listen in the capture phase.
+  ═══════════════════════════════════════════════════════════════ */
+
+  document.addEventListener('error', function (e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'IMG') return;
+    if (el.hasAttribute('data-onerror-hide')) {
+      el.style.display = 'none';
+    } else if (el.dataset.onerrorFallback && el.src !== el.dataset.onerrorFallback) {
+      el.src = el.dataset.onerrorFallback;
+    }
+  }, true);
+
+
+  /* ═══════════════════════════════════════════════════════════════
      SCROLL PROGRESS BAR
   ═══════════════════════════════════════════════════════════════ */
 
@@ -666,17 +682,19 @@
           body: new URLSearchParams(new FormData(this))
         })
         .then(function(r) { return r.json(); })
-        .then(function() {
+        .then(function(data) {
+          if (data && data.success === false) return;
+          var already = data && data.alreadyFavorited;
           var textBtn = card.querySelector('.fav-text-btn');
           var heartBtn = card.querySelector('.fav-heart');
-          if (textBtn) {
+          if (textBtn && !already) {
             var a = document.createElement('a');
             a.href = '/garage';
             a.className = textBtn.className.replace('fav-text-btn', '');
             a.innerHTML = '&#9829; View Favorites';
             textBtn.parentNode.replaceChild(a, textBtn);
           }
-          if (heartBtn) {
+          if (heartBtn && !already) {
             var count = parseInt(heartBtn.textContent.replace(/[^\d]/g, '')) || 0;
             heartBtn.innerHTML = '&#9829; ' + (count + 1);
             heartBtn.disabled = true;
@@ -737,7 +755,10 @@
       var favId = this.dataset.favId;
       fetch('/cars/favorites/delete/' + favId + '?_method=DELETE', {
         method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'x-csrf-token': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+        }
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {

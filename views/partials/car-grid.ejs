@@ -21,6 +21,7 @@
               <div class="btn-group">
                 <% if (currentUser) { %>
                   <form action="cars/fav" method="POST" id="favecar_form_<%= i %>" class="fav-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="favecar_model" value="<%= c.dataValues.model %>"/>
                     <input type="hidden" name="favecar_make" value="<%= c.dataValues.make %>"/>
                     <input type="hidden" name="favecar_image" value="<%= c.dataValues.image %>"/>

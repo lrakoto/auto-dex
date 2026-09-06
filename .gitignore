@@ -2,3 +2,4 @@
 node_modules
 server.local
 CLAUDE.md
+.DS_Store

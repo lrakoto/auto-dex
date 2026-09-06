@@ -14,12 +14,37 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Guards endpoints that send email via Resend — without this, anyone can
+// spam arbitrary inboxes (and burn your Resend quota) on repeat.
+const emailSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: 'Too many requests. Please try again in 15 minutes.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: 'Too many accounts created from this IP. Please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Only allow same-origin paths — blocks open redirects like ?returnTo=https://evil.example
+function safeReturnTo(url) {
+  if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) return url;
+  return null;
+}
+
 router.get('/signup', (req, res) => {
   res.render('auth/signup');
 });
 
 router.get('/login', (req, res) => {
-  if (req.query.returnTo) req.session.returnTo = req.query.returnTo;
+  const returnTo = safeReturnTo(req.query.returnTo);
+  if (returnTo) req.session.returnTo = returnTo;
   res.render('auth/login');
 });
 
@@ -34,30 +59,37 @@ router.post('/login', loginLimiter, (req, res, next) => {
       req.flash('error', 'Please verify your email before logging in. Check your inbox.');
       return res.redirect('/auth/login');
     }
-    req.logIn(user, (err) => {
+    // keepSessionInfo: passport 0.7 regenerates the session on login — this
+    // keeps req.session.returnTo set by GET /auth/login
+    req.logIn(user, { keepSessionInfo: true }, (err) => {
       if (err) return next(err);
       db.user.update({ lastLoginAt: new Date() }, { where: { id: user.id } }).catch(() => {});
       req.flash('success', 'Welcome back...');
-      const returnTo = req.session.returnTo || '/';
+      // Re-validate at use time in case the session value ever came from elsewhere
+      const returnTo = safeReturnTo(req.session.returnTo) || '/';
       delete req.session.returnTo;
       res.redirect(returnTo);
     });
   })(req, res, next);
 });
 
-router.get('/logout', (req, res) => {
-  req.logOut(() => {});
-  req.flash('success', 'Logging out... See you next time!');
-  res.redirect('/');
+// POST only — a GET logout is trivially CSRF-able (e.g. <img src="/auth/logout">)
+router.post('/logout', (req, res, next) => {
+  req.logOut((err) => {
+    if (err) return next(err);
+    req.flash('success', 'Logging out... See you next time!');
+    res.redirect('/');
+  });
 });
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', signupLimiter, async (req, res) => {
   const { email, name, password } = req.body;
   try {
     const token = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     const [user, created] = await db.user.findOrCreate({
       where: { email },
-      defaults: { name, password, emailVerified: false, verificationToken: token }
+      defaults: { name, password, emailVerified: false, verificationToken: token, verificationTokenExpiresAt: tokenExpiry }
     });
 
     if (created) {
@@ -88,7 +120,11 @@ router.get('/verify/:token', async (req, res) => {
       req.flash('error', 'Verification link is invalid or has already been used.');
       return res.redirect('/auth/login');
     }
-    await user.update({ emailVerified: true, verificationToken: null });
+    if (!user.verificationTokenExpiresAt || new Date(user.verificationTokenExpiresAt) < new Date()) {
+      req.flash('error', 'That verification link has expired — request a new one below.');
+      return res.redirect('/auth/login');
+    }
+    await user.update({ emailVerified: true, verificationToken: null, verificationTokenExpiresAt: null });
     req.flash('success', 'Email verified! You can now log in.');
     res.redirect('/auth/login');
   } catch (err) {
@@ -99,7 +135,7 @@ router.get('/verify/:token', async (req, res) => {
 });
 
 // POST /auth/resend-verification
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', emailSendLimiter, async (req, res) => {
   const { email } = req.body;
   try {
     const user = await db.user.findOne({ where: { email } });
@@ -108,7 +144,10 @@ router.post('/resend-verification', async (req, res) => {
       return res.redirect('/auth/login');
     }
     const token = crypto.randomBytes(32).toString('hex');
-    await user.update({ verificationToken: token });
+    await user.update({
+      verificationToken: token,
+      verificationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    });
     await sendVerificationEmail(email, user.name, token);
     req.flash('success', 'Verification email resent. Check your inbox.');
     res.redirect('/auth/login');

@@ -5,6 +5,7 @@
     <p class="mb-4" style="font-size:0.88rem;color:#71717a;">Save favorites and build your personal garage.</p>
 
     <form action="/auth/signup" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label for="new-name">Name</label>
         <input id="new-name" type="text" name="name" class="form-control" placeholder="Your name" required>

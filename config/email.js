@@ -5,6 +5,11 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const FROM     = process.env.EMAIL_FROM || 'AutoDex <noreply@autodx.io>';
 
 async function sendVerificationEmail(toEmail, toName, token) {
+  // Never hit the Resend API (or spend quota) from the test suite
+  if (process.env.NODE_ENV === 'test') {
+    console.log(`[test] Skipping verification email to ${toEmail}`);
+    return;
+  }
   const link = `${BASE_URL}/auth/verify/${token}`;
   await resend.emails.send({
     from: FROM,

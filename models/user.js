@@ -55,6 +55,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    verificationTokenExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     lastLoginAt: {
       type: DataTypes.DATE,
       allowNull: true

@@ -1,23 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('../config/ppConfig');
 const db = require('../models');
 const axios = require('axios');
 const isLoggedIn = require('../middleware/isLoggedIn');
-const app = express();
-const methodOverride = require('method-override');
 const { upload } = require('../config/cloudinary');
+const { isValidImageUrl } = require('../lib/validators');
 
 require('dotenv').config();
-const layouts = require('express-ejs-layouts');
-const session = require('express-session');
-const flash = require('connect-flash');
-const { application, request } = require('express');
-const car = require('../models/car');
 
-// For Car Data API calls
-const CarAPIbaseURI = 'https://car-data.p.rapidapi.com';
-const CarAPIKey = process.env.CKEY;
 const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
 const allMakes = 'getallmanufacturers/';
 const allModelsByMake = 'getmodelsformake/'; // needs model name
@@ -33,6 +23,19 @@ const uSplashEnd = `client_id=${uSplashKey}`
 
 
 const PAGE_SIZE = 12;
+
+// Tiny in-memory TTL cache for slow-changing external API responses
+const apiCache = new Map(); // url -> { at, data }
+const API_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+const API_CACHE_MAX = 500;
+async function cachedGet(url) {
+  const hit = apiCache.get(url);
+  if (hit && Date.now() - hit.at < API_CACHE_TTL) return hit.data;
+  const res = await axios.get(url, { timeout: 6000 });
+  if (apiCache.size >= API_CACHE_MAX) apiCache.delete(apiCache.keys().next().value);
+  apiCache.set(url, { at: Date.now(), data: res.data });
+  return res.data;
+}
 
 router.get('/search', async (req, res) => {
   const q = (req.query.q || '').trim();
@@ -64,24 +67,20 @@ router.get('/', async (req, res) => {
   try {
     const { getModels } = require('../config/carquery');
     const cqModels = await getModels(userQuery.selectmake);
-    let imgData = [];
-    for (let c of cqModels) {
-      let findCurrentCar = await db.car.findOne({
-        where: { make: c.make, model: c.model }
-      });
-      if (findCurrentCar) {
-        imgData.push(findCurrentCar);
-      } else {
-        imgData.push({
-          dataValues: {
-            make: c.make,
-            model: c.model,
-            image: 'https://i.ibb.co/PwkqdSy/placeholder.png',
-            favcount: 0
-          }
-        });
+
+    // One DB round-trip for the whole make instead of one per model (was N+1)
+    const dbCars = await db.car.findAll({ where: { make: userQuery.selectmake } });
+    const byModel = {};
+    dbCars.forEach(c => { byModel[c.model] = c; });
+
+    const imgData = cqModels.map(c => byModel[c.model] || {
+      dataValues: {
+        make: c.make,
+        model: c.model,
+        image: 'https://i.ibb.co/PwkqdSy/placeholder.png',
+        favcount: 0
       }
-    }
+    });
     const total = imgData.length;
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const pagedCars = imgData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -105,7 +104,9 @@ router.get('/', async (req, res) => {
     try {
       // Get this car from DB
       let car = await db.car.findOne({ where: { make, model } });
-      const image = req.query.image || (car ? car.image : 'https://i.ibb.co/PwkqdSy/placeholder.png');
+      // req.query.image comes from the link, so validate its scheme before rendering it
+      const queryImage = isValidImageUrl(req.query.image) ? req.query.image.trim() : null;
+      const image = queryImage || (car ? car.image : 'https://i.ibb.co/PwkqdSy/placeholder.png');
       const favcount = car ? car.favcount : 0;
 
       // Get other models from the same make (up to 6, excluding current model)
@@ -183,37 +184,40 @@ router.get('/', async (req, res) => {
         { label: 'Throttle House', icon: '🔥', url: `https://www.youtube.com/results?search_query=${searchQuery}+throttle+house` },
       ];
 
-      // Pull manufacturer country from NHTSA
+      // Pull manufacturer country from NHTSA (manufacturer list cached 24h —
+      // it changes essentially never and was being re-fetched on every view)
       let country = null;
       try {
-        const mfrRes = await axios.get(`${baseURL}getallmanufacturers${endOfURL}`);
-        const mfr = mfrRes.data.Results.find(m =>
-          m.Mfr_CommonName && m.Mfr_CommonName.toLowerCase() === make.toLowerCase()
-        );
-        if (mfr) country = mfr.Country;
+        const mfrList = await cachedGet(baseURL + 'getallmanufacturers' + endOfURL);
+        if (mfrList && Array.isArray(mfrList.Results)) {
+          const mfr = mfrList.Results.find(m =>
+            m.Mfr_CommonName && m.Mfr_CommonName.toLowerCase() === make.toLowerCase()
+          );
+          if (mfr) country = mfr.Country;
+        }
       } catch (e) { /* non-critical */ }
 
-      // Car specs from FuelEconomy.gov (free, no key required)
+      // Car specs from FuelEconomy.gov (free, no key required).
+      // Probe years in PARALLEL — sequentially this could block ~36s per view.
       let carSpecs = null;
       try {
         const fuelHeaders = { Accept: 'application/json' };
         const currentYear = new Date().getFullYear();
-        let vehicleId = null;
-        for (let year = currentYear; year >= currentYear - 8; year--) {
-          try {
-            const optRes = await axios.get('https://www.fueleconomy.gov/ws/rest/vehicle/menu/options', {
-              params: { year, make, model },
-              headers: fuelHeaders,
-              timeout: 4000
-            });
-            const items = optRes.data.menuItem;
-            if (items) {
-              vehicleId = (Array.isArray(items) ? items[0] : items).value;
-              break;
-            }
-          } catch (e) {}
-        }
-        if (vehicleId) {
+        const years = [];
+        for (let y = currentYear; y >= currentYear - 8; y--) years.push(y);
+
+        const probes = await Promise.allSettled(years.map(year =>
+          axios.get('https://www.fueleconomy.gov/ws/rest/vehicle/menu/options', {
+            params: { year, make, model },
+            headers: fuelHeaders,
+            timeout: 4000
+          })
+        ));
+        // Keep the newest year's hit (probes are in descending-year order)
+        const hit = probes.find(r => r.status === 'fulfilled' && r.value.data.menuItem);
+        if (hit) {
+          const items = hit.value.data.menuItem;
+          const vehicleId = (Array.isArray(items) ? items[0] : items).value;
           const specsRes = await axios.get(`https://www.fueleconomy.gov/ws/rest/vehicle/${vehicleId}`, {
             headers: fuelHeaders,
             timeout: 4000
@@ -263,7 +267,12 @@ router.get('/', async (req, res) => {
   // DELETE ROUTE for /favorites
   router.delete('/favorites/delete/:id', isLoggedIn, async (req, res) => {
     try {
-      await db.favorite_car.destroy({ where: { id: req.params.id, userId: req.user.id } });
+      const fav = await db.favorite_car.findOne({ where: { id: req.params.id, userId: req.user.id } });
+      if (fav) {
+        await fav.destroy();
+        // Keep favcount in sync — only decrement if a row was actually removed
+        await db.car.decrement('favcount', { by: 1, where: { id: fav.carId } });
+      }
       if (req.get('X-Requested-With') === 'XMLHttpRequest') {
         return res.json({ success: true });
       }
@@ -280,7 +289,15 @@ router.get('/', async (req, res) => {
   // PUT Route for /favorites/:id — handles URL or file upload
   router.put('/favorites/edit/:id', isLoggedIn, upload.single('newimage'), async (req, res) => {
     try {
-      const imageUrl = req.file ? req.file.path : req.body.newimagelink;
+      let imageUrl;
+      if (req.file) {
+        imageUrl = req.file.path;
+      } else if (isValidImageUrl(req.body.newimagelink)) {
+        imageUrl = req.body.newimagelink.trim();
+      } else {
+        req.flash('error', 'Please provide a valid http(s) image URL or upload a file.');
+        return res.redirect('/garage');
+      }
       await db.favorite_car.update(
         { image: imageUrl },
         { where: { id: req.params.id, userId: req.user.id } }
@@ -294,71 +311,62 @@ router.get('/', async (req, res) => {
 
   // POST route cars/fav
   router.post('/fav', isLoggedIn, async (req, res) => {
-    let data = req.body;
-    let [favCar] = await db.car.findOrCreate({
-        where: {
-            make: data.favecar_make,
-            model: data.favecar_model,
-        },
-        defaults: {
-            image: data.favecar_image || 'https://i.ibb.co/PwkqdSy/placeholder.png',
-            favcount: 0,
-            updated_img: false
-        }
-    })
-    console.log('AWAIT RESULT - FAVCAR:', favCar);
-    let newFavCar = await db.favorite_car.findOrCreate({
-        where: {
-            carId: favCar.id,
-            userId: req.user.id
-        },
-        defaults: {
-            make: data.favecar_make,
-            model: data.favecar_model,
-            image: data.favecar_image
-        }
-    })
-    console.log('AWAIT NEW FAV CAR INFO', newFavCar);
-    let foundCar = await db.car.findOne({
-        where: {
-            id: favCar.id
-        }
-    })
-    console.log('FOUND CAR AWAIT', foundCar);
-    let currentFavCount = parseInt(foundCar.favcount) || 0;
+    const data = req.body;
+    const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
+    try {
+      const [favCar, carCreated] = await db.car.findOrCreate({
+          where: {
+              make: data.favecar_make,
+              model: data.favecar_model,
+          },
+          defaults: {
+              image: data.favecar_image || 'https://i.ibb.co/PwkqdSy/placeholder.png',
+              favcount: 0,
+              updated_img: false
+          }
+      });
 
-    if(favCar.id === newFavCar[0].carId && req.user.id === newFavCar[0].userId) {
-        console.log('ALREADy IN FAVORITES');
-        if (req.get('X-Requested-With') === 'XMLHttpRequest') { return res.json({ success: true, favId: newFavCar[0].id, alreadyFavorited: true }); }
+      const [newFavCar, favCreated] = await db.favorite_car.findOrCreate({
+          where: {
+              carId: favCar.id,
+              userId: req.user.id
+          },
+          defaults: {
+              make: data.favecar_make,
+              model: data.favecar_model,
+              image: data.favecar_image
+          }
+      });
+
+      // Favorite already existed — nothing to count
+      if (!favCreated) {
+        console.log('ALREADY IN FAVORITES');
+        if (isAjax) { return res.json({ success: true, favId: newFavCar.id, alreadyFavorited: true }); }
         return res.redirect('favorites');
-    } else {
-        db.car.update({
-            favcount: currentFavCount += 1,
-            image: data.favecar_image
-        },
-        {
-            where: {
-                id: foundCar.id
-            }
-        })
-        .then(response => {
-            const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
-            if (isAjax) { res.json({ success: true, favId: newFavCar[0].id }); } else { res.redirect('favorites'); }
-            console.log('ADD CAR TO CARS ATTEMPT')
-        })
-        .catch((err) => {
-            console.log('ERROR', err);
-        })
-        .finally(() => {
-            console.log('SUCCESSFULLY ADDED CAR to CARS TABLE')
-        });
+      }
+
+      // New favorite: atomic increment (no read-modify-write race)
+      await db.car.increment('favcount', { by: 1, where: { id: favCar.id } });
+
+      // Backfill image only if the car still has a placeholder image
+      if (!carCreated && !favCar.updated_img && data.favecar_image) {
+        await favCar.update({ image: data.favecar_image });
+      }
+
+      if (isAjax) { return res.json({ success: true, favId: newFavCar.id }); }
+      return res.redirect('favorites');
+    } catch (err) {
+      console.log('FAV ERROR:', err);
+      if (isAjax) { return res.status(500).json({ success: false, error: 'Could not add to favorites.' }); }
+      req.flash('error', 'Could not add to favorites.');
+      return res.redirect('/garage');
     }
   });
 
   // POST /cars/propose-image — user submits an image proposal for a car
   router.post('/propose-image', isLoggedIn, async (req, res) => {
     const { carId, imageUrl } = req.body;
-    if (!carId || !imageUrl || !imageUrl.trim()) return res.redirect('back');
+    if (!carId || !isValidImageUrl(imageUrl)) return res.redirect('back');
     try {
       await db.image_proposal.create({
         carId: parseInt(carId),

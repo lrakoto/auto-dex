@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
-const axios = require('axios');
 const { cloudinary, upload } = require('../config/cloudinary');
 const isAdmin = require('../middleware/isAdmin');
-
-const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
-const endOfURL = '?format=json';
+const { isValidImageUrl } = require('../lib/validators');
 
 // ─── GARAGE (user profile page) ───────────────────────────────────────────────
 
@@ -51,26 +48,16 @@ router.get('/models', async (req, res) => {
   }
 });
 
-// GET /garage/years?make=Toyota&model=Camry — returns years for a make+model
-router.get('/years', async (req, res) => {
-  try {
-    const { make, model } = req.query;
-    if (!make || !model) return res.status(400).json({ error: 'make and model are required' });
-    const response = await axios.get(
-      `${baseURL}getmodelsformakeyear/make/${encodeURIComponent(make)}/modelyear/1990${endOfURL}`
-    );
-    // NHTSA doesn't have a great "years for model" endpoint, so we build a reasonable range
-    const currentYear = new Date().getFullYear() + 1;
-    const years = [];
-    for (let y = currentYear; y >= 1980; y--) years.push(String(y));
-    res.json(years);
-  } catch (err) {
-    // Fallback: return year range even on error
-    const currentYear = new Date().getFullYear() + 1;
-    const years = [];
-    for (let y = currentYear; y >= 1980; y--) years.push(String(y));
-    res.json(years);
-  }
+// GET /garage/years?make=Toyota&model=Camry — returns years for a make+model.
+// NHTSA has no good per-model years endpoint (the old code fetched and discarded
+// a response on every call) — so we just return a fixed range.
+router.get('/years', (req, res) => {
+  const { make, model } = req.query;
+  if (!make || !model) return res.status(400).json({ error: 'make and model are required' });
+  const currentYear = new Date().getFullYear() + 1;
+  const years = [];
+  for (let y = currentYear; y >= 1980; y--) years.push(String(y));
+  res.json(years);
 });
 
 // ─── ADD CAR ──────────────────────────────────────────────────────────────────
@@ -89,6 +76,10 @@ router.post('/add', upload.single('carImage'), async (req, res) => {
     if (req.file) {
       image = req.file.path; // Cloudinary URL
     } else if (imageUrl && imageUrl.trim() !== '') {
+      if (!isValidImageUrl(imageUrl)) {
+        req.flash('error', 'Image URL must start with http(s)://');
+        return res.redirect('/garage/add');
+      }
       image = imageUrl.trim();
     }
 
@@ -117,6 +108,10 @@ router.put('/car/:id', upload.single('carImage'), async (req, res) => {
     if (req.file) {
       updates.image = req.file.path;
     } else if (req.body.imageUrl && req.body.imageUrl.trim()) {
+      if (!isValidImageUrl(req.body.imageUrl)) {
+        req.flash('error', 'Image URL must start with http(s)://');
+        return res.redirect('/garage');
+      }
       updates.image = req.body.imageUrl.trim();
     }
     if (req.body.notes !== undefined) updates.notes = req.body.notes || null;
@@ -212,7 +207,7 @@ router.get('/admin', isAdmin, async (req, res) => {
 router.post('/admin/verify-user/:id', isAdmin, async (req, res) => {
   try {
     await db.user.update(
-      { emailVerified: true, verificationToken: null },
+      { emailVerified: true, verificationToken: null, verificationTokenExpiresAt: null },
       { where: { id: req.params.id } }
     );
     req.flash('success', 'User verified.');
@@ -279,6 +274,10 @@ router.put('/admin/car/:id', isAdmin, upload.single('carImage'), async (req, res
     if (req.file) {
       image = req.file.path;
     } else if (imageUrl && imageUrl.trim() !== '') {
+      if (!isValidImageUrl(imageUrl)) {
+        req.flash('error', 'Image URL must start with http(s)://');
+        return res.redirect('/garage/admin');
+      }
       image = imageUrl.trim();
     } else {
       req.flash('error', 'Please provide an image URL or upload a file.');

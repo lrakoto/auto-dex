@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>AutoDex</title>
+    <meta name="csrf-token" content="<%= csrfToken %>">
     <meta property="og:type" content="website">
     <meta property="og:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : 'AutoDex' %>">
     <meta property="og:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : 'Browse thousands of car makes and models.' %>">
@@ -35,7 +36,10 @@
               <% if (currentUser.isAdmin) { %>
                 <a class="nav-link" href="/garage/admin">Admin</a>
               <% } %>
-              <a class="nav-link" href="/auth/logout">Log Out</a>
+              <form method="POST" action="/auth/logout" style="margin:0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="nav-link" style="background:none;border:none;cursor:pointer;padding:0;">Log Out</button>
+              </form>
             <% } %>
           </nav>
           <div class="nav-right">
@@ -74,7 +78,10 @@
         <% if (currentUser.isAdmin) { %>
           <a class="nav-link" href="/garage/admin">Admin</a>
         <% } %>
-        <a class="nav-link" href="/auth/logout">Log Out</a>
+        <form method="POST" action="/auth/logout" style="margin:0;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="nav-link" style="background:none;border:none;cursor:pointer;">Log Out</button>
+        </form>
       <% } %>
     </div>
     <!-- Nav search overlay: lives outside <main> to escape z-index stacking contexts -->

@@ -21,6 +21,7 @@ const STRATEGY = new LocalStrategy({
         } catch (err) {
             console.log('------- Error below -----------');
             console.log(err);
+            cb(err);    // never leave the request hanging
         }
 })
 
@@ -35,10 +36,13 @@ passport.deserializeUser(async (id, cb) => {
 
         if (user) {
             cb(null, user)
+        } else {
+            cb(null, false);    // stale session for a deleted user
         }
     } catch (err) {
         console.log('---- Yo... There is an error ----');
         console.log(err);
+        cb(err);
     }
 });
 

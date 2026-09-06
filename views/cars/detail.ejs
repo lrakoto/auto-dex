@@ -25,6 +25,7 @@
             </form>
           <% } else { %>
             <form action="/cars/fav" method="POST" class="detail-fav-form d-inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <input type="hidden" name="favecar_model" value="<%= model %>"/>
               <input type="hidden" name="favecar_make" value="<%= make %>"/>
               <input type="hidden" name="favecar_image" value="<%= image %>"/>
@@ -36,6 +37,7 @@
         <!-- Template for restoring + Favorite button after remove -->
         <template id="detail-fav-template">
           <form action="/cars/fav" method="POST" class="detail-fav-form d-inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="favecar_model" value="<%= model %>"/>
             <input type="hidden" name="favecar_make" value="<%= make %>"/>
             <input type="hidden" name="favecar_image" value="<%= image %>"/>
@@ -137,6 +139,7 @@
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       </div>
       <form method="POST" action="/cars/propose-image">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="modal-body">
           <p style="font-size:0.82rem;color:var(--text-muted);">Suggest a better image for <strong><%= make %> <%= model %></strong>. An admin will review it.</p>
           <input type="hidden" name="carId" value="<%= carDbId %>">
@@ -168,12 +171,14 @@
         </div>
         <div id="detail-fav-url" class="img-tab-pane">
           <form id="detail-fav-url-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="favid" value="<%= userFavorite.id %>">
             <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
           </form>
         </div>
         <div id="detail-fav-upload" class="img-tab-pane" style="display:none;">
-          <form id="detail-fav-upload-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT" enctype="multipart/form-data">
+          <form id="detail-fav-upload-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="favid" value="<%= userFavorite.id %>">
             <input type="file" class="form-control-file" name="newimage" accept="image/*">
           </form>

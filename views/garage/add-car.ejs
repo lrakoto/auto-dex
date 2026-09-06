@@ -6,7 +6,8 @@
 </section>
 
 <div class="container" style="max-width: 600px; padding-bottom: 60px;">
-  <form method="POST" action="/garage/add" enctype="multipart/form-data">
+  <form method="POST" action="/garage/add?_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
     <div class="form-group">
       <label for="make">Make</label>

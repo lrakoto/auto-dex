@@ -56,6 +56,7 @@
                     <!-- URL panel -->
                     <div id="url-<%= f.id %>" class="img-tab-pane">
                       <form id="url-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <input type="hidden" name="favid" value="<%= f.id %>">
                         <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
                       </form>
@@ -63,7 +64,8 @@
 
                     <!-- Upload panel -->
                     <div id="upload-<%= f.id %>" class="img-tab-pane" style="display:none;">
-                      <form id="upload-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT" enctype="multipart/form-data">
+                      <form id="upload-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <input type="hidden" name="favid" value="<%= f.id %>">
                         <input type="file" class="form-control-file" name="newimage" accept="image/*">
                       </form>
@@ -72,6 +74,7 @@
 
                   <div class="modal-footer" style="justify-content:space-between;">
                     <form method="POST" action="/cars/favorites/delete/<%= f.id %>?_method=DELETE" style="margin:0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <button type="submit" class="btn btn-sm btn-outline-secondary">Remove</button>
                     </form>
                     <button type="button" class="btn btn-primary fav-update-btn" data-id="<%= f.id %>">Update Image</button>
