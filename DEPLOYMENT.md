@@ -1,140 +1,131 @@
 # AutoDex — Deployment
 
-Production runs on a Hetzner VPS behind nginx, with the Node process managed by
-**PM2** (process name `autodex`).
+Production runs on **Render**, from the blueprint in `render.yaml`. A push to
+`main` is the deploy: Render rebuilds, runs migrations, and restarts the web
+service on its own.
 
 | | |
 | --- | --- |
-| Server | Hetzner VPS, Ubuntu |
-| IP | `178.156.219.19` |
-| SSH | `ssh root@178.156.219.19` |
-| App directory | `/var/www/autodex` |
-| Process manager | PM2 (`pm2 restart autodex`) |
-| Reverse proxy | nginx → `127.0.0.1:3000` |
-| Domain | `autodx.io` (SSL via Certbot / Let's Encrypt) |
-| Database | PostgreSQL — user `autodex_user`, database `autodex` |
-| Env file | `/var/www/autodex/.env` |
+| Host | Render (managed) |
+| Blueprint | `render.yaml` (web service `autodex` + Postgres `autodex-db`) |
+| Region / plan | `oregon`, `starter` web + `basic-256mb` Postgres 16 |
+| Deploy trigger | `autoDeploy: true` on `main` |
+| Build command | `npm ci && npx sequelize-cli db:migrate` |
+| Start command | `npm start` |
+| Health check | `GET /` |
+| Domain | `autodx.io` (DNS → Render; TLS issued by Render) |
+| Database | Render Postgres — `DATABASE_URL` injected from `autodex-db` |
+| Secrets | Render dashboard → service → Environment (the `sync: false` keys) |
 
-> **Not** systemd, and **not** `/opt/autodex`. Earlier revisions of this repo
-> shipped a systemd unit and `/opt/autodex` paths; those were never the live
-> setup and have been removed. If you see them in an old branch or in your
-> shell history, ignore them.
+> The Hetzner VPS at `178.156.219.19` is **not** serving `autodx.io` and has not
+> been since the move to Render. Nothing in this repo deploys to it any more;
+> its PM2/nginx scripts were removed (recoverable in git history if a self-host
+> move ever comes back). Ignore any `ssh root@…`, `pm2 restart autodex`, or
+> `/var/www/autodex` instructions left in an old branch or in shell history —
+> running them updates a box no visitor reaches.
 
 ## Deploying a change
 
 ```bash
-ssh root@178.156.219.19
-cd /var/www/autodex && git pull \
-  && npm install \
-  && NODE_ENV=production npx sequelize-cli db:migrate \
-  && pm2 restart autodex
+git push origin main
 ```
 
-Or use the helper installed on the server (does the same thing, plus an nginx
-config test):
+That's the whole flow. Then watch it land: Render dashboard → **autodex** →
+*Events* / *Logs*. A deploy is done when the health check on `/` passes.
+
+To deploy without a code change (for example after editing an env var), use
+**Manual Deploy → Deploy latest commit** in the dashboard. Changing an env var
+already triggers a restart on its own.
+
+Verify afterwards:
 
 ```bash
-autodex-update
+curl -sS -o /dev/null -w '%{http_code}\n' https://autodx.io/
 ```
 
-## First-time server setup
+## Environment variables
 
-`deploy/setup.sh` bootstraps a fresh VM end to end (Node 22, PostgreSQL, nginx,
-PM2, certbot, UFW, fail2ban; clones to `/var/www/autodex`, creates the DB, runs
-migrations, starts the app under PM2, registers `pm2 startup`). Run it once, as
-root, on a new server:
+`NODE_ENV`, `DATABASE_URL`, `SECRET_SESSION` and `BASE_URL` are set by
+`render.yaml` — `DATABASE_URL` from the managed database, `SECRET_SESSION`
+generated once by Render and kept stable across deploys. Note the name:
+`SECRET_SESSION`, not `SESSION_SECRET`; the app refuses to boot without it.
 
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/lrakoto/auto-dex/main/deploy/setup.sh)
-```
+The rest are marked `sync: false` and must be filled in the dashboard, never
+committed: `EMAIL_FROM`, `RESEND_API_KEY`, `UKEY`, `USKEY`, `CKEY`,
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+`.env.example` documents all of them.
 
-Then fill in the secrets and restart:
+## Editing the blueprint
 
-```bash
-nano /var/www/autodex/.env
-pm2 restart autodex
-```
-
-The script is idempotent (safe to re-run) but has **not** been exercised
-end-to-end in CI — dry-run it on a throwaway VM before trusting it on prod.
-
-## Common operations
-
-```bash
-pm2 status                        # app status
-pm2 logs autodex                  # live logs
-pm2 restart autodex               # restart after an .env change
-pm2 restart autodex --update-env  # restart, re-reading environment
-pm2 save                          # persist the process list
-sudo systemctl {status,reload} nginx
-sudo certbot renew --dry-run      # test TLS renewal
-```
+If the service is linked to `render.yaml` as a Blueprint, a push that changes
+this file re-syncs the service settings — so treat plan, region, commands and
+env var declarations in it as live configuration, not documentation. Changes
+made only in the dashboard can be overwritten by the next blueprint sync; keep
+the two in step.
 
 ## Migrations
 
-Migrations run on every deploy and are idempotent via the `SequelizeMeta`
-table. Before deploying a migration that rewrites existing data, rehearse it
-against a dump of production:
+Migrations run in the build command on every deploy, and are idempotent via the
+`SequelizeMeta` table. A migration that fails fails the build, and Render keeps
+the previous version serving.
+
+Before deploying a migration that rewrites existing data, rehearse it against a
+dump of production (connection string: dashboard → `autodex-db` → *Connect* →
+External Connection):
 
 ```bash
-ssh root@178.156.219.19 "pg_dump -U autodex_user autodex" > prod.sql
+pg_dump "$RENDER_EXTERNAL_DATABASE_URL" > prod.sql
 createdb autodex_prodtest && psql autodex_prodtest < prod.sql
 DATABASE_URL=postgres:///autodex_prodtest NODE_ENV=production npx sequelize-cli db:migrate
 dropdb autodex_prodtest
+```
+
+Watch the build log for warnings the migrations emit — `20260916000000` logs
+colliding user emails rather than deleting them, and those have to be resolved
+by hand.
+
+## One-off scripts
+
+Run them in **Render Shell** (dashboard → service → *Shell*), where the
+service's environment is already loaded:
+
+```bash
+node scripts/recount-favcounts.js
 ```
 
 ## Files
 
 | File | Purpose |
 | ---- | ------- |
-| `deploy/setup.sh` | One-shot bootstrap for a fresh VM (run once, as root) |
-| `deploy/update.sh` | Pull, install, migrate, reload nginx, restart (installed as `autodex-update`) |
-| `deploy/ecosystem.config.js` | PM2 process definition |
-| `deploy/nginx.conf` | nginx site: HTTPS, reverse proxy, security headers, static assets from `/var/www/autodex/public` |
+| `render.yaml` | Blueprint: web service, database, build/start commands, env vars |
 | `.env.example` | Template for all required environment variables |
 
 ## Troubleshooting
 
-### `REMOTE HOST IDENTIFICATION HAS CHANGED`
+### Deploy fails during build
 
-SSH refuses to connect because the server's host key no longer matches the
-entry in your local `known_hosts`. This happens when the server is rebuilt,
-reprovisioned, or restored from a snapshot — which is expected over the life
-of a box. It can also mean a man-in-the-middle, so **confirm the change was
-yours before clearing anything.**
+Open the failed deploy's log in the dashboard. The usual causes are a migration
+error (fix it, push again — the old version is still serving) and a missing
+dependency in `package.json` (`npm ci` installs from the lockfile only, so a
+package that only exists locally will not be there).
 
-1. Confirm the rebuild in the Hetzner console (or with whoever manages it).
-2. Compare the fingerprint against the one in the Hetzner console:
-   ```bash
-   ssh-keyscan -t ed25519 178.156.219.19 2>/dev/null | ssh-keygen -lf -
-   ```
-3. If it matches and you expected the rebuild, drop the stale entry and
-   reconnect. `ssh-keygen -R` backs the file up automatically.
-   ```bash
-   ssh-keygen -R 178.156.219.19
-   ssh root@178.156.219.19
-   ```
+### App boots, then 500s
 
-The old key was removed this way during the September 2026 cleanup. If SSH
-still fails afterward with `Permission denied (publickey)`, the problem is
-authorized keys — not host verification. Check that your public key is in
-`/root/.ssh/authorized_keys` on the server (the Hetzner console's rescue mode
-is the way in if SSH is fully locked out).
+Check the service logs. The most common cause is a missing env var: the app
+refuses to boot without `SECRET_SESSION`, and Cloudinary/Resend/Unsplash
+features fail at call time if their keys are unset. Confirm the `sync: false`
+keys are all filled in the dashboard.
 
-### Static assets 404 / unstyled pages
+### Database connection errors
 
-nginx serves `/css`, `/js`, and images directly from disk. If that `alias`
-path does not exist, assets break while the HTML still renders. Verify:
+Confirm `DATABASE_URL` is still wired to `autodex-db` in the service's
+Environment tab — that link breaks if the database is recreated. The free
+Postgres tier has no backups and expires; `autodex-db` is on `basic-256mb`
+deliberately, so keep it on a paid plan.
 
-```bash
-grep -n 'alias' /etc/nginx/sites-available/autodex.io
-# should be: alias /var/www/autodex/public;
-```
+### Domain or TLS problems
 
-### App up but returning 500s
-
-```bash
-pm2 logs autodex --lines 50
-# Most common cause: missing or malformed .env (the app refuses to boot
-# without SECRET_SESSION).
-```
+Dashboard → service → *Settings* → **Custom Domains** shows verification and
+certificate state for `autodx.io`. DNS must point at Render (the apex resolves
+to Render's anycast addresses); if it points anywhere else, visitors are not
+reaching this service at all.

@@ -169,73 +169,44 @@ npm run format
 
 ## Deployment
 
-AutoDex runs on a Hetzner VPS (Ubuntu/Debian) behind nginx, with the Node
-process managed by **PM2** (process name `autodex`). The app lives in
-`/var/www/autodex`.
-
-See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the full reference — first-time setup,
-migration rehearsals, common operations, and SSH host-key troubleshooting.
-The short version follows.
-
-### First-time server setup
-
-1. Create a new server on Hetzner Cloud (Ubuntu 24.04 LTS, CX22 or larger).
-2. Point DNS for `autodx.io` and `www.autodx.io` (A records) to the server's IP.
-3. SSH in as root and run:
+AutoDex runs on **Render**, from the blueprint in [`render.yaml`](render.yaml).
+Pushing to `main` deploys: Render runs `npm ci && npx sequelize-cli db:migrate`,
+then starts the app with `npm start`, and cuts over once `GET /` passes the
+health check.
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/lrakoto/auto-dex/main/deploy/setup.sh)
+git push origin main
 ```
 
-This installs Node.js 22, PostgreSQL, nginx, PM2, certbot (Let's Encrypt), UFW,
-and fail2ban; clones the repo to `/var/www/autodex`; creates the database, runs
-migrations, and starts the app under PM2. The local DB password and
-`DATABASE_URL` are written to `.env` automatically.
-
-4. Fill in the remaining secrets in `.env` (see `.env.example`):
+Then watch it in the Render dashboard (**autodex** → *Events* / *Logs*), and
+confirm:
 
 ```bash
-nano /var/www/autodex/.env
+curl -sS -o /dev/null -w '%{http_code}\n' https://autodx.io/
 ```
 
-5. Restart to pick up the new env:
+`NODE_ENV`, `DATABASE_URL`, `SECRET_SESSION` and `BASE_URL` come from
+`render.yaml`. The secrets marked `sync: false` there (Resend, Unsplash,
+Cloudinary, `EMAIL_FROM`) are set in the dashboard and never committed — see
+`.env.example` for the full list.
+
+One-off scripts run in Render Shell, where the service environment is already
+loaded:
 
 ```bash
-pm2 restart autodex
+node scripts/recount-favcounts.js
 ```
 
-### Deploying a change
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for the full reference — env vars,
+blueprint edits, migration rehearsals, and troubleshooting.
 
-```bash
-ssh root@178.156.219.19
-cd /var/www/autodex && git pull && npm install \
-  && NODE_ENV=production npx sequelize-cli db:migrate \
-  && pm2 restart autodex
-```
-
-Or, on the server, run the bundled helper (does the same thing):
-
-```bash
-autodex-update
-```
-
-### Common operations
-
-```bash
-pm2 status                     # app status
-pm2 logs autodex               # live app logs
-pm2 restart autodex            # restart after an env change
-pm2 restart autodex --update-env  # restart, re-reading env vars
-sudo systemctl {status,reload} nginx
-sudo certbot renew --dry-run   # test TLS renewal
-```
+> Earlier revisions deployed to a Hetzner VPS with PM2 and nginx. That box no
+> longer serves `autodx.io`, and its `deploy/` scripts have been removed; they
+> remain in git history if self-hosting ever comes back.
 
 ### Files
 
 | File | Purpose |
 | ---- | ------- |
-| `deploy/setup.sh`            | One-shot server bootstrap (run once on a fresh VM) |
-| `deploy/update.sh`           | Pull latest code, migrate, restart (run on each deploy) |
-| `deploy/ecosystem.config.js` | PM2 process definition (start/restart/logs) |
-| `deploy/nginx.conf`          | nginx site: HTTPS, reverse proxy to :3000, security headers |
-| `.env.example`               | Template for all required environment variables |
+| `render.yaml`    | Blueprint: web service, Postgres, build/start commands, env vars |
+| `.env.example`   | Template for all required environment variables |

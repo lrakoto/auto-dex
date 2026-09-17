@@ -3,8 +3,9 @@
  * Needed because favcount was broken for a long time (never incremented on add,
  * never decremented on remove), so existing values are stale.
  *
- * Run locally:   node scripts/recount-favcounts.js
- * Run on server: cd /var/www/autodex && NODE_ENV=production node scripts/recount-favcounts.js
+ * Run locally: node scripts/recount-favcounts.js
+ * Run on prod:  Render dashboard -> autodex -> Shell, then the same command
+ *               (the service environment is already loaded there).
  */
 const db = require('../models');
 

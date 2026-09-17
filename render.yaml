@@ -1,0 +1,55 @@
+# Render Blueprint for AutoDex
+# Deploy: push to GitHub, then Render Dashboard -> New -> Blueprint -> pick this repo.
+# Secrets marked `sync: false` must be filled in the Render dashboard after the
+# first apply; they are deliberately not stored in the repo.
+
+databases:
+  - name: autodex-db
+    databaseName: autodex
+    user: autodex_user
+    # NOTE: a paid instance is required for daily backups + point-in-time restore.
+    # Render's free Postgres has no backups and is deleted after 30 days.
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: autodex
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    # Migrations run on every deploy; sequelize-cli is idempotent via SequelizeMeta.
+    buildCommand: npm ci && npx sequelize-cli db:migrate
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autodex-db
+          property: connectionString
+      # Generated once by Render and kept stable across deploys.
+      - key: SECRET_SESSION
+        generateValue: true
+      - key: BASE_URL
+        value: https://autodx.io
+      # Fill these in the dashboard (rotate the old values first).
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: UKEY
+        sync: false
+      - key: USKEY
+        sync: false
+      - key: CKEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
