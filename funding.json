@@ -1,0 +1,68 @@
+{
+  "version": "v1.0.0",
+  "entity": {
+    "type": "individual",
+    "role": "owner",
+    "name": "Lova Rakotomavonandrianina",
+    "email": "TODO@threeohfivestudios.com",
+    "description": "Creative and web developer in Los Angeles, working as ThreeOhFive Studios. Builds browser-native games, portfolio pieces and experiments, largely in collaboration with AI agents.",
+    "webpageUrl": {
+      "url": "https://threeohfivestudios.com"
+    }
+  },
+  "projects": [
+    {
+      "guid": "auto-dex",
+      "name": "auto-dex",
+      "description": "A searchable exotic cars database with customizable profiles",
+      "webpageUrl": {
+        "url": "https://github.com/lrakoto/auto-dex"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/lrakoto/auto-dex"
+      },
+      "licenses": [
+        "spdx:NOASSERTION"
+      ],
+      "tags": [
+        "javascript"
+      ]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "usdc-base",
+        "type": "other",
+        "address": "0x23178a649a868ff0b8280125982a0fb9e9016164",
+        "description": "Native USDC on Base (chain id 8453). Receive-only address published for attribution and voluntary support."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "tip-any",
+        "status": "active",
+        "name": "Voluntary support",
+        "description": "Any amount, one time. No entitlement, no support obligation, nothing gated behind it.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": [
+          "usdc-base"
+        ]
+      },
+      {
+        "guid": "agent-x402",
+        "status": "planned",
+        "name": "Machine-payable support (x402)",
+        "description": "Planned HTTP 402 endpoint so an agent acting under its own principal's budget and policy can pay programmatically and receive a receipt. Specification: https://github.com/lrakoto/threeohfivestudios/blob/main/colophon/docs/x402-tip-endpoint.md",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": [
+          "usdc-base"
+        ]
+      }
+    ]
+  }
+}
