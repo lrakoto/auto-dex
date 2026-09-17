@@ -43,10 +43,6 @@ services:
         sync: false
       - key: UKEY
         sync: false
-      - key: USKEY
-        sync: false
-      - key: CKEY
-        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

@@ -51,17 +51,25 @@ generated once by Render and kept stable across deploys. Note the name:
 `SECRET_SESSION`, not `SESSION_SECRET`; the app refuses to boot without it.
 
 The rest are marked `sync: false` and must be filled in the dashboard, never
-committed: `EMAIL_FROM`, `RESEND_API_KEY`, `UKEY`, `USKEY`, `CKEY`,
+committed: `EMAIL_FROM`, `RESEND_API_KEY`, `UKEY` (Unsplash),
 `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+`EMAIL_FROM` is currently unset in the dashboard; `config/email.js` falls back
+to `AutoDex <noreply@autodx.io>`, so set it there if that address ever changes.
 `.env.example` documents all of them.
 
 ## Editing the blueprint
 
-If the service is linked to `render.yaml` as a Blueprint, a push that changes
-this file re-syncs the service settings — so treat plan, region, commands and
-env var declarations in it as live configuration, not documentation. Changes
-made only in the dashboard can be overwritten by the next blueprint sync; keep
-the two in step.
+The service is Blueprint-managed, so treat plan, region, commands and env var
+declarations in `render.yaml` as live configuration, not documentation: a sync
+can overwrite settings changed only in the dashboard. Keep the two in step.
+
+In practice the blueprint has synced exactly once (the original apply on
+2026-09-01, which the dashboard still shows as **Failed sync** because that
+first deploy failed before the secrets were filled in). Deploys have run on
+auto-deploy ever since, independent of blueprint syncs — which is why deleting
+`render.yaml` in `22a1ee8` broke nothing visible. A **Manual sync** from the
+blueprint page clears that stale state and re-applies the file; do it
+deliberately, not as routine maintenance.
 
 ## Migrations
 
@@ -82,7 +90,8 @@ dropdb autodex_prodtest
 
 Watch the build log for warnings the migrations emit — `20260916000000` logs
 colliding user emails rather than deleting them, and those have to be resolved
-by hand.
+by hand. (On the 2026-09-17 deploy it logged none, so there are no collisions
+outstanding.)
 
 ## One-off scripts
 
@@ -90,7 +99,9 @@ Run them in **Render Shell** (dashboard → service → *Shell*), where the
 service's environment is already loaded:
 
 ```bash
-node scripts/recount-favcounts.js
+node scripts/recount-favcounts.js     # recompute cars.favcount
+node scripts/purge-junk-cars.js       # dry run: junk catalog rows, nothing deleted
+node scripts/purge-junk-cars.js --apply
 ```
 
 ## Files

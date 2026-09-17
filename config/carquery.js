@@ -37,10 +37,16 @@ async function getModels(makeDisplay) {
       `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(makeDisplay)}?format=json`,
       { timeout: 8000 }
     );
+    // NHTSA matches the make as a substring, so asking for "MG" also returns
+    // models from CHEMGUARD, MGM Trailers, TMG Trailer and friends. Keep only
+    // exact make matches, and store our own spelling so casing stays stable
+    // ("SAAB"/"smart" come back inconsistently).
+    const wanted = makeDisplay.trim().toLowerCase();
     const seen = new Set();
     const models = (res.data.Results || [])
+      .filter(m => (m.Make_Name || '').trim().toLowerCase() === wanted)
       .filter(m => { if (seen.has(m.Model_Name)) return false; seen.add(m.Model_Name); return true; })
-      .map(m => ({ make: m.Make_Name || makeDisplay, model: m.Model_Name }))
+      .map(m => ({ make: makeDisplay, model: m.Model_Name }))
       .sort((a, b) => a.model.localeCompare(b.model));
     modelsCache[makeDisplay] = { data: models, at: now };
     return models;
