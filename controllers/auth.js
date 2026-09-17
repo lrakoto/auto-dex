@@ -1,9 +1,9 @@
 const express = require('express');
 const router  = express.Router();
-const crypto  = require('crypto');
 const passport = require('../config/ppConfig');
 const db = require('../models');
 const { sendVerificationEmail } = require('../config/email');
+const { generateVerificationToken, hashToken, normalizeEmail } = require('../lib/tokens');
 const rateLimit = require('express-rate-limit');
 
 const loginLimiter = rateLimit({
@@ -39,13 +39,21 @@ function safeReturnTo(url) {
 }
 
 router.get('/signup', (req, res) => {
-  res.render('auth/signup');
+  res.render('auth/signup', {
+    pageTitle: 'Sign Up — AutoDex',
+    canonicalPath: '/auth/signup',
+    noindex: true
+  });
 });
 
 router.get('/login', (req, res) => {
   const returnTo = safeReturnTo(req.query.returnTo);
   if (returnTo) req.session.returnTo = returnTo;
-  res.render('auth/login');
+  res.render('auth/login', {
+    pageTitle: 'Log In — AutoDex',
+    canonicalPath: '/auth/login',
+    noindex: true
+  });
 });
 
 router.post('/login', loginLimiter, (req, res, next) => {
@@ -83,13 +91,21 @@ router.post('/logout', (req, res, next) => {
 });
 
 router.post('/signup', signupLimiter, async (req, res) => {
-  const { email, name, password } = req.body;
+  const { name, password } = req.body;
+  const email = normalizeEmail(req.body.email);
   try {
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = generateVerificationToken();
     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     const [user, created] = await db.user.findOrCreate({
       where: { email },
-      defaults: { name, password, emailVerified: false, verificationToken: token, verificationTokenExpiresAt: tokenExpiry }
+      // Only the token's hash is stored — a DB leak can't be replayed to verify
+      defaults: {
+        name,
+        password,
+        emailVerified: false,
+        verificationToken: hashToken(token),
+        verificationTokenExpiresAt: tokenExpiry
+      }
     });
 
     if (created) {
@@ -99,12 +115,11 @@ router.post('/signup', signupLimiter, async (req, res) => {
       } catch (emailErr) {
         console.log('EMAIL SEND ERROR:', emailErr);
       }
-      req.flash('success', `Welcome ${user.name}! Check your email to verify your account before logging in.`);
-      res.redirect('/auth/login');
-    } else {
-      req.flash('error', 'Email already exists');
-      res.redirect('/auth/signup');
     }
+    // Same response whether or not the address was already registered —
+    // the old "Email already exists" flash leaked which emails have accounts.
+    req.flash('success', `Check your email — if ${email} is new, we've sent a verification link.`);
+    res.redirect('/auth/login');
   } catch (error) {
     console.log('SIGNUP ERROR:', error);
     req.flash('error', 'Something went wrong. Please try again.');
@@ -115,7 +130,8 @@ router.post('/signup', signupLimiter, async (req, res) => {
 // GET /auth/verify/:token
 router.get('/verify/:token', async (req, res) => {
   try {
-    const user = await db.user.findOne({ where: { verificationToken: req.params.token } });
+    // Look up by hash — the plaintext token only ever existed in the email link
+    const user = await db.user.findOne({ where: { verificationToken: hashToken(req.params.token) } });
     if (!user) {
       req.flash('error', 'Verification link is invalid or has already been used.');
       return res.redirect('/auth/login');
@@ -136,20 +152,20 @@ router.get('/verify/:token', async (req, res) => {
 
 // POST /auth/resend-verification
 router.post('/resend-verification', emailSendLimiter, async (req, res) => {
-  const { email } = req.body;
+  const email = normalizeEmail(req.body.email);
   try {
     const user = await db.user.findOne({ where: { email } });
-    if (!user || user.emailVerified) {
-      req.flash('error', 'No unverified account found for that email.');
-      return res.redirect('/auth/login');
+    if (user && !user.emailVerified) {
+      const token = generateVerificationToken();
+      await user.update({
+        verificationToken: hashToken(token),
+        verificationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      });
+      await sendVerificationEmail(email, user.name, token);
     }
-    const token = crypto.randomBytes(32).toString('hex');
-    await user.update({
-      verificationToken: token,
-      verificationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-    });
-    await sendVerificationEmail(email, user.name, token);
-    req.flash('success', 'Verification email resent. Check your inbox.');
+    // Same response regardless of whether the account exists / is unverified,
+    // so this endpoint can't be used to enumerate addresses.
+    req.flash('success', 'If that address needs verification, a new link is on its way.');
     res.redirect('/auth/login');
   } catch (err) {
     console.log('RESEND ERROR:', err);

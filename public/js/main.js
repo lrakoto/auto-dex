@@ -1,6 +1,31 @@
 (function () {
   'use strict';
 
+  /* Escape untrusted strings before they touch innerHTML. Server data
+     (make/model) and localStorage values are not trusted here. */
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /* Transient toast — shared by the favorites flows (which run outside the
+     DOMContentLoaded scope, so this cannot live inside that callback). */
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('toast-show'); });
+    setTimeout(function () {
+      t.classList.remove('toast-show');
+      setTimeout(function () { t.remove(); }, 300);
+    }, 2600);
+  }
+
   /* ═══════════════════════════════════════════════════════════════
      IMG ERROR FALLBACKS — replaces inline onerror handlers (CSP-safe).
      Error events don't bubble, so listen in the capture phase.
@@ -53,6 +78,8 @@
 
   // Fade out on internal link click
   document.addEventListener('click', function (e) {
+    // Another handler (AJAX pagination, modal triggers, etc.) already handled it
+    if (e.defaultPrevented) return;
     var link = e.target.closest('a[href]');
     if (!link) return;
     var href = link.getAttribute('href');
@@ -62,6 +89,8 @@
       href.startsWith('#') ||
       href.startsWith('javascript') ||
       link.target === '_blank' ||
+      link.hasAttribute('download') ||
+      link.dataset.noTransition !== undefined ||
       e.metaKey || e.ctrlKey || e.shiftKey
     ) return;
     if (href.startsWith('http') && !href.includes(location.hostname)) return;
@@ -76,8 +105,11 @@
      CURSOR-INTERACTIVE DOT GRID BACKGROUND
   ═══════════════════════════════════════════════════════════════ */
 
+  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   var canvas = document.createElement('canvas');
   canvas.id = 'bg-canvas';
+  canvas.setAttribute('aria-hidden', 'true'); // purely decorative
   // Insert inside .overlay so it renders above page-specific background overlays
   var overlay = document.querySelector('.overlay');
   if (overlay) {
@@ -248,7 +280,8 @@
     // Reset shadow so it doesn't bleed
     ctx.shadowBlur = 0;
 
-    raf = requestAnimationFrame(draw);
+    // Reduced motion: render one static frame, no continuous loop
+    if (!prefersReducedMotion) raf = requestAnimationFrame(draw);
   }
 
   // Track real mouse position
@@ -287,10 +320,16 @@
   }, { passive: true });
 
   resize();
-  requestAnimationFrame(function (now) {
-    lastWaveTime = now; // start the interval clock from first frame
-    draw(now);
-  });
+  // Respect the OS "reduce motion" preference: draw a single static frame
+  // instead of running the continuous RAF loop with waves and shockwaves.
+  if (prefersReducedMotion) {
+    draw(0);
+  } else {
+    requestAnimationFrame(function (now) {
+      lastWaveTime = now; // start the interval clock from first frame
+      draw(now);
+    });
+  }
 
 
   /* ═══════════════════════════════════════════════════════════════
@@ -410,18 +449,23 @@
       function openNavSearch() {
         navSearchOverlay.classList.add('open');
         navSearchOverlay.setAttribute('aria-hidden', 'false');
+        navSearchOverlay.removeAttribute('inert');
         navSearchInput.focus();
       }
       function closeNavSearch() {
+        if (!navSearchOverlay.classList.contains('open')) return;
         navSearchOverlay.classList.remove('open');
         navSearchOverlay.setAttribute('aria-hidden', 'true');
+        navSearchOverlay.setAttribute('inert', '');
         navSearchInput.value = '';
         var dd = navSearchOverlay.querySelector('.suggest-dropdown');
         if (dd) dd.style.display = 'none';
+        navSearchBtn.focus(); // return focus to the trigger
       }
 
       navSearchBtn.addEventListener('click', openNavSearch);
       if (navSearchClose) navSearchClose.addEventListener('click', closeNavSearch);
+      navSearchOverlay.setAttribute('inert', '');
 
       navSearchInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
@@ -441,57 +485,51 @@
     }
 
     // ── Recently Viewed ──────────────────────────────────────────
+    // Detail page publishes the current car via #car-recent-data; the homepage
+    // renders the stored list. Both paths avoid inline scripts (CSP-safe).
+    var recentDataEl = document.getElementById('car-recent-data');
+    if (recentDataEl) {
+      try {
+        var entry = {
+          make: recentDataEl.dataset.make,
+          model: recentDataEl.dataset.model,
+          image: recentDataEl.dataset.image,
+          url: window.location.href
+        };
+        var key = 'autodex_recent';
+        var saved = JSON.parse(localStorage.getItem(key) || '[]');
+        saved = saved.filter(function (c) { return !(c.make === entry.make && c.model === entry.model); });
+        saved.unshift(entry);
+        if (saved.length > 6) saved = saved.slice(0, 6);
+        localStorage.setItem(key, JSON.stringify(saved));
+      } catch (e) {}
+    }
+
     var rvWrap = document.getElementById('recently-viewed');
     if (rvWrap) {
       try {
         var recent = JSON.parse(localStorage.getItem('autodex_recent') || '[]');
         if (recent.length > 0) {
           var row = rvWrap.querySelector('.recently-viewed-row');
-          recent.forEach(function(c) {
+          recent.forEach(function (c) {
             var col = document.createElement('div');
             col.className = 'col-md-2 col-4 mb-3 card-col';
+            var safeUrl = escapeHtml(c.url);
             col.innerHTML = '<div class="card h-100">' +
-              '<a href="' + c.url + '"><img class="card-img-top imgresp" src="' + c.image + '" alt="' + c.model + '" style="height:90px;"></a>' +
+              '<a href="' + safeUrl + '"><img class="card-img-top imgresp" src="' + escapeHtml(c.image) + '" alt="' + escapeHtml(c.model) + '" style="height:90px;"></a>' +
               '<div class="card-body" style="padding:0.5rem;">' +
-              '<p class="card-text mb-0" style="font-size:0.72rem;"><a href="' + c.url + '" class="text-dark">' + c.model + '</a></p>' +
+              '<p class="card-text mb-0" style="font-size:0.72rem;"><a href="' + safeUrl + '" class="text-dark">' + escapeHtml(c.model) + '</a></p>' +
               '</div></div>';
             row.appendChild(col);
           });
           rvWrap.style.display = 'block';
         }
-      } catch(e) {}
+      } catch (e) {}
     }
 
-    // ── Toast ────────────────────────────────────────────────────
-    function showToast(msg) {
-      var t = document.createElement('div');
-      t.className = 'toast-notification';
-      t.textContent = msg;
-      document.body.appendChild(t);
-      requestAnimationFrame(function() { t.classList.add('toast-show'); });
-      setTimeout(function() {
-        t.classList.remove('toast-show');
-        setTimeout(function() { t.remove(); }, 300);
-      }, 2600);
-    }
-
-    // ── Favorite form AJAX intercept ─────────────────────────────
-    document.addEventListener('submit', function(e) {
-      var form = e.target;
-      if (!form.action || !form.action.includes('/fav')) return;
-      e.preventDefault();
-      var params = new URLSearchParams(new FormData(form));
-      fetch(form.action, {
-        method: 'POST',
-        body: params,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      }).then(function(r) { return r.json(); })
-        .then(function() { showToast('Added to favorites ♥'); })
-        .catch(function() { showToast('Could not add — try again.'); });
-    });
+    // Favorite forms are handled exclusively by initFavForms() below.
+    // (A second global interceptor here used to double-submit every POST and,
+    // because it matched /fav as a substring, hijack /cars/favorites/... too.)
 
     // ── Search form loading state ─────────────────────────────────
     var heroForm = document.querySelector('.hero-form');
@@ -527,13 +565,13 @@
               if (data.makes.length) {
                 html += '<div class="suggest-label">Makes</div>';
                 data.makes.forEach(function(m) {
-                  html += '<a class="suggest-item" href="/cars?selectmake=' + encodeURIComponent(m) + '">' + m + '</a>';
+                  html += '<a class="suggest-item" href="/cars?selectmake=' + encodeURIComponent(m) + '">' + escapeHtml(m) + '</a>';
                 });
               }
               if (data.models.length) {
                 html += '<div class="suggest-label">Models</div>';
                 data.models.forEach(function(c) {
-                  html += '<a class="suggest-item" href="/cars/car?make=' + encodeURIComponent(c.make) + '&model=' + encodeURIComponent(c.model) + '"><span class="suggest-make">' + c.make + '</span>' + c.model + '</a>';
+                  html += '<a class="suggest-item" href="/cars/car?make=' + encodeURIComponent(c.make) + '&model=' + encodeURIComponent(c.model) + '"><span class="suggest-make">' + escapeHtml(c.make) + '</span>' + escapeHtml(c.model) + '</a>';
                 });
               }
               if (!html) { hide(); return; }
@@ -576,16 +614,39 @@
      FAVORITES MODAL — image source tabs + update button
   ═══════════════════════════════════════════════════════════════ */
 
-  // Tab switching
+  // Tab switching (ARIA tablist semantics: aria-selected + roving tabindex)
+  function activateTab(btn) {
+    var modal = btn.closest('.modal-content');
+    if (!modal) return;
+    modal.querySelectorAll('.img-tab-btn').forEach(function (b) {
+      var selected = b === btn;
+      b.classList.toggle('active', selected);
+      b.setAttribute('aria-selected', String(selected));
+      b.tabIndex = selected ? 0 : -1;
+    });
+    modal.querySelectorAll('.img-tab-pane').forEach(function (p) { p.style.display = 'none'; });
+    var pane = document.getElementById(btn.dataset.tab);
+    if (pane) pane.style.display = '';
+  }
+
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.img-tab-btn');
+    if (btn) activateTab(btn);
+  });
+
+  // Left/Right arrows move between tabs in a tablist
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var btn = e.target.closest && e.target.closest('.img-tab-btn');
     if (!btn) return;
-    var targetId = btn.dataset.tab;
-    var modal = btn.closest('.modal-content');
-    modal.querySelectorAll('.img-tab-btn').forEach(function(b) { b.classList.remove('active'); });
-    modal.querySelectorAll('.img-tab-pane').forEach(function(p) { p.style.display = 'none'; });
-    btn.classList.add('active');
-    document.getElementById(targetId).style.display = '';
+    var list = btn.closest('.img-source-tabs');
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('.img-tab-btn'));
+    var idx = tabs.indexOf(btn);
+    var next = e.key === 'ArrowRight'
+      ? tabs[(idx + 1) % tabs.length]
+      : tabs[(idx - 1 + tabs.length) % tabs.length];
+    if (next) { next.focus(); activateTab(next); }
+    e.preventDefault();
   });
 
   // Update Image button — submits the active form (favorites)
@@ -598,6 +659,17 @@
     var tabId = activeTab ? activeTab.dataset.tab : ('url-' + id);
     var isUpload = tabId.startsWith('upload-');
     var form = document.getElementById((isUpload ? 'upload-form-' : 'url-form-') + id);
+    if (form) form.submit();
+  });
+
+  // Update Image button on the car detail page's edit-favorite modal
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.detail-fav-save');
+    if (!btn) return;
+    var modal = btn.closest('.modal-content');
+    var activeTab = modal.querySelector('.img-tab-btn.active');
+    var isUpload = activeTab && activeTab.dataset.tab === 'detail-fav-upload';
+    var form = document.getElementById(isUpload ? 'detail-fav-upload-form' : 'detail-fav-url-form');
     if (form) form.submit();
   });
 
@@ -623,31 +695,29 @@
   var mobileMenu  = document.getElementById('nav-mobile-menu');
 
   if (hamburger && mobileMenu) {
+    function setMenu(open) {
+      mobileMenu.classList.toggle('open', open);
+      hamburger.classList.toggle('open', open);
+      hamburger.setAttribute('aria-expanded', String(open));
+      mobileMenu.setAttribute('aria-hidden', String(!open));
+      // Keep hidden menu items out of the tab order
+      if (open) mobileMenu.removeAttribute('inert');
+      else mobileMenu.setAttribute('inert', '');
+    }
+
+    setMenu(false);
     hamburger.addEventListener('click', function () {
-      var isOpen = mobileMenu.classList.toggle('open');
-      hamburger.classList.toggle('open', isOpen);
-      hamburger.setAttribute('aria-expanded', isOpen);
-      mobileMenu.setAttribute('aria-hidden', !isOpen);
+      setMenu(!mobileMenu.classList.contains('open'));
     });
 
     // Close on any link click inside the menu
     mobileMenu.addEventListener('click', function (e) {
-      if (e.target.tagName === 'A') {
-        mobileMenu.classList.remove('open');
-        hamburger.classList.remove('open');
-        hamburger.setAttribute('aria-expanded', 'false');
-        mobileMenu.setAttribute('aria-hidden', 'true');
-      }
+      if (e.target.tagName === 'A') setMenu(false);
     });
 
     // Close on Esc
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
-        mobileMenu.classList.remove('open');
-        hamburger.classList.remove('open');
-        hamburger.setAttribute('aria-expanded', 'false');
-        mobileMenu.setAttribute('aria-hidden', 'true');
-      }
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) setMenu(false);
     });
   }
 
@@ -683,22 +753,26 @@
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          if (data && data.success === false) return;
+          if (data && data.success === false) {
+            showToast('Could not add — try again.');
+            return;
+          }
           var already = data && data.alreadyFavorited;
           var textBtn = card.querySelector('.fav-text-btn');
           var heartBtn = card.querySelector('.fav-heart');
           if (textBtn && !already) {
             var a = document.createElement('a');
             a.href = '/garage';
-            a.className = textBtn.className.replace('fav-text-btn', '');
+            a.className = textBtn.className.replace(/\s*fav-text-btn\s*/, ' ').trim();
             a.innerHTML = '&#9829; View Favorites';
             textBtn.parentNode.replaceChild(a, textBtn);
           }
           if (heartBtn && !already) {
-            var count = parseInt(heartBtn.textContent.replace(/[^\d]/g, '')) || 0;
+            var count = parseInt(heartBtn.textContent.replace(/[^\d]/g, ''), 10) || 0;
             heartBtn.innerHTML = '&#9829; ' + (count + 1);
             heartBtn.disabled = true;
           }
+          if (!already) showToast('Added to favorites \u2665');
         })
         .catch(function() { form.submit(); });
       });

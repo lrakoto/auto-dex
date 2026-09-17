@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /garage/
+Disallow: /cars/fav
+Disallow: /suggest
+
+Sitemap: https://autodx.io/sitemap.xml

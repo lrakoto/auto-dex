@@ -1,3 +1,10 @@
+<!-- Recently-viewed data is read by main.js (no inline script — CSP-safe).
+     EJS HTML-escapes attribute values, so no </script>/quote break-out. -->
+<div id="car-recent-data" hidden
+     data-make="<%= make %>"
+     data-model="<%= model %>"
+     data-image="<%= image %>"></div>
+
 <!-- Hero Image -->
 <div class="car-hero" style="background-image: url('<%= image %>');">
   <div class="car-hero-overlay">
@@ -131,7 +138,7 @@
 </div>
 
 <% if (currentUser && !carUpdatedImg) { %>
-<div class="modal fade" id="proposeImgModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="proposeImgModal" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -155,7 +162,7 @@
 <% } %>
 
 <% if (currentUser && userFavorite) { %>
-<div class="modal fade" id="detailEditFavModal" tabindex="-1" role="dialog" aria-hidden="true">
+<div class="modal fade" id="detailEditFavModal" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -165,18 +172,18 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="img-source-tabs">
-          <button type="button" class="img-tab-btn active" data-tab="detail-fav-url">Use URL</button>
-          <button type="button" class="img-tab-btn" data-tab="detail-fav-upload">Upload File</button>
+        <div class="img-source-tabs" role="tablist" aria-label="Image source">
+          <button type="button" role="tab" id="detail-fav-url-tab" class="img-tab-btn active" data-tab="detail-fav-url" aria-controls="detail-fav-url" aria-selected="true">Use URL</button>
+          <button type="button" role="tab" id="detail-fav-upload-tab" class="img-tab-btn" data-tab="detail-fav-upload" aria-controls="detail-fav-upload" aria-selected="false" tabindex="-1">Upload File</button>
         </div>
-        <div id="detail-fav-url" class="img-tab-pane">
+        <div id="detail-fav-url" class="img-tab-pane" role="tabpanel" aria-labelledby="detail-fav-url-tab">
           <form id="detail-fav-url-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="favid" value="<%= userFavorite.id %>">
             <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
           </form>
         </div>
-        <div id="detail-fav-upload" class="img-tab-pane" style="display:none;">
+        <div id="detail-fav-upload" class="img-tab-pane" role="tabpanel" aria-labelledby="detail-fav-upload-tab" style="display:none;">
           <form id="detail-fav-upload-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="favid" value="<%= userFavorite.id %>">
@@ -185,20 +192,11 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="detail-fav-save">Update Image</button>
+        <button type="button" class="btn btn-primary detail-fav-save">Update Image</button>
       </div>
     </div>
   </div>
 </div>
-<script>
-document.getElementById('detail-fav-save').addEventListener('click', function() {
-  var modal = this.closest('.modal-content');
-  var activeTab = modal.querySelector('.img-tab-btn.active');
-  var isUpload = activeTab && activeTab.dataset.tab === 'detail-fav-upload';
-  var form = document.getElementById(isUpload ? 'detail-fav-upload-form' : 'detail-fav-url-form');
-  if (form) form.submit();
-});
-</script>
 <% } %>
 
 <style>
@@ -244,17 +242,3 @@ document.getElementById('detail-fav-save').addEventListener('click', function() 
   .media-card { background: url('/assets/noise.svg') repeat, rgba(10,16,30,0.52); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 20px rgba(0,0,0,0.35); border-radius: 3px; padding: 1.5rem; }
   .media-card h5 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; margin-bottom: 1rem; }
 </style>
-
-<script>
-(function() {
-  try {
-    var key = 'autodex_recent';
-    var entry = { make: '<%= make.replace(/'/g, "\\'") %>', model: '<%= model.replace(/'/g, "\\'") %>', image: '<%= image.replace(/'/g, "\\'") %>', url: window.location.href };
-    var list = JSON.parse(localStorage.getItem(key) || '[]');
-    list = list.filter(function(c) { return !(c.make === entry.make && c.model === entry.model); });
-    list.unshift(entry);
-    if (list.length > 6) list = list.slice(0, 6);
-    localStorage.setItem(key, JSON.stringify(list));
-  } catch(e) {}
-})();
-</script>

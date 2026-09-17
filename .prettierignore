@@ -1,0 +1,8 @@
+node_modules
+package-lock.json
+public/css/style.css
+public/js/main.js
+public/js/add-car.js
+migrations
+seeders
+views

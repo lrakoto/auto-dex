@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+const { PLACEHOLDER_URL } = require('../lib/constants');
 
 module.exports = (sequelize, DataTypes) => {
   class user_car extends Model {
@@ -12,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
     make:    { type: DataTypes.STRING,  allowNull: false },
     model:   { type: DataTypes.STRING,  allowNull: false },
     year:    { type: DataTypes.STRING,  allowNull: false },
-    image:   { type: DataTypes.TEXT,    defaultValue: 'https://i.ibb.co/PwkqdSy/placeholder.png' },
+    image:   { type: DataTypes.TEXT,    defaultValue: PLACEHOLDER_URL },
     notes:   { type: DataTypes.TEXT }
   }, {
     sequelize,

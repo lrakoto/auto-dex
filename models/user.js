@@ -28,6 +28,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     email: {
       type: DataTypes.STRING,
+      // Canonicalize on write so Foo@x.com and foo@x.com are one account.
+      set(value) {
+        this.setDataValue('email', typeof value === 'string' ? value.trim().toLowerCase() : value);
+      },
       validate: {
         isEmail: {
           msg: 'Invalid email'

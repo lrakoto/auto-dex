@@ -1,7 +1,8 @@
 const db = require('../models');
 
+// Schema is created once per run from the real migrations (see test/setup.js).
+
 before(async function() {
-  await db.sequelize.sync({ force: true });
   await db.user.create({
     email: 'known@example.com',
     name: 'Known User',

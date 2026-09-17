@@ -3,13 +3,33 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>AutoDex</title>
+    <%
+      // Per-page SEO. Controllers set pageTitle / pageDescription; the
+      // canonical URL is derived in server.js from res.locals.siteUrl.
+      var metaTitle = (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : 'AutoDex';
+      var metaDescription = (typeof pageDescription !== 'undefined' && pageDescription)
+        ? pageDescription
+        : 'Browse thousands of car makes and models, save favorites, and build your personal garage.';
+      var canonicalUrl = siteUrl + (typeof canonicalPath !== 'undefined' && canonicalPath ? canonicalPath : '/');
+    %>
+    <title><%= metaTitle %></title>
+    <meta name="description" content="<%= metaDescription %>">
+    <link rel="canonical" href="<%= canonicalUrl %>">
+    <% if (typeof noindex !== 'undefined' && noindex) { %>
+      <meta name="robots" content="noindex, nofollow">
+    <% } %>
     <meta name="csrf-token" content="<%= csrfToken %>">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : 'AutoDex' %>">
-    <meta property="og:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : 'Browse thousands of car makes and models.' %>">
+    <meta property="og:site_name" content="AutoDex">
+    <meta property="og:url" content="<%= canonicalUrl %>">
+    <meta property="og:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : metaTitle %>">
+    <meta property="og:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : metaDescription %>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : metaTitle %>">
+    <meta name="twitter:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : metaDescription %>">
     <% if (typeof ogImage !== 'undefined' && ogImage) { %>
       <meta property="og:image" content="<%= ogImage %>">
+      <meta name="twitter:image" content="<%= ogImage %>">
     <% } %>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,8 +39,9 @@
     <link rel="stylesheet" href="/css/style.css">
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to content</a>
     <div class="overlay">
-    <main role="main">
+    <main id="main-content" role="main">
       <%- include('partials/alerts') %>
       <header class="masthead">
         <div class="inner">

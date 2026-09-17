@@ -2,23 +2,23 @@
 # AutoDex — one-shot server setup script for a fresh Ubuntu/Debian Hetzner VM.
 #
 # Usage:
-#   1. Spin up a new Hetzner server (Ubuntu 22.04 LTS recommended).
+#   1. Spin up a new Hetzner server (Ubuntu 24.04 LTS recommended).
 #   2. SSH in as root, then run:
 #        bash <(curl -fsSL https://raw.githubusercontent.com/lrakoto/auto-dex/main/deploy/setup.sh)
-#   3. Fill in /opt/autodex/.env with your real secrets (see .env.example).
-#   4. Run the deploy script to pull the latest code:
-#        bash /opt/autodex/deploy/update.sh
+#   3. Fill in /var/www/autodex/.env with your real secrets (see .env.example).
+#   4. Restart to pick up the env:
+#        pm2 restart autodex
 #
+# The app is managed by PM2 (process name: autodex), not systemd.
 # This script is idempotent: safe to re-run.
 
 set -euo pipefail
 
 DOMAIN="autodx.io"
-APP_DIR="/opt/autodex"
-APP_USER="autodex"
+APP_DIR="/var/www/autodex"
 REPO_URL="https://github.com/lrakoto/auto-dex.git"
 DB_NAME="autodex"
-DB_USER="autodex"
+DB_USER="autodex_user"
 
 log()  { echo -e "\033[1;34m[setup]\033[0m $*"; }
 ok()   { echo -e "\033[1;32m  OK\033[0m  $*"; }
@@ -32,8 +32,7 @@ log "Updating apt and installing packages..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq \
-  curl git build-essential \
-  nodejs npm \
+  curl git build-essential ca-certificates \
   nginx \
   postgresql postgresql-contrib \
   ufw fail2ban \
@@ -42,30 +41,29 @@ apt-get install -y -qq \
 
 ok "system packages installed"
 
-# ─── Node via NodeSource (newer than Debian default) ─────────────────────────
-if ! command -v node >/dev/null || [[ "$(node -v 2>/dev/null | cut -dv -f2 | cut -d. -f1)" -lt 18 ]]; then
-  log "Installing Node.js 20 LTS via NodeSource..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
+# ─── Node via NodeSource ─────────────────────────────────────────────────────
+# package.json engines requires >=22 — keep this in step with that.
+if ! command -v node >/dev/null || [[ "$(node -v 2>/dev/null | cut -dv -f2 | cut -d. -f1)" -lt 22 ]]; then
+  log "Installing Node.js 22 LTS via NodeSource..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
   apt-get install -y -qq nodejs > /dev/null
 fi
 ok "node $(node -v), npm $(npm -v)"
 
-# ─── Dedicated unprivileged user ─────────────────────────────────────────────
-if ! id -u "$APP_USER" >/dev/null 2>&1; then
-  log "Creating user '$APP_USER'..."
-  useradd --system --create-home --home-dir "/home/$APP_USER" --shell /bin/bash "$APP_USER"
-fi
-ok "user '$APP_USER' exists"
+# ─── PM2 (process manager) ───────────────────────────────────────────────────
+log "Installing PM2..."
+npm install -g pm2 --no-audit --no-fund >/dev/null
+ok "pm2 $(pm2 -v)"
 
 # ─── App directory + clone ───────────────────────────────────────────────────
 log "Cloning/updating repo to $APP_DIR..."
+mkdir -p "$(dirname "$APP_DIR")"
 if [[ -d "$APP_DIR/.git" ]]; then
-  sudo -u "$APP_USER" git -C "$APP_DIR" fetch --quiet origin
-  sudo -u "$APP_USER" git -C "$APP_DIR" reset --quiet --hard origin/$(git -C "$APP_DIR" symbolic-ref --short HEAD 2>/dev/null || echo main)
+  git -C "$APP_DIR" fetch --quiet origin
+  git -C "$APP_DIR" reset --quiet --hard "origin/$(git -C "$APP_DIR" symbolic-ref --short HEAD 2>/dev/null || echo main)"
 else
   rm -rf "$APP_DIR"
-  install -d -o "$APP_USER" -g "$APP_USER" "$APP_DIR"
-  sudo -u "$APP_USER" git clone --quiet "$REPO_URL" "$APP_DIR"
+  git clone --quiet "$REPO_URL" "$APP_DIR"
 fi
 ok "repo at $APP_DIR"
 
@@ -74,7 +72,6 @@ ENV_FILE="$APP_DIR/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
   log "Creating .env from .env.example..."
   cp "$APP_DIR/.env.example" "$ENV_FILE"
-  chown "$APP_USER:$APP_USER" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
   ok ".env created — edit it: nano $ENV_FILE"
 else
@@ -84,14 +81,13 @@ fi
 # ─── PostgreSQL ──────────────────────────────────────────────────────────────
 log "Setting up PostgreSQL database..."
 DB_PASS="$(openssl rand -base64 24 | tr -d '/+=' | head -c 32 || true)"
-# Fall back if openssl missing
 [[ -z "$DB_PASS" ]] && DB_PASS="$(head -c 32 /dev/urandom | base64)"
 
-# Start postgres if not running
 systemctl enable --now postgresql >/dev/null 2>&1 || true
 
 if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
   sudo -u postgres psql -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';" >/dev/null
+  ok "db user '$DB_USER' created"
 else
   ok "db user '$DB_USER' already exists"
 fi
@@ -112,30 +108,28 @@ fi
 
 # ─── npm install (production deps only) ──────────────────────────────────────
 log "Running npm install (production)..."
-sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npm ci --omit=dev --no-audit --no-fund" >/dev/null 2>&1 \
-  || sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && npm install --omit=dev --no-audit --no-fund" >/dev/null
+(cd "$APP_DIR" && npm ci --omit=dev --no-audit --no-fund >/dev/null 2>&1) \
+  || (cd "$APP_DIR" && npm install --omit=dev --no-audit --no-fund >/dev/null)
 ok "dependencies installed"
 
 # ─── Sequelize migrations ────────────────────────────────────────────────────
 log "Running database migrations..."
-if [[ -f "$ENV_FILE" ]]; then
-  sudo -u "$APP_USER" -H bash -c "cd '$APP_DIR' && NODE_ENV=production npx sequelize-cli db:migrate" 2>&1 | tail -n 5
-fi
+(cd "$APP_DIR" && NODE_ENV=production npx sequelize-cli db:migrate 2>&1 | tail -n 5)
 ok "migrations applied"
 
-# ─── systemd service ─────────────────────────────────────────────────────────
-log "Installing systemd service..."
-install -m644 "$APP_DIR/deploy/autodex.service" /etc/systemd/system/autodex.service
-systemctl daemon-reload
-systemctl enable autodex >/dev/null
-ok "systemd service installed"
+# ─── PM2 process ─────────────────────────────────────────────────────────────
+log "Starting app under PM2..."
+(cd "$APP_DIR" && pm2 start deploy/ecosystem.config.js >/dev/null)
+pm2 save >/dev/null
+# Register a boot service so PM2 resurrects the app after a reboot
+pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+ok "PM2 process 'autodex' started and saved"
 
 # ─── nginx ───────────────────────────────────────────────────────────────────
 log "Configuring nginx..."
 install -d /etc/nginx/sites-available /etc/nginx/sites-enabled
 install -m644 "$APP_DIR/deploy/nginx.conf" "/etc/nginx/sites-available/${DOMAIN}"
 
-# Enable site, disable default
 ln -sf "/etc/nginx/sites-available/${DOMAIN}" "/etc/nginx/sites-enabled/${DOMAIN}"
 rm -f /etc/nginx/sites-enabled/default
 
@@ -146,9 +140,9 @@ ok "nginx configured"
 # ─── Firewall (UFW) ──────────────────────────────────────────────────────────
 log "Configuring firewall (UFW)..."
 ufw --force reset >/dev/null
-ufw allow 22/tcp    comment 'SSH'       >/dev/null
-ufw allow 80/tcp    comment 'HTTP'      >/dev/null
-ufw allow 443/tcp   comment 'HTTPS'     >/dev/null
+ufw allow 22/tcp    comment 'SSH'   >/dev/null
+ufw allow 80/tcp    comment 'HTTP'  >/dev/null
+ufw allow 443/tcp   comment 'HTTPS' >/dev/null
 ufw --force enable >/dev/null
 ok "firewall: 22,80,443 open"
 
@@ -172,18 +166,12 @@ else
   if certbot --nginx -d "${DOMAIN}" -d "www.${DOMAIN}" --non-interactive --agree-tos --register-unsafely-without-email -q; then
     ok "TLS certificate issued"
   else
-    echo -e "\033[1;33m  NOTE\033[0m certbot failed — run manually after DNS points here:"
+    echo -e "\033[1;33m  NOTE\033[0m certbot failed — run manually once DNS points here:"
     echo "    certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
   fi
 fi
 
-# ─── Start / restart app ─────────────────────────────────────────────────────
-log "Starting AutoDex service..."
-systemctl restart autodex
-sleep 2
-systemctl is-active --quiet autodex && ok "AutoDex is running" || die "AutoDex failed to start — check: journalctl -u autodex -n 50"
-
-# ─── Auto-update timer (optional, off by default) ────────────────────────────
+# ─── Auto-update helper ──────────────────────────────────────────────────────
 install -m755 "$APP_DIR/deploy/update.sh" /usr/local/bin/autodex-update
 
 # ─── Summary ─────────────────────────────────────────────────────────────────
@@ -191,10 +179,10 @@ echo ""
 echo -e "\033[1;32m════════════════════════════════════════════════════════════\033[0m"
 echo -e " AutoDex deployment complete."
 echo -e "  • App:     http://localhost:3000  (proxied via nginx)"
-echo -e "  • Service: systemctl {start,stop,status,restart} autodex"
-echo -e "  • Logs:    journalctl -u autodex -f"
+echo -e "  • Process: pm2 {status,restart,logs} autodex"
+echo -e "  • Logs:    pm2 logs autodex"
 echo -e "  • Nginx:   systemctl {reload,status} nginx"
-echo -e "  • DB:      sudo -u postgres psql autodex"
+echo -e "  • DB:      sudo -u postgres psql ${DB_NAME}"
 echo -e "  • .env:    nano $ENV_FILE"
 echo -e ""
 echo -e " Next steps:"
@@ -202,7 +190,7 @@ echo -e "  1. Make sure DNS for ${DOMAIN} points to this server's IP."
 echo -e "  2. Edit .env and fill in real API keys/secret session:"
 echo -e "       nano $ENV_FILE"
 echo -e "  3. Restart to pick up new env:"
-echo -e "       systemctl restart autodex"
+echo -e "       pm2 restart autodex"
 echo -e "  4. (If certbot was skipped) Issue the TLS cert:"
 echo -e "       certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
 echo -e "\033[1;32m════════════════════════════════════════════════════════════\033[0m"

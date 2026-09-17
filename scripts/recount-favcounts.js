@@ -10,7 +10,7 @@ const db = require('../models');
 
 (async () => {
   try {
-    const [result] = await db.sequelize.query(`
+    await db.sequelize.query(`
       UPDATE cars
       SET favcount = COALESCE(counts.total, 0)
       FROM (SELECT "carId", COUNT(*) AS total FROM favorite_cars GROUP BY "carId") AS counts

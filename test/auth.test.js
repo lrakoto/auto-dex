@@ -2,11 +2,9 @@ const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
 const { getCsrfToken } = require('./helpers');
+const { hashToken } = require('../lib/tokens');
 
-// Wipes and rebuilds the TEST database (autodex_test — never the dev DB)
-before(async function() {
-  await db.sequelize.sync({ force: true });
-});
+// Schema is created once per run from the real migrations (see test/setup.js).
 
 describe('Auth Controller', function() {
   const agent = request.agent(app);
@@ -38,13 +36,27 @@ describe('Auth Controller', function() {
       if (after !== before2) throw new Error('User was created despite missing CSRF token');
     });
 
-    it('should redirect to /auth/signup when email already exists', async function() {
+    it('responds identically when the email already exists (no enumeration)', async function() {
+      const before = await db.user.count();
+      const token = await getCsrfToken(agent, '/auth/signup');
+      const res = await agent.post('/auth/signup')
+        .set('Content-Type', 'application/x-www-form-urlencoded')
+        .send({ ...testUser, _csrf: token })
+        .expect('Location', '/auth/login')
+        .expect(302);
+      const after = await db.user.count();
+      if (after !== before) throw new Error('duplicate signup created a second user');
+      if (/already exists/i.test(res.text)) throw new Error('response leaks that the email exists');
+    });
+
+    it('normalizes email case/whitespace so it cannot create a second account', async function() {
       const token = await getCsrfToken(agent, '/auth/signup');
       await agent.post('/auth/signup')
         .set('Content-Type', 'application/x-www-form-urlencoded')
-        .send({ ...testUser, _csrf: token })
-        .expect('Location', '/auth/signup')
+        .send({ email: '  MIKE@EXAMPLE.COM  ', name: 'Mike Again', password: 'password123', _csrf: token })
         .expect(302);
+      const matches = await db.user.count({ where: { email: 'mike@example.com' } });
+      if (matches !== 1) throw new Error(`expected 1 canonical user, found ${matches}`);
     });
   });
 
@@ -109,7 +121,7 @@ describe('Auth Controller', function() {
         name: 'Stale Link',
         password: 'password123',
         emailVerified: false,
-        verificationToken: 'expired-token',
+        verificationToken: hashToken('expired-token'),
         verificationTokenExpiresAt: new Date(Date.now() - 60 * 1000) // 1 min ago
       });
       await request(app).get('/auth/verify/expired-token')
@@ -117,6 +129,23 @@ describe('Auth Controller', function() {
         .expect(302);
       const fresh = await db.user.findByPk(stale.id);
       if (fresh.emailVerified) throw new Error('Expired token verified the user');
+    });
+
+    it('verifies a user from the plaintext link and clears the stored hash', async function() {
+      const user = await db.user.create({
+        email: 'verify@example.com',
+        name: 'Verify Me',
+        password: 'password123',
+        emailVerified: false,
+        verificationToken: hashToken('good-token'),
+        verificationTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000)
+      });
+      await request(app).get('/auth/verify/good-token')
+        .expect('Location', '/auth/login')
+        .expect(302);
+      const fresh = await db.user.findByPk(user.id);
+      if (!fresh.emailVerified) throw new Error('valid token did not verify the user');
+      if (fresh.verificationToken !== null) throw new Error('verification token was not cleared');
     });
   });
 });

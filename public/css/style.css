@@ -1530,3 +1530,54 @@ main > *:not(#bg-canvas) { position: relative; z-index: 2; }
   font-weight: 600;
   color: var(--text);
 }
+
+/* ─── Accessibility ─────────────────────────────────────────────────────── */
+
+/* Keyboard-only skip link to bypass the nav */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2000;
+  padding: 0.6rem 1rem;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+.skip-link:focus {
+  left: 0;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Visible focus ring for keyboard users on all interactive controls */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Honor the OS "reduce motion" setting: stop transitions/animations and
+   reveal any scroll-animation elements that would otherwise stay hidden. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fade-up,
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

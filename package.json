@@ -4,7 +4,10 @@
   "description": "AutoDex — car browsing and garage management (Express + EJS + Sequelize/Postgres)",
   "main": "server.js",
   "scripts": {
-    "test": "NODE_ENV=test mocha --timeout 15000",
+    "test": "NODE_ENV=test mocha",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
     "start": "node server.js",
     "nodemon": "nodemon"
   },
@@ -27,11 +30,12 @@
   "homepage": "https://github.com/lrakoto/auto-dex#readme",
   "devDependencies": {
     "chai": "^4.3.6",
+    "eslint": "^9.39.5",
     "mocha": "^10.0.0",
+    "prettier": "^3.9.7",
     "supertest": "^6.2.4"
   },
   "dependencies": {
-    "@ngneat/falso": "^6.1.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",

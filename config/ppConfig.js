@@ -3,6 +3,7 @@ const LocalStrategy = require('passport-local').Strategy;
 
 // Database
 const db = require('../models');
+const { normalizeEmail } = require('../lib/tokens');
 
 const STRATEGY = new LocalStrategy({
     usernameField: 'email',         // looks for an email field as the username
@@ -10,7 +11,7 @@ const STRATEGY = new LocalStrategy({
     }, async (email, password, cb) => {
         try {
             const user = await db.user.findOne({
-                where: { email }
+                where: { email: normalizeEmail(email) }
             });
 
             if (!user || !user.validPassword(password)) { 

@@ -1,9 +1,28 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../models');
-const { cloudinary, upload } = require('../config/cloudinary');
+const { upload } = require('../config/cloudinary');
 const isAdmin = require('../middleware/isAdmin');
 const { isValidImageUrl } = require('../lib/validators');
+const { PLACEHOLDER_URL } = require('../lib/constants');
+
+// Mutating garage/admin routes were previously unlimited.
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests. Please slow down.'
+});
+
+const adminWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many admin actions. Please slow down.'
+});
 
 // ─── GARAGE (user profile page) ───────────────────────────────────────────────
 
@@ -14,7 +33,9 @@ router.get('/', async (req, res) => {
     const favorites = await db.favorite_car.findAll({ where: { userId: req.user.id } });
     res.render('garage/index', {
       myCars: myCars.map(c => c.toJSON()),
-      favorites: favorites.map(f => f.toJSON())
+      favorites: favorites.map(f => f.toJSON()),
+      pageTitle: 'My Garage — AutoDex',
+      canonicalPath: '/garage'
     });
   } catch (err) {
     console.log('GARAGE ERROR:', err);
@@ -64,14 +85,17 @@ router.get('/years', (req, res) => {
 
 // GET /garage/add — show add-car form
 router.get('/add', (req, res) => {
-  res.render('garage/add-car');
+  res.render('garage/add-car', {
+    pageTitle: 'Add a Car — AutoDex',
+    canonicalPath: '/garage/add'
+  });
 });
 
 // POST /garage/add — create a user car (handles both URL and file upload)
-router.post('/add', upload.single('carImage'), async (req, res) => {
+router.post('/add', writeLimiter, upload.single('carImage'), async (req, res) => {
   try {
     const { make, model, year, imageUrl, notes } = req.body;
-    let image = 'https://i.ibb.co/PwkqdSy/placeholder.png';
+    let image = PLACEHOLDER_URL;
 
     if (req.file) {
       image = req.file.path; // Cloudinary URL
@@ -102,7 +126,7 @@ router.post('/add', upload.single('carImage'), async (req, res) => {
 });
 
 // PUT /garage/car/:id — update a user car's image and/or notes
-router.put('/car/:id', upload.single('carImage'), async (req, res) => {
+router.put('/car/:id', writeLimiter, upload.single('carImage'), async (req, res) => {
   try {
     const updates = {};
     if (req.file) {
@@ -124,7 +148,7 @@ router.put('/car/:id', upload.single('carImage'), async (req, res) => {
 });
 
 // DELETE /garage/car/:id — remove a user car
-router.delete('/car/:id', async (req, res) => {
+router.delete('/car/:id', writeLimiter, async (req, res) => {
   try {
     await db.user_car.destroy({
       where: { id: req.params.id, userId: req.user.id }
@@ -145,7 +169,7 @@ router.get('/admin', isAdmin, async (req, res) => {
     const cars = await db.car.findAll({
       where: {
         image: {
-          [Op.or]: [null, 'https://i.ibb.co/PwkqdSy/placeholder.png']
+          [Op.or]: [null, PLACEHOLDER_URL]
         }
       },
       order: [['make', 'ASC'], ['model', 'ASC']],
@@ -164,10 +188,9 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
-    const PLACEHOLDER = 'https://i.ibb.co/PwkqdSy/placeholder.png';
     const [totalCars, unsplashRemaining, favCounts, garageCounts, proposalCounts] = await Promise.all([
       db.car.count(),
-      db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER }] } }),
+      db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }),
       db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.image_proposal.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] })
@@ -190,6 +213,8 @@ router.get('/admin', isAdmin, async (req, res) => {
       order: [['createdAt', 'ASC']]
     });
     res.render('garage/admin', {
+      pageTitle: 'Admin — AutoDex',
+      canonicalPath: '/garage/admin',
       cars: cars.map(c => c.toJSON()),
       proposals: proposals.map(p => p.toJSON()),
       unverifiedUsers: unverifiedUsers.map(u => u.toJSON()),
@@ -204,7 +229,7 @@ router.get('/admin', isAdmin, async (req, res) => {
 });
 
 // POST /garage/admin/verify-user/:id — manually verify a user's email
-router.post('/admin/verify-user/:id', isAdmin, async (req, res) => {
+router.post('/admin/verify-user/:id', isAdmin, adminWriteLimiter, async (req, res) => {
   try {
     await db.user.update(
       { emailVerified: true, verificationToken: null, verificationTokenExpiresAt: null },
@@ -219,7 +244,7 @@ router.post('/admin/verify-user/:id', isAdmin, async (req, res) => {
 });
 
 // POST /garage/admin/proposal/:id/approve
-router.post('/admin/proposal/:id/approve', isAdmin, async (req, res) => {
+router.post('/admin/proposal/:id/approve', isAdmin, adminWriteLimiter, async (req, res) => {
   try {
     const proposal = await db.image_proposal.findByPk(req.params.id);
     if (!proposal) return res.redirect('/garage/admin');
@@ -237,7 +262,7 @@ router.post('/admin/proposal/:id/approve', isAdmin, async (req, res) => {
 });
 
 // POST /garage/admin/proposal/:id/reject
-router.post('/admin/proposal/:id/reject', isAdmin, async (req, res) => {
+router.post('/admin/proposal/:id/reject', isAdmin, adminWriteLimiter, async (req, res) => {
   try {
     const proposal = await db.image_proposal.findByPk(req.params.id);
     if (proposal) await proposal.update({ status: 'rejected' });
@@ -249,13 +274,12 @@ router.post('/admin/proposal/:id/reject', isAdmin, async (req, res) => {
 });
 
 // POST /garage/admin/reset-unsplash-queue — reset updated_img for placeholder cars so Unsplash retries them
-router.post('/admin/reset-unsplash-queue', isAdmin, async (req, res) => {
+router.post('/admin/reset-unsplash-queue', isAdmin, adminWriteLimiter, async (req, res) => {
   try {
-    const PLACEHOLDER = 'https://i.ibb.co/PwkqdSy/placeholder.png';
     const { Op } = require('sequelize');
     const [count] = await db.car.update(
       { updated_img: false },
-      { where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER }] } }
+      { where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }
     );
     req.flash('success', `Queue reset — ${count} cars will be retried on the next Unsplash run.`);
   } catch (err) {
@@ -266,7 +290,7 @@ router.post('/admin/reset-unsplash-queue', isAdmin, async (req, res) => {
 });
 
 // PUT /garage/admin/car/:id — update a car's default image
-router.put('/admin/car/:id', isAdmin, upload.single('carImage'), async (req, res) => {
+router.put('/admin/car/:id', isAdmin, adminWriteLimiter, upload.single('carImage'), async (req, res) => {
   try {
     const { imageUrl } = req.body;
     let image;

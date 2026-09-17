@@ -10,8 +10,88 @@ async function getKnownMakes() {
   return makes.map(m => m.display);
 }
 
+// The fuzzy pass needs a pool of the most-favorited cars. Loading it from the
+// DB on every keystroke was wasteful (and the queries ordered by a column that
+// had no index), so cache the pools briefly. Suggestions tolerate staleness.
+const FUZZY_POOL_SIZE = 1000;      // global pool (no make prefix typed)
+const FUZZY_MAKE_POOL_SIZE = 300;  // per-make pool ("Ferrari F…")
+const FUZZY_POOL_TTL = 5 * 60 * 1000; // 5 minutes
+
+let globalPool = { at: 0, cars: [] };
+const makePools = new Map(); // make -> { at, cars }
+
+async function getGlobalPool() {
+  if (Date.now() - globalPool.at < FUZZY_POOL_TTL) return globalPool.cars;
+  const rows = await db.car.findAll({
+    attributes: ['make', 'model', 'favcount'],
+    order: [['favcount', 'DESC']],
+    limit: FUZZY_POOL_SIZE
+  });
+  globalPool = { at: Date.now(), cars: rows.map(c => c.toJSON()) };
+  return globalPool.cars;
+}
+
+async function getMakePool(make) {
+  const hit = makePools.get(make);
+  if (hit && Date.now() - hit.at < FUZZY_POOL_TTL) return hit.cars;
+  const rows = await db.car.findAll({
+    where: { make },
+    attributes: ['make', 'model', 'favcount'],
+    order: [['favcount', 'DESC']],
+    limit: FUZZY_MAKE_POOL_SIZE
+  });
+  const cars = rows.map(c => c.toJSON());
+  makePools.set(make, { at: Date.now(), cars });
+  return cars;
+}
+
 router.get('/', (req, res) => {
-  res.render('index');
+  res.render('index', {
+    pageTitle: 'AutoDex — Car Database, Specs & Garage',
+    pageDescription: 'Browse thousands of car makes and models, discover specs, save favorites, and build your personal garage.'
+  });
+});
+
+// XML sitemap for crawlers — makes + the models we have real rows for.
+// Capped so a large catalog can't produce an unbounded response.
+const SITEMAP_MODEL_LIMIT = 5000;
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const siteUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+    const [makes, cars] = await Promise.all([
+      getKnownMakes(),
+      db.car.findAll({
+        attributes: ['make', 'model', 'updatedAt'],
+        order: [['favcount', 'DESC']],
+        limit: SITEMAP_MODEL_LIMIT
+      })
+    ]);
+
+    const urls = [
+      { loc: '/', priority: '1.0' },
+      { loc: '/makes', priority: '0.8' },
+      ...makes.map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
+      ...cars.map(c => ({
+        loc: `/cars/car?make=${encodeURIComponent(c.make)}&model=${encodeURIComponent(c.model)}`,
+        priority: '0.5',
+        lastmod: c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : null
+      }))
+    ];
+
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+      urls.map(u =>
+        '  <url><loc>' + siteUrl + u.loc.replace(/&/g, '&amp;') + '</loc>' +
+        (u.lastmod ? '<lastmod>' + u.lastmod + '</lastmod>' : '') +
+        '<priority>' + u.priority + '</priority></url>'
+      ).join('\n') +
+      '\n</urlset>';
+
+    res.type('application/xml').send(xml);
+  } catch (err) {
+    console.log('SITEMAP ERROR:', err);
+    res.status(500).send('Could not generate sitemap.');
+  }
 });
 
 // ── Autocomplete suggestions ──────────────────────────────────────────────────
@@ -36,7 +116,7 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
     );
     if (makePrefix) {
       const modelQ = q.slice(makePrefix.length + 1).trim();
-      let dbModels = await db.car.findAll({
+      const dbModels = await db.car.findAll({
         where: { make: makePrefix, model: { [Op.iLike]: '%' + modelQ + '%' } },
         attributes: ['make', 'model', 'favcount'],
         order: [['favcount', 'DESC']],
@@ -44,16 +124,12 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
       });
       let models = dbModels.map(c => c.toJSON());
       if (models.length < 15 && modelQ.length >= 2) {
-        // Bounded pool — fuzzy-scoring one make's most-favorited cars is cheap
-        const makeCars = await db.car.findAll({
-          where: { make: makePrefix },
-          attributes: ['make', 'model', 'favcount'],
-          order: [['favcount', 'DESC']],
-          limit: 300
-        });
+        // Fuzzy pass against the cached per-make pool instead of a fresh
+        // 300-row query on every keystroke.
+        const pool = await getMakePool(makePrefix);
         const seen = new Set(models.map(c => c.make + '|' + c.model));
-        const fuzzyHits = makeCars
-          .map(c => { const car = c.toJSON(); return { ...car, _score: fuzzyScore(modelQ, car.model) }; })
+        const fuzzyHits = pool
+          .map(car => ({ ...car, _score: fuzzyScore(modelQ, car.model) }))
           .filter(c => c._score > 0.45 && !seen.has(c.make + '|' + c.model))
           .sort((a, b) => b._score - a._score);
         models = models.concat(fuzzyHits.slice(0, 15 - models.length));
@@ -93,12 +169,12 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
     let models = exactCars.map(c => c.toJSON());
     const seen = new Set(models.map(c => c.make + '|' + c.model));
 
-    // Fuzzy DB pass — bounded to the most-favorited cars; the previous
-    // version loaded the ENTIRE cars table into memory on every keystroke
+    // Fuzzy DB pass — bounded to the most-favorited cars (cached briefly);
+    // the previous version loaded 1000 rows from the DB on every keystroke.
     if (models.length < 15) {
-      const pool = await db.car.findAll({ attributes: ['make', 'model', 'favcount'], order: [['favcount', 'DESC']], limit: 1000 });
+      const pool = await getGlobalPool();
       const fuzzyHits = pool
-        .map(c => { const car = c.toJSON(); return { ...car, _score: Math.max(fuzzyScore(q, car.model), fuzzyScore(q, car.make + ' ' + car.model)) }; })
+        .map(car => ({ ...car, _score: Math.max(fuzzyScore(q, car.model), fuzzyScore(q, car.make + ' ' + car.model)) }))
         .filter(c => c._score > 0.45 && !seen.has(c.make + '|' + c.model))
         .sort((a, b) => b._score - a._score || (b.favcount || 0) - (a.favcount || 0));
       models = models.concat(fuzzyHits.slice(0, 15 - models.length));
@@ -165,7 +241,11 @@ router.get('/makes', async (req, res) => {
       modelCount: countMap[name] != null ? countMap[name] : null
     }));
 
-    res.render('makes', { makes });
+    res.render('makes', {
+      makes,
+      pageTitle: 'Browse Car Manufacturers — AutoDex',
+      pageDescription: `Browse ${makes.length} car manufacturers and their models on AutoDex.`
+    });
   } catch (err) {
     console.log('MAKES ERROR:', err);
     res.redirect('/');

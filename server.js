@@ -96,6 +96,11 @@ app.use((req, res, next) => {
   res.locals.alerts = req.flash();
   res.locals.currentUser = req.user;
   res.locals.csrfToken = generateToken(req);
+  // SEO: site origin + default canonical path (controllers can override
+  // res.locals.canonicalPath for pages with query-driven variants).
+  const proto = req.get('x-forwarded-proto') || req.protocol;
+  res.locals.siteUrl = (process.env.BASE_URL || `${proto}://${req.get('host')}`).replace(/\/+$/, '');
+  res.locals.canonicalPath = req.path;
   next();
 });
 
@@ -140,7 +145,7 @@ app.use((err, req, res, next) => {
 
 // 404 Handler
 app.use((req, res, next) => {
-  res.status(404).render('404');
+  res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
 });
 
 // Only bind a port when run directly (node server.js / PM2 / nodemon).

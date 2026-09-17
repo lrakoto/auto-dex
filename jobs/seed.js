@@ -9,16 +9,30 @@ async function seedAllMakes() {
   try {
     const makes = await carquery.getMakes();
     console.log(`Seed: checking ${makes.length} makes...`);
+    // One query to find which makes already have rows (was one count per make)
+    const haveRows = await db.car.findAll({
+      attributes: ['make'],
+      group: ['make']
+    });
+    const seeded = new Set(haveRows.map(r => r.make));
     for (const make of makes) {
-      const existing = await db.car.count({ where: { make: make.display } });
-      if (existing > 0) continue; // already seeded
+      if (seeded.has(make.display)) continue; // already seeded
       try {
         const models = await carquery.getModels(make.display);
-        for (const m of models) {
-          await db.car.findOrCreate({
-            where: { make: m.make, model: m.model },
-            defaults: { image: PLACEHOLDER_URL, favcount: 0, updated_img: false }
-          });
+        if (models.length > 0) {
+          // Single INSERT ... ON CONFLICT DO NOTHING per make instead of a
+          // findOrCreate round-trip per model. Relies on the cars(make, model)
+          // unique index added in 20260916000000.
+          await db.car.bulkCreate(
+            models.map(m => ({
+              make: m.make,
+              model: m.model,
+              image: PLACEHOLDER_URL,
+              favcount: 0,
+              updated_img: false
+            })),
+            { ignoreDuplicates: true }
+          );
         }
         console.log(`Seed: added ${models.length} models for ${make.display}`);
       } catch (err) {

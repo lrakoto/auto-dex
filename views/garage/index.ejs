@@ -40,7 +40,7 @@
         </div>
 
         <!-- Edit Modal -->
-        <div class="modal fade" id="editCarModal<%= car.id %>" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal fade" id="editCarModal<%= car.id %>" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
               <div class="modal-header">
@@ -50,12 +50,12 @@
                 </button>
               </div>
               <div class="modal-body">
-                <div class="img-source-tabs">
-                  <button type="button" class="img-tab-btn active" data-tab="car-url-<%= car.id %>">Use URL</button>
-                  <button type="button" class="img-tab-btn" data-tab="car-upload-<%= car.id %>">Upload File</button>
+                <div class="img-source-tabs" role="tablist" aria-label="Image source">
+                  <button type="button" role="tab" id="car-url-<%= car.id %>-tab" class="img-tab-btn active" data-tab="car-url-<%= car.id %>" aria-controls="car-url-<%= car.id %>" aria-selected="true">Use URL</button>
+                  <button type="button" role="tab" id="car-upload-<%= car.id %>-tab" class="img-tab-btn" data-tab="car-upload-<%= car.id %>" aria-controls="car-upload-<%= car.id %>" aria-selected="false" tabindex="-1">Upload File</button>
                 </div>
 
-                <div id="car-url-<%= car.id %>" class="img-tab-pane">
+                <div id="car-url-<%= car.id %>" class="img-tab-pane" role="tabpanel" aria-labelledby="car-url-<%= car.id %>-tab">
                   <form id="car-url-form-<%= car.id %>" method="POST" action="/garage/car/<%= car.id %>?_method=PUT">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="carid" value="<%= car.id %>">
@@ -64,7 +64,7 @@
                   </form>
                 </div>
 
-                <div id="car-upload-<%= car.id %>" class="img-tab-pane" style="display:none;">
+                <div id="car-upload-<%= car.id %>" class="img-tab-pane" role="tabpanel" aria-labelledby="car-upload-<%= car.id %>-tab" style="display:none;">
                   <form id="car-upload-form-<%= car.id %>" method="POST" action="/garage/car/<%= car.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="carid" value="<%= car.id %>">
@@ -111,7 +111,7 @@
         </div>
 
         <!-- Edit Favorite Modal -->
-        <div class="modal fade" id="editFavModal<%= f.id %>" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal fade" id="editFavModal<%= f.id %>" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
               <div class="modal-header">
@@ -121,18 +121,18 @@
                 </button>
               </div>
               <div class="modal-body">
-                <div class="img-source-tabs">
-                  <button type="button" class="img-tab-btn active" data-tab="fav-url-<%= f.id %>">Use URL</button>
-                  <button type="button" class="img-tab-btn" data-tab="fav-upload-<%= f.id %>">Upload File</button>
+                <div class="img-source-tabs" role="tablist" aria-label="Image source">
+                  <button type="button" role="tab" id="fav-url-<%= f.id %>-tab" class="img-tab-btn active" data-tab="fav-url-<%= f.id %>" aria-controls="fav-url-<%= f.id %>" aria-selected="true">Use URL</button>
+                  <button type="button" role="tab" id="fav-upload-<%= f.id %>-tab" class="img-tab-btn" data-tab="fav-upload-<%= f.id %>" aria-controls="fav-upload-<%= f.id %>" aria-selected="false" tabindex="-1">Upload File</button>
                 </div>
-                <div id="fav-url-<%= f.id %>" class="img-tab-pane">
+                <div id="fav-url-<%= f.id %>" class="img-tab-pane" role="tabpanel" aria-labelledby="fav-url-<%= f.id %>-tab">
                   <form id="fav-url-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="favid" value="<%= f.id %>">
                     <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
                   </form>
                 </div>
-                <div id="fav-upload-<%= f.id %>" class="img-tab-pane" style="display:none;">
+                <div id="fav-upload-<%= f.id %>" class="img-tab-pane" role="tabpanel" aria-labelledby="fav-upload-<%= f.id %>-tab" style="display:none;">
                   <form id="fav-upload-form-<%= f.id %>" method="POST" action="/cars/favorites/edit/<%= f.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="favid" value="<%= f.id %>">
