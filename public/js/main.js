@@ -898,6 +898,14 @@
     var thumb = e.target.closest && e.target.closest('.gallery-thumb');
     if (!thumb) return;
     setHeroImage(thumb.dataset.full);
+    // Keep the hero's photographer credit in step with the photo shown.
+    // data-credit-html is server-rendered from the photo-credit partial
+    // (EJS-escaped names/URLs), never user-typed markup.
+    var credit = document.getElementById('hero-credit');
+    if (credit) {
+      credit.innerHTML = thumb.dataset.creditHtml || '';
+      credit.hidden = !thumb.dataset.creditHtml.trim();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 

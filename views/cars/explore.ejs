@@ -1,0 +1,56 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading">Explore</h1>
+    <p class="lead text-muted">Every make at once. Try the 1990s + Japan.</p>
+    <form action="/cars/explore" method="GET" class="explore-filters">
+      <label>
+        <span>Decade</span>
+        <select name="decade" class="form-control form-control-sm auto-submit">
+          <option value="">Any</option>
+          <% decades.forEach(d => { %>
+            <option value="<%= d %>" <%= filters.decade === d ? 'selected' : '' %>><%= d %>s</option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span>Country</span>
+        <select name="country" class="form-control form-control-sm auto-submit">
+          <option value="">Any</option>
+          <% countries.forEach(c => { %>
+            <option value="<%= c %>" <%= filters.country === c ? 'selected' : '' %>><%= c %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span>Make</span>
+        <select name="make" class="form-control form-control-sm auto-submit">
+          <option value="">Any</option>
+          <% makesList.forEach(m => { %>
+            <option value="<%= m %>" <%= filters.make === m ? 'selected' : '' %>><%= m %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span>Sort</span>
+        <select name="sort" class="form-control form-control-sm auto-submit">
+          <option value="popular" <%= filters.sort === 'popular' ? 'selected' : '' %>>Most favorited</option>
+          <option value="newest" <%= filters.sort === 'newest' ? 'selected' : '' %>>Newest</option>
+          <option value="oldest" <%= filters.sort === 'oldest' ? 'selected' : '' %>>Oldest</option>
+          <option value="az" <%= filters.sort === 'az' ? 'selected' : '' %>>A–Z</option>
+        </select>
+      </label>
+      <label class="explore-check">
+        <input type="checkbox" name="photos" value="1" class="auto-submit" <%= filters.photos ? 'checked' : '' %>>
+        <span>With photos only</span>
+      </label>
+      <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+    </form>
+    <p class="explore-count"><%= total.toLocaleString('en-US') %> car<%= total === 1 ? '' : 's' %></p>
+  </div>
+</section>
+
+<div class="album py-5 bg-light">
+  <div class="container" id="cars-grid">
+    <%- include('../partials/car-grid') %>
+  </div>
+</div>

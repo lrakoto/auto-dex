@@ -8,6 +8,7 @@ const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
 const { getMakeCountry } = require('../config/carquery');
+const unsplash = require('../lib/unsplash');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar } = require('../lib/catalog');
 const { getMakeProgress } = require('../lib/dex');
@@ -16,6 +17,16 @@ require('dotenv').config();
 
 const PAGE_SIZE = 12;
 const MAX_COMPARE = 3;
+
+// Attribution for a displayed photo: the recorded photographer when we have
+// one, a generic Unsplash credit for Unsplash photos we couldn't attribute yet.
+function photoCredit(url, galleryRow) {
+  if (galleryRow && galleryRow.credit_name) {
+    return { name: galleryRow.credit_name, url: galleryRow.credit_url, unsplash: unsplash.isUnsplashUrl(url) };
+  }
+  if (unsplash.isUnsplashUrl(url)) return { name: null, url: null, unsplash: true };
+  return null;
+}
 
 // Mutating endpoints get their own limits — previously only auth routes were
 // throttled, so a single logged-in user could spam favorites/proposals forever.
@@ -67,6 +78,88 @@ router.get('/search', async (req, res) => {
   } catch (err) {
     console.log('MODEL SEARCH ERROR:', err);
     res.redirect('/');
+  }
+});
+
+// GET /cars/explore — cross-make browsing: decade, country, make, photos-only,
+// sort. Decades use the NHTSA model years (jobs/years.js), so cars whose make
+// hasn't been scanned yet only appear when no decade is picked.
+const EXPLORE_SORTS = {
+  popular: [['favcount', 'DESC'], ['year_max', 'DESC NULLS LAST'], ['model', 'ASC']],
+  newest:  [['year_max', 'DESC NULLS LAST'], ['favcount', 'DESC']],
+  oldest:  [['year_min', 'ASC NULLS LAST'], ['favcount', 'DESC']],
+  az:      [['make', 'ASC'], ['model', 'ASC']]
+};
+
+router.get('/explore', async (req, res) => {
+  const { Op } = require('sequelize');
+  const { MAKES_LIST } = require('../config/carquery');
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const str = v => (typeof v === 'string' ? v : '');
+  const firstDecade = 1980;
+  const lastDecade = Math.floor(new Date().getFullYear() / 10) * 10;
+  const decades = [];
+  for (let d = lastDecade; d >= firstDecade; d -= 10) decades.push(d);
+  const countries = [...new Set(MAKES_LIST.map(getMakeCountry).filter(Boolean))].sort();
+
+  const decade = decades.includes(parseInt(req.query.decade, 10)) ? parseInt(req.query.decade, 10) : null;
+  const country = countries.includes(str(req.query.country)) ? str(req.query.country) : '';
+  const make = MAKES_LIST.includes(str(req.query.make)) ? str(req.query.make) : '';
+  const photos = req.query.photos === '1';
+  const sort = EXPLORE_SORTS[req.query.sort] ? req.query.sort : 'popular';
+
+  const where = {};
+  const makes = MAKES_LIST.filter(m => (!make || m === make) && (!country || getMakeCountry(m) === country));
+  where.make = { [Op.in]: makes };
+  if (decade) {
+    const span = [];
+    for (let y = decade; y < decade + 10; y++) span.push(y);
+    where.model_years = { [Op.overlap]: span };
+  }
+  if (photos) where.image = { [Op.ne]: PLACEHOLDER_URL };
+
+  try {
+    const { rows, count } = makes.length === 0 ? { rows: [], count: 0 } : await db.car.findAndCountAll({
+      where,
+      order: EXPLORE_SORTS[sort],
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE
+    });
+    rows.forEach(r => { r.dataValues.years = carinfo.formatYears(r); });
+
+    const params = new URLSearchParams();
+    if (decade) params.set('decade', decade);
+    if (country) params.set('country', country);
+    if (make) params.set('make', make);
+    if (photos) params.set('photos', '1');
+    if (sort !== 'popular') params.set('sort', sort);
+    const qs = params.toString();
+    const label = [decade ? decade + 's' : '', country, make].filter(Boolean).join(' ') || 'those filters';
+    const viewData = {
+      search: label,
+      carImg: rows,
+      page,
+      total: count,
+      totalPages: Math.ceil(count / PAGE_SIZE),
+      baseUrl: `/cars/explore?${qs ? qs + '&' : ''}page=`
+    };
+    if (req.query.partial === '1') {
+      res.locals.layout = false;
+      return res.render('partials/car-grid', viewData);
+    }
+    Object.assign(viewData, {
+      decades, countries, makesList: MAKES_LIST,
+      filters: { decade, country, make, photos, sort },
+      pageTitle: `Explore ${label === 'those filters' ? 'Cars' : label + ' Cars'} — AutoDex`,
+      pageDescription: 'Browse cars across every make by decade, country of origin and popularity.',
+      canonicalPath: '/cars/explore' + (qs ? '?' + qs : ''),
+      // Filter combinations are endless; only the bare page is worth indexing
+      noindex: !!qs || page > 1
+    });
+    res.render('cars/explore', viewData);
+  } catch (err) {
+    console.log('EXPLORE ERROR:', err);
+    res.status(500).send('Error loading cars.');
   }
 });
 
@@ -193,10 +286,13 @@ router.get('/', async (req, res) => {
         if (car) mySpotCount = await db.spotting.count({ where: { userId: req.user.id, carId: car.id } });
       }
       const gallery = car ? await getGallery(car.id, req.user && req.user.id) : [];
+      gallery.forEach(img => { img.credit = photoCredit(img.url, img); });
+      const heroImage = gallery.find(g => g.url === image);
+      const heroCredit = photoCredit(image, heroImage);
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, userFavorite,
-        gallery, mySpotCount,
+        gallery, mySpotCount, heroCredit,
         years: carinfo.formatYears(car),
         carDbId: car ? car.id : null,
         carUpdatedImg: car ? !!car.updated_img : false,

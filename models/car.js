@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
     make: DataTypes.STRING,
     model: DataTypes.STRING,
     year: DataTypes.INTEGER,
-    image: DataTypes.STRING,
+    image: DataTypes.TEXT,
     favcount: DataTypes.INTEGER,
     updated_img: DataTypes.BOOLEAN,
     year_min: DataTypes.INTEGER,

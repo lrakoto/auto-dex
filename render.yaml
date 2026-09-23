@@ -49,3 +49,6 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Optional: error tracking. Leave unset to disable (see instrument.js).
+      - key: SENTRY_DSN
+        sync: false

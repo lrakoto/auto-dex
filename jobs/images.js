@@ -1,14 +1,11 @@
-// Unsplash image updater: fills in placeholder car images, 50 cars per run,
-// priority makes first. Started from server.js (web process) for now —
-// set ENABLE_BACKGROUND_JOBS=false when this moves to a separate cron.
-const axios = require('axios');
+// Unsplash image updater: fills in placeholder car images, priority makes
+// first, then spends any leftover request budget crediting photographers on
+// older Unsplash images that predate credits. Started from server.js (web
+// process) — set ENABLE_BACKGROUND_JOBS=false when this moves to a separate cron.
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { addImage } = require('../lib/gallery');
-
-const uSplashKey = process.env.UKEY;
-const uSplashBaseURL = 'https://api.unsplash.com/';
-const uSplashEnd = `client_id=${uSplashKey}`;
+const unsplash = require('../lib/unsplash');
 
 const PRIORITY_MAKES = [
   'Tesla', 'Subaru', 'Mitsubishi', 'Chrysler', 'Nissan', 'Audi', 'Toyota', 'Mercedes-Benz',
@@ -19,56 +16,90 @@ const PRIORITY_MAKES = [
   'Mazda', 'Honda', 'Hyundai', 'Kia', 'Genesis', 'Suzuki', 'Isuzu', 'Daihatsu',
 ];
 
-const BATCH_SIZE = 50;
+// Search requests per hourly run. The Unsplash demo tier allows 50/hour.
+const BATCH_SIZE = 45;
+
+async function fillPlaceholders(budget) {
+  // First pass: priority makes. Second pass: everything else.
+  let cars = await db.car.findAll({
+    where: { updated_img: false, make: PRIORITY_MAKES },
+    limit: budget
+  });
+  if (cars.length === 0) {
+    cars = await db.car.findAll({ where: { updated_img: false }, limit: budget });
+  }
+
+  for (const car of cars) {
+    try {
+      const photo = await unsplash.searchCarPhoto(car.make, car.model);
+      if (!photo) {
+        await db.car.update({ updated_img: true, image: PLACEHOLDER_URL }, { where: { id: car.id } });
+        continue;
+      }
+      // Goes into the gallery too, so users can vote it down if it's the wrong car
+      await addImage(car.id, unsplash.sizedUrl(photo.urls.full), {
+        source: 'unsplash',
+        makeHero: true,
+        ...unsplash.creditFor(photo)
+      });
+      await unsplash.trackDownload(photo);
+      console.log(`Image updated: ${car.make} ${car.model}`);
+    } catch (err) {
+      console.log(`UNSPLASH ERROR for ${car.make} ${car.model}:`, err.message);
+      if (err.response && err.response.status === 403) break; // rate limited — stop for this hour
+      await db.car.update({ updated_img: true, image: PLACEHOLDER_URL }, { where: { id: car.id } });
+    }
+  }
+  return cars.length;
+}
+
+// Older Unsplash images were stored without the photo record, so there's no
+// photographer to credit. Re-run the same search the image came from and, if
+// the top result is still that photo, record the credit.
+async function backfillCredits(budget) {
+  if (budget <= 0) return 0;
+  const images = await db.car_image.findAll({
+    where: {
+      credit_checked: false,
+      source: ['catalog', 'unsplash'],
+      url: { [db.Sequelize.Op.like]: 'https://images.unsplash.com/%' }
+    },
+    include: [{ model: db.car, attributes: ['make', 'model'] }],
+    limit: budget
+  });
+  let credited = 0;
+  for (const image of images) {
+    try {
+      const photo = await unsplash.searchCarPhoto(image.car.make, image.car.model);
+      const match = photo && unsplash.samePhoto(photo.urls.full, image.url);
+      const credit = match ? unsplash.creditFor(photo) : {};
+      await image.update({
+        credit_name: credit.creditName || null,
+        credit_url: credit.creditUrl || null,
+        credit_checked: true
+      });
+      if (match) credited++;
+    } catch (err) {
+      if (err.response && err.response.status === 403) break;
+      console.log(`Credit backfill error for image ${image.id}:`, err.message);
+    }
+  }
+  console.log(`Credits: ${credited}/${images.length} older Unsplash images credited`);
+  return images.length;
+}
 
 async function unsplashImages() {
+  if (!process.env.UKEY) {
+    console.log('Unsplash: UKEY not set, skipping.');
+    return;
+  }
   try {
-    // First pass: priority makes. Second pass: everything else.
-    // LIMIT in SQL — previously every pending row for the make list was loaded
-    // into memory and then sliced to 50.
-    let carimg = await db.car.findAll({
-      where: { updated_img: false, make: PRIORITY_MAKES },
-      limit: BATCH_SIZE
-    });
-    if (carimg.length === 0) {
-      carimg = await db.car.findAll({ where: { updated_img: false }, limit: BATCH_SIZE });
-    }
-    if (carimg.length === 0) {
-      console.log('All images up to date.');
-      return;
-    }
-
-    for (const car of carimg) {
-      const index = car.dataValues;
-      try {
-        const getCarImage = await axios.get(
-          `${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`
-        );
-        const results = getCarImage.data.results;
-        const imgURL = results && results.length > 0
-          ? results[0].urls.full
-          : PLACEHOLDER_URL;
-        // Update by primary key — make/model is not guaranteed unique in the
-        // DB and the old where-clause could rewrite several rows at once.
-        if (imgURL === PLACEHOLDER_URL) {
-          await db.car.update({ updated_img: true, image: imgURL }, { where: { id: index.id } });
-        } else {
-          // Goes into the gallery too, so users can vote it down if it's the wrong car
-          await addImage(index.id, imgURL, { source: 'unsplash', makeHero: true });
-        }
-        console.log(`Image updated: ${index.make} ${index.model}`);
-      } catch (err) {
-        console.log(`UNSPLASH ERROR for ${index.make} ${index.model}:`, err.message);
-        await db.car.update(
-          { updated_img: true, image: PLACEHOLDER_URL },
-          { where: { id: index.id } }
-        );
-      }
-    }
-    console.log(`IMAGES ADDED: ${carimg.length} processed`);
+    const used = await fillPlaceholders(BATCH_SIZE);
+    if (used === 0) console.log('All images up to date.');
+    await backfillCredits(BATCH_SIZE - used);
   } catch (err) {
     console.log('ERROR in unsplashImages:', err);
   }
 }
 
-module.exports = { unsplashImages };
+module.exports = { unsplashImages, backfillCredits };

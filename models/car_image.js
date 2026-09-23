@@ -16,7 +16,11 @@ module.exports = (sequelize, DataTypes) => {
     userId: { type: DataTypes.INTEGER, allowNull: true },
     url:    { type: DataTypes.TEXT,    allowNull: false },
     source: { type: DataTypes.STRING,  allowNull: false, defaultValue: 'user' },
-    score:  { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }
+    score:  { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    // Photographer credit (Unsplash guidelines) — see lib/unsplash.js
+    credit_name:    { type: DataTypes.TEXT },
+    credit_url:     { type: DataTypes.TEXT },
+    credit_checked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
   }, {
     sequelize,
     modelName: 'car_image'

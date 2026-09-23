@@ -55,7 +55,9 @@ committed: `EMAIL_FROM`, `RESEND_API_KEY`, `UKEY` (Unsplash),
 `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
 `EMAIL_FROM` is currently unset in the dashboard; `config/email.js` falls back
 to `AutoDex <noreply@autodx.io>`, so set it there if that address ever changes.
-`.env.example` documents all of them.
+`SENTRY_DSN` is optional: leave it unset and error tracking stays off
+(`instrument.js`); set it to a Sentry project's DSN to report server errors
+(no cookies, IPs or emails are sent). `.env.example` documents all of them.
 
 ## Editing the blueprint
 

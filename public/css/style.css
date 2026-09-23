@@ -2016,3 +2016,38 @@ textarea:focus-visible,
   .dex-bar { width: 80px; }
   .compare-tray { bottom: 0.5rem; }
 }
+
+/* ─── PHOTO CREDITS (Unsplash guidelines) ──────────────────────────────────── */
+.photo-credit {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.6rem;
+  z-index: 2;
+  margin: 0;
+  font-size: 0.68rem;
+  color: rgba(250, 250, 250, 0.55);
+}
+.photo-credit a { color: rgba(250, 250, 250, 0.8); text-decoration: underline; text-underline-offset: 2px; }
+.gallery-source a { color: inherit; }
+
+/* ─── EXPLORE ──────────────────────────────────────────────────────────────── */
+.explore-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-top: 1.5rem;
+}
+.explore-filters label { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; text-align: left; }
+.explore-filters label > span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.explore-filters .form-control { min-width: 130px; }
+.explore-filters .explore-check { flex-direction: row; align-items: center; gap: 0.4rem; padding-bottom: 0.35rem; }
+.explore-filters .explore-check > span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 0.8rem; }
+.explore-count { font-size: 0.78rem; color: var(--text-subtle); margin: 1rem 0 0; }

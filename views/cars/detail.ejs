@@ -14,6 +14,7 @@
         <p class="car-hero-sub"><%= [country, years].filter(Boolean).join(' · ') %></p>
       <% } %>
     </div>
+    <p class="photo-credit" id="hero-credit"<% if (!heroCredit) { %> hidden<% } %>><%- include('../partials/photo-credit', { credit: heroCredit }) %></p>
   </div>
 </div>
 
@@ -145,7 +146,8 @@
       <div class="gallery-grid">
         <% gallery.forEach(img => { %>
           <figure class="gallery-item" data-image-id="<%= img.id %>">
-            <button type="button" class="gallery-thumb" data-full="<%= img.url %>" aria-label="Preview this photo">
+            <button type="button" class="gallery-thumb" data-full="<%= img.url %>"
+                    data-credit-html="<%= include('../partials/photo-credit', { credit: img.credit }) %>" aria-label="Preview this photo">
               <img src="<%= img.url %>" alt="<%= make %> <%= model %> photo" loading="lazy">
             </button>
             <figcaption class="gallery-meta">
@@ -170,7 +172,7 @@
               <% } else { %>
                 <span class="vote-score"><%= img.score %> pts</span>
               <% } %>
-              <span class="gallery-source"><%= img.source %></span>
+              <span class="gallery-source"><% if (img.credit && img.credit.name) { %><%= img.credit.name %><% } else { %><%= img.source %><% } %></span>
             </figcaption>
           </figure>
         <% }) %>

@@ -128,6 +128,7 @@ async function getCarData() {
 | POST | /cars/fav | cars.js | Add favorite (AJAX) |
 | DELETE | /cars/favorites/delete/:id | cars.js | Remove favorite |
 | PUT | /cars/favorites/edit/:id | cars.js | Update favorite image |
+| GET | /cars/explore | cars.js | Explore by decade, country, make, photos-only |
 | GET | /cars/compare | cars.js | Side-by-side compare (`?c=Make\|Model`, up to 3) |
 | POST | /cars/propose-image | cars.js | Propose a photo for any car's gallery |
 | POST | /cars/spot | cars.js | "Spotted it" check-in (Dex) |

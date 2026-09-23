@@ -1,4 +1,4 @@
-require('dotenv').config();
+const Sentry = require('./instrument'); // first — see instrument.js
 const express = require('express');
 const layouts = require('express-ejs-layouts');
 const app = express();
@@ -110,6 +110,14 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 app.use('/u', require('./controllers/profile'));   // public garages
+
+// Report unexpected errors to Sentry (no-op without SENTRY_DSN). Upload and
+// CSRF rejections are user mistakes handled below, not bugs.
+Sentry.setupExpressErrorHandler(app, {
+  shouldHandleError(err) {
+    return !(err instanceof require('multer').MulterError) && err.code !== 'EBADCSRFTOKEN';
+  }
+});
 
 // Error handler — multer rejects oversize files and csrf-sync rejects bad tokens
 // before route handlers run, so turn those into friendly flashes, not bare 500s
