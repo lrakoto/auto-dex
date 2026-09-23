@@ -282,6 +282,16 @@ describe('Features', function() {
     });
   });
 
+  describe('Favorites', function() {
+    it('refuses cars that are not in the catalog', async function() {
+      const token = await getCsrfToken(alice, '/garage');
+      await form(alice, 'post', '/cars/fav', { favecar_make: 'Toyota', favecar_model: 'Definitely Not A Real Model 9000' }, token)
+        .set('X-Requested-With', 'XMLHttpRequest')
+        .expect(404);
+      if (await db.car.count({ where: { model: 'Definitely Not A Real Model 9000' } })) throw new Error('junk car created');
+    });
+  });
+
   describe('Compare', function() {
     it('renders an empty state and ignores malformed params', async function() {
       const res = await request(app).get('/cars/compare?c=nopipe&c=|&c=Make|').expect(200);

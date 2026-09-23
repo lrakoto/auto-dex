@@ -3,6 +3,7 @@
 const { unsplashImages } = require('./images');
 const { seedAllMakes } = require('./seed');
 const { scanYears } = require('./years');
+const { pruneCache } = require('../lib/cache');
 
 const UNSPLASH_INTERVAL_MS = 3700000; // ~1 hour
 const YEARS_INTERVAL_MS = 24 * 60 * 60 * 1000; // daily — picks up newly seeded makes/models
@@ -41,6 +42,11 @@ function startBackgroundJobs() {
     await scanYearsGuarded();
   }, 5000).unref();
   setInterval(scanYearsGuarded, YEARS_INTERVAL_MS).unref();
+
+  // Daily: clear month-old rows out of the durable API cache
+  setInterval(() => {
+    pruneCache().catch(err => console.log('Cache prune error:', err.message));
+  }, 24 * 60 * 60 * 1000).unref();
 }
 
 module.exports = { startBackgroundJobs };

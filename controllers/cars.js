@@ -7,6 +7,7 @@ const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
+const { getMakeCountry } = require('../config/carquery');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar } = require('../lib/catalog');
 const { getMakeProgress } = require('../lib/dex');
@@ -128,6 +129,9 @@ router.get('/', async (req, res) => {
 
     Object.assign(viewData, {
       year, yearOptions, dexProgress,
+      // Each make is its own page to search engines (req.path alone made
+      // every make canonicalize to /cars). Year filters point at the make.
+      canonicalPath: `/cars?selectmake=${encodeURIComponent(make)}${page > 1 && !year ? '&page=' + page : ''}`,
       pageTitle: `${make} Models${year ? ' (' + year + ')' : ''} — AutoDex`,
       pageDescription: `Browse ${total} ${make} models${year ? ' from ' + year : ''} on AutoDex.`
     });
@@ -161,7 +165,7 @@ router.get('/', async (req, res) => {
       // External lookups are independent — run them in parallel
       const [wiki, country, carSpecs] = await Promise.all([
         carinfo.getWikiSummary(make, model),
-        carinfo.getCountry(make),
+        Promise.resolve(getMakeCountry(make)),
         carinfo.getFuelSpecs(make, model, car && car.year_max)
       ]);
       const wikiFacts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
@@ -372,17 +376,14 @@ router.get('/', async (req, res) => {
     // scheme and reject characters that could break out of HTML/CSS contexts.
     const proposedImage = isValidImageUrl(data.favecar_image) ? data.favecar_image.trim() : null;
     try {
-      const [favCar, carCreated] = await db.car.findOrCreate({
-          where: {
-              make: data.favecar_make,
-              model: data.favecar_model,
-          },
-          defaults: {
-              image: proposedImage || PLACEHOLDER_URL,
-              favcount: 0,
-              updated_img: false
-          }
-      });
+      // Only real catalog cars (NHTSA-listed or already in the DB) — this used
+      // to findOrCreate whatever make/model the form posted
+      const favCar = await findOrCreateCatalogCar(data.favecar_make, data.favecar_model);
+      if (!favCar) {
+        if (isAjax) { return res.status(404).json({ success: false, error: "We couldn't find that car." }); }
+        req.flash('error', "We couldn't find that car.");
+        return res.redirect('/garage');
+      }
 
       const [newFavCar, favCreated] = await db.favorite_car.findOrCreate({
           where: {
@@ -390,8 +391,8 @@ router.get('/', async (req, res) => {
               userId: req.user.id
           },
           defaults: {
-              make: data.favecar_make,
-              model: data.favecar_model,
+              make: favCar.make,
+              model: favCar.model,
               image: proposedImage
           }
       });
@@ -405,10 +406,9 @@ router.get('/', async (req, res) => {
       // New favorite: atomic increment (no read-modify-write race)
       await db.car.increment('favcount', { by: 1, where: { id: favCar.id } });
 
-      // Backfill image only if the car still has a placeholder image
-      if (!carCreated && !favCar.updated_img && proposedImage) {
-        await favCar.update({ image: proposedImage });
-      }
+      // (The posted image only decorates the user's own favorite row. It used
+      // to backfill the catalog hero too, which let any form post set a
+      // placeholder car's cover — covers now go through the moderated gallery.)
 
       if (isAjax) { return res.json({ success: true, favId: newFavCar.id }); }
       return res.redirect('favorites');
