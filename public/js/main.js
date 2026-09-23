@@ -886,6 +886,171 @@
 
 
   /* ═══════════════════════════════════════════════════════════════
+     PHOTO GALLERY — preview + AJAX voting
+  ═══════════════════════════════════════════════════════════════ */
+
+  function setHeroImage(url) {
+    var hero = document.querySelector('.car-hero');
+    if (hero && url) hero.style.backgroundImage = 'url(' + JSON.stringify(url) + ')';
+  }
+
+  document.addEventListener('click', function (e) {
+    var thumb = e.target.closest && e.target.closest('.gallery-thumb');
+    if (!thumb) return;
+    setHeroImage(thumb.dataset.full);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form.classList || !form.classList.contains('vote-form')) return;
+    e.preventDefault();
+    var item = form.closest('.gallery-item');
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: new URLSearchParams(new FormData(form))
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data || !data.success) { showToast('Could not record your vote.'); return; }
+      item.querySelector('.vote-score').textContent = data.score;
+      var up = item.querySelector('.vote-up');
+      var down = item.querySelector('.vote-down');
+      up.classList.toggle('active', data.myVote === 1);
+      down.classList.toggle('active', data.myVote === -1);
+      up.setAttribute('aria-pressed', data.myVote === 1);
+      down.setAttribute('aria-pressed', data.myVote === -1);
+      // Clicking an active arrow again clears the vote
+      up.form.querySelector('[name=value]').value = data.myVote === 1 ? 0 : 1;
+      down.form.querySelector('[name=value]').value = data.myVote === -1 ? 0 : -1;
+      if (data.heroUrl) setHeroImage(data.heroUrl);
+    })
+    .catch(function () { form.submit(); });
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     COMPARE TRAY — up to 3 cars kept in localStorage
+  ═══════════════════════════════════════════════════════════════ */
+
+  var COMPARE_KEY = 'autodex_compare';
+  var COMPARE_MAX = 3;
+
+  function readCompare() {
+    try { return JSON.parse(localStorage.getItem(COMPARE_KEY) || '[]'); } catch (err) { return []; }
+  }
+  function writeCompare(list) {
+    try { localStorage.setItem(COMPARE_KEY, JSON.stringify(list)); } catch (err) {}
+  }
+  function compareUrl(list) {
+    return '/cars/compare?' + list.map(function (c) {
+      return 'c=' + encodeURIComponent(c.make + '|' + c.model);
+    }).join('&');
+  }
+
+  function renderCompareTray() {
+    var tray = document.getElementById('compare-tray');
+    var list = readCompare();
+    // The compare page is its own tray
+    if (list.length === 0 || window.location.pathname === '/cars/compare') {
+      if (tray) tray.remove();
+      return;
+    }
+    if (!tray) {
+      tray = document.createElement('div');
+      tray.id = 'compare-tray';
+      tray.className = 'compare-tray';
+      tray.setAttribute('role', 'region');
+      tray.setAttribute('aria-label', 'Cars to compare');
+      document.body.appendChild(tray);
+    }
+    tray.innerHTML = list.map(function (c, i) {
+      return '<span class="compare-chip">' +
+        '<img src="' + escapeHtml(c.image) + '" alt="">' +
+        '<span>' + escapeHtml(c.model) + '</span>' +
+        '<button type="button" class="compare-chip-x" data-index="' + i + '" aria-label="Remove ' + escapeHtml(c.make + ' ' + c.model) + '">&times;</button>' +
+        '</span>';
+    }).join('') +
+      '<a class="btn btn-primary btn-sm" href="' + escapeHtml(compareUrl(list)) + '">Compare (' + list.length + ') &rarr;</a>' +
+      '<button type="button" class="compare-clear">Clear</button>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var add = e.target.closest && e.target.closest('.compare-add-btn');
+    if (add) {
+      var list = readCompare();
+      var entry = { make: add.dataset.make, model: add.dataset.model, image: add.dataset.image };
+      if (list.some(function (c) { return c.make === entry.make && c.model === entry.model; })) {
+        showToast('Already in your compare list');
+      } else if (list.length >= COMPARE_MAX) {
+        showToast('Compare holds ' + COMPARE_MAX + ' cars. Remove one first.');
+      } else {
+        list.push(entry);
+        writeCompare(list);
+        renderCompareTray();
+        showToast('Added to compare');
+      }
+      return;
+    }
+    var x = e.target.closest && e.target.closest('.compare-chip-x');
+    if (x) {
+      var l = readCompare();
+      l.splice(parseInt(x.dataset.index, 10), 1);
+      writeCompare(l);
+      renderCompareTray();
+      return;
+    }
+    if (e.target.closest && e.target.closest('.compare-clear')) {
+      writeCompare([]);
+      renderCompareTray();
+      return;
+    }
+    // Compare page: drop a column by rebuilding the URL without it
+    var rm = e.target.closest && e.target.closest('.compare-remove-btn');
+    if (rm) {
+      var make = rm.dataset.make, model = rm.dataset.model;
+      writeCompare(readCompare().filter(function (c) { return !(c.make === make && c.model === model); }));
+      var params = new URLSearchParams(window.location.search);
+      var keep = params.getAll('c').filter(function (v) { return v !== make + '|' + model; });
+      window.location.href = '/cars/compare' + (keep.length ? '?' + keep.map(function (v) { return 'c=' + encodeURIComponent(v); }).join('&') : '');
+    }
+  });
+
+  renderCompareTray();
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     GARAGE — recall badges (lazy, one NHTSA lookup per car)
+  ═══════════════════════════════════════════════════════════════ */
+
+  document.querySelectorAll('.recall-badge[data-recalls-url]').forEach(function (badge) {
+    fetch(badge.dataset.recallsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.count) return;
+        badge.textContent = '⚠ ' + data.count + ' recall' + (data.count === 1 ? '' : 's');
+        badge.hidden = false;
+      })
+      .catch(function () {});
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
+     AUTO-SUBMIT SELECTS (browse page year filter)
+  ═══════════════════════════════════════════════════════════════ */
+
+  document.addEventListener('change', function (e) {
+    if (e.target.classList && e.target.classList.contains('auto-submit') && e.target.form) {
+      e.target.form.submit();
+    }
+  });
+
+
+  /* ═══════════════════════════════════════════════════════════════
      HERO WORD REVEAL
   ═══════════════════════════════════════════════════════════════ */
 

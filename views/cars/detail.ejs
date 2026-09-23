@@ -10,8 +10,8 @@
   <div class="car-hero-overlay">
     <div class="car-hero-text">
       <h1><%= make %> <span><%= model %></span></h1>
-      <% if (country) { %>
-        <p class="car-hero-sub"><%= country %></p>
+      <% if (country || years) { %>
+        <p class="car-hero-sub"><%= [country, years].filter(Boolean).join(' · ') %></p>
       <% } %>
     </div>
   </div>
@@ -55,8 +55,15 @@
       <% } else { %>
         <a href="/auth/login" class="btn btn-primary btn-sm">Log in to Favorite</a>
       <% } %>
-      <% if (currentUser && !carUpdatedImg) { %>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#proposeImgModal">Propose Image</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm compare-add-btn"
+              data-make="<%= make %>" data-model="<%= model %>" data-image="<%= image %>">+ Compare</button>
+      <% if (currentUser) { %>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#spotModal">
+          👀 Spotted it<% if (mySpotCount > 0) { %> <span class="spot-count">×<%= mySpotCount %></span><% } %>
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#proposeImgModal"><%= carUpdatedImg ? 'Add Photo' : 'Propose Image' %></button>
+      <% } else { %>
+        <a href="/auth/login" class="btn btn-outline-secondary btn-sm">👀 Log in to Spot</a>
       <% } %>
     </div>
   </div>
@@ -93,6 +100,23 @@
           </div>
         </div>
       <% } %>
+      <% if (wikiFacts && wikiFacts.length) { %>
+        <div class="facts-panel">
+          <div class="accent-line"></div>
+          <h5 class="section-label">At a Glance</h5>
+          <dl class="facts-list">
+            <% wikiFacts.forEach(f => { %>
+              <div class="fact-row">
+                <dt><%= f.label %></dt>
+                <dd>
+                  <% f.values.forEach((v, i) => { %><% if (i) { %>, <% } %><% if (f.link) { %><a href="/search?q=<%= encodeURIComponent(v) %>"><%= v %></a><% } else { %><%= v %><% } %><% }) %>
+                </dd>
+              </div>
+            <% }) %>
+          </dl>
+          <p class="facts-source">Source: <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> (CC0)</p>
+        </div>
+      <% } %>
     </div>
 
     <!-- Media Links -->
@@ -112,6 +136,47 @@
     </div>
 
   </div>
+
+  <!-- Photo Gallery -->
+  <% if (gallery.length > 0) { %>
+    <div class="gallery-section" id="gallery">
+      <p class="eyebrow" style="margin-bottom:0.5rem;">Photos</p>
+      <p class="gallery-hint">Vote for the best shot of the <%= model %> — the top photo becomes the cover.</p>
+      <div class="gallery-grid">
+        <% gallery.forEach(img => { %>
+          <figure class="gallery-item" data-image-id="<%= img.id %>">
+            <button type="button" class="gallery-thumb" data-full="<%= img.url %>" aria-label="Preview this photo">
+              <img src="<%= img.url %>" alt="<%= make %> <%= model %> photo" loading="lazy">
+            </button>
+            <figcaption class="gallery-meta">
+              <% if (currentUser) { %>
+                <form method="POST" action="/cars/images/<%= img.id %>/vote" class="vote-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="value" value="<%= img.myVote === 1 ? 0 : 1 %>">
+                  <button type="submit" class="vote-btn vote-up<%= img.myVote === 1 ? ' active' : '' %>" aria-label="Upvote" aria-pressed="<%= img.myVote === 1 %>">▲</button>
+                </form>
+                <span class="vote-score"><%= img.score %></span>
+                <form method="POST" action="/cars/images/<%= img.id %>/vote" class="vote-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="value" value="<%= img.myVote === -1 ? 0 : -1 %>">
+                  <button type="submit" class="vote-btn vote-down<%= img.myVote === -1 ? ' active' : '' %>" aria-label="Downvote" aria-pressed="<%= img.myVote === -1 %>">▼</button>
+                </form>
+                <% if (currentUser.isAdmin) { %>
+                  <form method="POST" action="/garage/admin/image/<%= img.id %>?_method=DELETE" class="ml-auto">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="vote-btn" aria-label="Remove photo" title="Remove photo (admin)">✕</button>
+                  </form>
+                <% } %>
+              <% } else { %>
+                <span class="vote-score"><%= img.score %> pts</span>
+              <% } %>
+              <span class="gallery-source"><%= img.source %></span>
+            </figcaption>
+          </figure>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
 
   <!-- Related Models -->
   <% if (relatedCars.length > 0) { %>
@@ -137,23 +202,59 @@
   <% } %>
 </div>
 
-<% if (currentUser && !carUpdatedImg) { %>
+<% if (currentUser) { %>
 <div class="modal fade" id="proposeImgModal" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Propose an Image</h5>
+        <h5 class="modal-title"><%= carUpdatedImg ? 'Add a Photo' : 'Propose an Image' %></h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       </div>
       <form method="POST" action="/cars/propose-image">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="modal-body">
-          <p style="font-size:0.82rem;color:var(--text-muted);">Suggest a better image for <strong><%= make %> <%= model %></strong>. An admin will review it.</p>
-          <input type="hidden" name="carId" value="<%= carDbId %>">
+          <p style="font-size:0.82rem;color:var(--text-muted);">Suggest a photo of the <strong><%= make %> <%= model %></strong>. Once an admin approves it, it joins the gallery and the community votes on the cover shot.</p>
+          <% if (carDbId) { %>
+            <input type="hidden" name="carId" value="<%= carDbId %>">
+          <% } else { %>
+            <input type="hidden" name="make" value="<%= make %>">
+            <input type="hidden" name="model" value="<%= model %>">
+          <% } %>
           <input type="text" class="form-control" name="imageUrl" placeholder="https://…" autocomplete="off" required>
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary btn-sm">Submit Proposal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<% if (currentUser) { %>
+<div class="modal fade" id="spotModal" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Spotted a <%= make %> <%= model %>?</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      </div>
+      <form method="POST" action="/cars/spot?_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="make" value="<%= make %>">
+        <input type="hidden" name="model" value="<%= model %>">
+        <div class="modal-body">
+          <p style="font-size:0.82rem;color:var(--text-muted);">Log it in your Dex. Everything below is optional.</p>
+          <label class="field-label" for="spotImage">Photo</label>
+          <input type="file" class="form-control-file mb-2" id="spotImage" name="spotImage" accept="image/jpeg,image/png,image/webp">
+          <input type="text" class="form-control mb-3" name="imageUrl" placeholder="…or paste a photo URL" autocomplete="off">
+          <label class="field-label" for="spotLocation">Where</label>
+          <input type="text" class="form-control mb-3" id="spotLocation" name="location" maxlength="120" placeholder="e.g. Cars &amp; Coffee, Malibu">
+          <label class="field-label" for="spotNotes">Notes</label>
+          <textarea class="form-control" id="spotNotes" name="notes" rows="2" maxlength="1000" placeholder="Color, mods, anything memorable"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary btn-sm">Add to my Dex</button>
         </div>
       </form>
     </div>
@@ -198,47 +299,3 @@
   </div>
 </div>
 <% } %>
-
-<style>
-  .car-hero {
-    width: 100%;
-    height: 480px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-  }
-  .car-hero-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(3,6,14,0.97) 0%, rgba(3,6,14,0.3) 55%, transparent 100%);
-    display: flex;
-    align-items: flex-end;
-  }
-  .car-hero-text {
-    max-width: 1200px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 2.5rem 2rem;
-    text-align: left;
-    color: #fff;
-  }
-  .car-hero-text h1 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    margin-bottom: 0.35rem;
-    text-shadow: none;
-  }
-  .car-hero-text h1 span { font-weight: 300; }
-  .car-hero-sub {
-    font-size: 0.72rem;
-    color: rgba(250,250,250,0.5);
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-  }
-  .detail-container { max-width: 1200px; width: 100%; margin: 0 auto; padding: 0 2rem; }
-  .detail-actions { padding: 1.5rem 0; border-bottom: 1px solid #27272a; }
-  .media-card { background: url('/assets/noise.svg') repeat, rgba(10,16,30,0.52); backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%); border: 1px solid rgba(255,255,255,0.07); box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 4px 20px rgba(0,0,0,0.35); border-radius: 3px; padding: 1.5rem; }
-  .media-card h5 { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #71717a; margin-bottom: 1rem; }
-</style>

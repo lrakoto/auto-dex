@@ -4,6 +4,7 @@
 const axios = require('axios');
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const { addImage } = require('../lib/gallery');
 
 const uSplashKey = process.env.UKEY;
 const uSplashBaseURL = 'https://api.unsplash.com/';
@@ -49,10 +50,12 @@ async function unsplashImages() {
           : PLACEHOLDER_URL;
         // Update by primary key — make/model is not guaranteed unique in the
         // DB and the old where-clause could rewrite several rows at once.
-        await db.car.update(
-          { updated_img: true, image: imgURL },
-          { where: { id: index.id } }
-        );
+        if (imgURL === PLACEHOLDER_URL) {
+          await db.car.update({ updated_img: true, image: imgURL }, { where: { id: index.id } });
+        } else {
+          // Goes into the gallery too, so users can vote it down if it's the wrong car
+          await addImage(index.id, imgURL, { source: 'unsplash', makeHero: true });
+        }
         console.log(`Image updated: ${index.make} ${index.model}`);
       } catch (err) {
         console.log(`UNSPLASH ERROR for ${index.make} ${index.model}:`, err.message);

@@ -109,6 +109,7 @@ app.use('/', require('./controllers/home'));     // /, /suggest, /search, /makes
 app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
+app.use('/u', require('./controllers/profile'));   // public garages
 
 // Error handler — multer rejects oversize files and csrf-sync rejects bad tokens
 // before route handlers run, so turn those into friendly flashes, not bare 500s

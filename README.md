@@ -128,11 +128,23 @@ async function getCarData() {
 | POST | /cars/fav | cars.js | Add favorite (AJAX) |
 | DELETE | /cars/favorites/delete/:id | cars.js | Remove favorite |
 | PUT | /cars/favorites/edit/:id | cars.js | Update favorite image |
-| POST | /cars/propose-image | cars.js | Propose an image for a placeholder car |
+| GET | /cars/compare | cars.js | Side-by-side compare (`?c=Make\|Model`, up to 3) |
+| POST | /cars/propose-image | cars.js | Propose a photo for any car's gallery |
+| POST | /cars/spot | cars.js | "Spotted it" check-in (Dex) |
+| POST | /cars/images/:id/vote | cars.js | Vote on a gallery photo (AJAX) |
 | GET | /garage | garage.js | My Cars + Favorites |
 | POST | /garage/add | garage.js | Add a car to the garage |
 | PUT | /garage/car/:id | garage.js | Update a garage car |
 | DELETE | /garage/car/:id | garage.js | Remove a garage car |
+| GET | /garage/car/:id | garage.js | Garage car page: recalls + maintenance log |
+| GET | /garage/car/:id/recalls | garage.js | Recall count (JSON, for card badges) |
+| POST | /garage/car/:id/maintenance | garage.js | Add a maintenance entry |
+| DELETE | /garage/car/:id/maintenance/:logId | garage.js | Remove a maintenance entry |
+| GET | /garage/vin | garage.js | Decode a VIN (JSON) |
+| POST | /garage/settings | garage.js | Username + public garage toggle |
+| DELETE | /garage/spot/:id | garage.js | Remove a spot |
+| DELETE | /garage/admin/image/:id | garage.js | Remove a gallery photo (admin) |
+| GET | /u/:username | profile.js | Public garage page |
 | GET | /garage/admin | garage.js | Admin panel (admin only) |
 
 

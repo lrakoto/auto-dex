@@ -6,12 +6,21 @@
     <% if (currentUser.isAdmin) { %>
       <a href="/garage/admin" class="btn btn-warning ml-2">Admin: Manage Images</a>
     <% } %>
+    <nav class="garage-subnav" aria-label="Garage sections">
+      <a href="#my-cars">My Cars</a>
+      <a href="#dex">Dex <span class="subnav-count"><%= dex.spottedCars %></span></a>
+      <a href="#favorites">Favorites</a>
+      <a href="#settings">Settings</a>
+      <% if (currentUser.garagePublic && currentUser.username) { %>
+        <a href="/u/<%= currentUser.username %>">Public page ↗</a>
+      <% } %>
+    </nav>
   </div>
 </section>
 
 <div class="container pb-5">
 
-  <h2 class="text-left mb-3">My Cars</h2>
+  <h2 class="text-left mb-3" id="my-cars">My Cars</h2>
   <% if (myCars.length === 0) { %>
     <p class="text-muted">You haven't added any cars yet. <a href="/garage/add">Add one now!</a></p>
   <% } else { %>
@@ -20,11 +29,12 @@
         <div class="col-md-4 mb-4 card-col">
           <div class="card box-shadow">
             <span class="card-badge card-badge--garage">My Car</span>
-            <a href="/cars/car?make=<%= encodeURIComponent(car.make) %>&model=<%= encodeURIComponent(car.model) %>&image=<%= encodeURIComponent(car.image) %>">
+            <a class="recall-badge" href="/garage/car/<%= car.id %>#recalls" data-recalls-url="/garage/car/<%= car.id %>/recalls" hidden></a>
+            <a href="/garage/car/<%= car.id %>">
               <img class="card-img-top imgresp" src="<%= car.image %>" alt="<%= car.year %> <%= car.make %> <%= car.model %>">
             </a>
             <div class="card-body text-left">
-              <h5 class="card-title"><%= car.year %> <%= car.make %> <%= car.model %></h5>
+              <h5 class="card-title"><a href="/garage/car/<%= car.id %>" class="text-dark"><%= car.year %> <%= car.make %> <%= car.model %></a></h5>
               <% if (car.notes) { %>
                 <p class="card-text text-muted"><%= car.notes %></p>
               <% } %>
@@ -85,7 +95,59 @@
 
   <hr class="my-5">
 
-  <h2 class="text-left mb-3">Favorite Cars</h2>
+  <h2 class="text-left mb-3" id="dex">My Dex</h2>
+  <% if (dex.spottedCars === 0) { %>
+    <p class="text-muted">You haven't spotted anything yet. Open any car and hit <strong>👀 Spotted it</strong> when you see one in the wild.</p>
+  <% } else { %>
+    <p class="text-muted"><%= dex.spottedCars %> car<%= dex.spottedCars === 1 ? '' : 's' %> spotted across <%= dex.spottedMakes %> make<%= dex.spottedMakes === 1 ? '' : 's' %>.</p>
+    <div class="dex-makes">
+      <% dex.makes.forEach(m => { %>
+        <a class="dex-make" href="/cars?selectmake=<%= encodeURIComponent(m.make) %>">
+          <span class="dex-make-name"><%= m.make %></span>
+          <span class="dex-bar"><span style="width:<%= m.pct %>%"></span></span>
+          <span class="dex-progress-count"><%= m.spotted %>/<%= m.total %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <h3 class="garage-h3">Badges</h3>
+  <div class="badge-grid">
+    <% badges.forEach(b => { %>
+      <div class="badge-tile<%= b.earned ? ' earned' : '' %>" title="<%= b.desc %>">
+        <span class="badge-icon" aria-hidden="true"><%= b.icon %></span>
+        <span class="badge-name"><%= b.name %></span>
+        <span class="badge-desc"><%= b.earned ? 'Earned' : b.desc %></span>
+      </div>
+    <% }) %>
+  </div>
+
+  <% if (recentSpots.length > 0) { %>
+    <h3 class="garage-h3">Recent Spots</h3>
+    <div class="row">
+      <% recentSpots.forEach(sp => { %>
+        <div class="col-md-3 col-6 mb-4 card-col">
+          <div class="card h-100">
+            <a href="/cars/car?make=<%= encodeURIComponent(sp.car.make) %>&model=<%= encodeURIComponent(sp.car.model) %>">
+              <img class="card-img-top imgresp spot-img" src="<%= sp.imageUrl || sp.car.image %>" alt="<%= sp.car.make %> <%= sp.car.model %>">
+            </a>
+            <div class="card-body text-left">
+              <p class="card-text mb-1"><strong><%= sp.car.make %> <%= sp.car.model %></strong></p>
+              <p class="spot-meta"><%= new Date(sp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %><% if (sp.location) { %> · <%= sp.location %><% } %></p>
+              <form method="POST" action="/garage/spot/<%= sp.id %>?_method=DELETE" style="margin:0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <hr class="my-5">
+
+  <h2 class="text-left mb-3" id="favorites">Favorite Cars</h2>
   <% if (favorites.length === 0) { %>
     <p class="text-muted">No favorites yet. <a href="/">Search for cars</a> to add some!</p>
   <% } else { %>
@@ -150,4 +212,25 @@
     </div>
   <% } %>
 
+  <hr class="my-5">
+
+  <h2 class="text-left mb-3" id="settings">Settings</h2>
+  <form method="POST" action="/garage/settings" class="settings-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-group">
+      <label for="username" class="field-label">Username</label>
+      <div class="input-prefix">
+        <span><%= siteUrl.replace(/^https?:\/\//, '') %>/u/</span>
+        <input type="text" class="form-control" id="username" name="username" value="<%= currentUser.username || '' %>"
+               maxlength="30" pattern="[A-Za-z0-9_]{3,30}" placeholder="your_handle" autocomplete="off">
+      </div>
+      <small class="text-muted">3–30 letters, numbers or underscores.</small>
+    </div>
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="garagePublic" name="garagePublic" <%= currentUser.garagePublic ? 'checked' : '' %>>
+      <label class="form-check-label" for="garagePublic">Make my garage public</label>
+      <small class="d-block text-muted">Shows your cars, favorites, Dex and badges. Never your email, VINs or notes.</small>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+  </form>
 </div>

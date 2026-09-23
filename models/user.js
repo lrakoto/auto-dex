@@ -14,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       models.user.hasMany(models.favorite_car);
       models.user.hasMany(models.user_car, { foreignKey: 'userId' });
+      models.user.hasMany(models.spotting, { foreignKey: 'userId' });
     }
   };
   user.init({
@@ -66,6 +67,18 @@ module.exports = (sequelize, DataTypes) => {
     lastLoginAt: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    // Public garage handle (/u/:username). Stored lowercase; see lib/usernames.js
+    username: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      set(value) {
+        this.setDataValue('username', typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null);
+      }
+    },
+    garagePublic: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     sequelize,

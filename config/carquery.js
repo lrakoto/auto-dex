@@ -23,6 +23,22 @@ const MAKES_LIST = [
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const modelsCache = {};
 
+// Compare make names across sources that disagree on case, accents and
+// punctuation (NHTSA says "SKODA", "MERCEDES-BENZ", "ROLLS ROYCE").
+function normalizeMake(name) {
+  return String(name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
+}
+
+// Map any spelling of a make onto our MAKES_LIST spelling, or null.
+function canonicalMake(name) {
+  const wanted = normalizeMake(name);
+  if (!wanted) return null;
+  return MAKES_LIST.find(m => normalizeMake(m) === wanted) || null;
+}
+
 async function getMakes() {
   return MAKES_LIST.map(display => ({ display, id: display.toLowerCase(), country: '' }));
 }
@@ -56,4 +72,4 @@ async function getModels(makeDisplay) {
   }
 }
 
-module.exports = { getMakes, getModels };
+module.exports = { MAKES_LIST, getMakes, getModels, normalizeMake, canonicalMake };

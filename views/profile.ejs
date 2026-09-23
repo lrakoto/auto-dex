@@ -1,0 +1,94 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <p class="eyebrow">@<%= owner.username %></p>
+    <h1 class="jumbotron-heading"><%= displayName %>'s Garage</h1>
+    <p class="lead text-muted">
+      <%= myCars.length %> car<%= myCars.length === 1 ? '' : 's' %> ·
+      <%= dex.spottedCars %> spotted ·
+      <%= badges.length %> badge<%= badges.length === 1 ? '' : 's' %> ·
+      member since <%= new Date(owner.createdAt).getFullYear() %>
+    </p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <% if (badges.length > 0) { %>
+    <div class="badge-grid mb-5">
+      <% badges.forEach(b => { %>
+        <div class="badge-tile earned" title="<%= b.desc %>">
+          <span class="badge-icon" aria-hidden="true"><%= b.icon %></span>
+          <span class="badge-name"><%= b.name %></span>
+          <span class="badge-desc"><%= b.desc %></span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <h2 class="text-left mb-3">Garage</h2>
+  <% if (myCars.length === 0) { %>
+    <p class="text-muted">No cars here yet.</p>
+  <% } else { %>
+    <div class="row">
+      <% myCars.forEach(car => { %>
+        <div class="col-md-4 mb-4 card-col">
+          <div class="card box-shadow">
+            <span class="card-badge card-badge--garage">Owned</span>
+            <a href="/cars/car?make=<%= encodeURIComponent(car.make) %>&model=<%= encodeURIComponent(car.model) %>">
+              <img class="card-img-top imgresp" src="<%= car.image %>" alt="<%= car.year %> <%= car.make %> <%= car.model %>">
+            </a>
+            <div class="card-body text-left">
+              <h5 class="card-title"><%= car.year %> <%= car.make %> <%= car.model %></h5>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (dex.spottedCars > 0) { %>
+    <h2 class="text-left mb-3 mt-5">Dex</h2>
+    <div class="dex-makes mb-4">
+      <% dex.makes.forEach(m => { %>
+        <a class="dex-make" href="/cars?selectmake=<%= encodeURIComponent(m.make) %>">
+          <span class="dex-make-name"><%= m.make %></span>
+          <span class="dex-bar"><span style="width:<%= m.pct %>%"></span></span>
+          <span class="dex-progress-count"><%= m.spotted %>/<%= m.total %></span>
+        </a>
+      <% }) %>
+    </div>
+    <div class="row">
+      <% recentSpots.forEach(sp => { %>
+        <div class="col-md-3 col-6 mb-4 card-col">
+          <div class="card h-100">
+            <a href="/cars/car?make=<%= encodeURIComponent(sp.car.make) %>&model=<%= encodeURIComponent(sp.car.model) %>">
+              <img class="card-img-top imgresp spot-img" src="<%= sp.imageUrl || sp.car.image %>" alt="<%= sp.car.make %> <%= sp.car.model %>">
+            </a>
+            <div class="card-body text-left">
+              <p class="card-text mb-1"><strong><%= sp.car.make %> <%= sp.car.model %></strong></p>
+              <p class="spot-meta"><%= new Date(sp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <% if (favorites.length > 0) { %>
+    <h2 class="text-left mb-3 mt-5">Favorites</h2>
+    <div class="row">
+      <% favorites.forEach(f => { %>
+        <div class="col-md-3 col-6 mb-4 card-col">
+          <div class="card h-100">
+            <span class="card-badge card-badge--favorite">&#9825;</span>
+            <a href="/cars/car?make=<%= encodeURIComponent(f.make) %>&model=<%= encodeURIComponent(f.model) %>">
+              <img class="card-img-top imgresp spot-img" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
+            </a>
+            <div class="card-body text-left">
+              <p class="card-text mb-0"><strong><%= f.make %> <%= f.model %></strong></p>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

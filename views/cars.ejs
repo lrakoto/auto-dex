@@ -9,6 +9,30 @@
         </div>
         <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.5rem;white-space:nowrap;">Search &rarr;</button>
       </form>
+      <% if (yearOptions.length > 0 || dexProgress) { %>
+        <div class="browse-tools">
+          <% if (yearOptions.length > 0) { %>
+            <form action="/cars" method="GET" class="year-filter">
+              <input type="hidden" name="selectmake" value="<%= search %>">
+              <label for="yearFilter">Model year</label>
+              <select id="yearFilter" name="year" class="form-control form-control-sm auto-submit">
+                <option value="">All years</option>
+                <% yearOptions.forEach(y => { %>
+                  <option value="<%= y %>" <%= year === y ? 'selected' : '' %>><%= y %></option>
+                <% }) %>
+              </select>
+              <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button></noscript>
+            </form>
+          <% } %>
+          <% if (dexProgress) { %>
+            <div class="dex-progress" title="Distinct <%= search %> models you've spotted">
+              <span class="dex-progress-label">Your <%= search %> Dex</span>
+              <span class="dex-bar"><span style="width:<%= Math.round(dexProgress.spotted / dexProgress.total * 100) %>%"></span></span>
+              <span class="dex-progress-count"><%= dexProgress.spotted %>/<%= dexProgress.total %></span>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
     </div>
   </section>
 

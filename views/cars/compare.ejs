@@ -1,0 +1,63 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading">Compare</h1>
+    <p class="lead text-muted">Up to three cars, side by side. Add cars with <strong>+ Compare</strong> on any car page.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <% if (cars.length === 0) { %>
+    <div class="empty-state">
+      <div class="empty-icon">⇄</div>
+      <h3>Nothing to compare yet</h3>
+      <p>Open a car and hit <strong>+ Compare</strong>, then come back here.</p>
+      <a href="/makes" class="btn btn-outline-secondary mt-3">Browse Manufacturers</a>
+    </div>
+  <% } else { %>
+    <%
+      // Rows: label + a per-car value getter. Rows where no car has a value are skipped.
+      var specRows = [
+        ['Years', c => c.years],
+        ['Favorites', c => c.favcount ? '♥ ' + c.favcount : null],
+        ['Class', c => c.specs && c.specs.type],
+        ['Engine', c => c.specs && c.specs.displacement ? c.specs.displacement + 'L' + (c.specs.cylinders ? ' · ' + c.specs.cylinders + '-cyl' : '') : null],
+        ['Transmission', c => c.specs && c.specs.transmission],
+        ['Drive', c => c.specs && c.specs.drive],
+        ['Fuel', c => c.specs && c.specs.fuel],
+        ['MPG (city / hwy)', c => c.specs && c.specs.cityMpg ? c.specs.cityMpg + ' / ' + c.specs.hwyMpg : null],
+        ['Specs year', c => c.specs && c.specs.year]
+      ];
+      factLabels.forEach(label => specRows.push([label, c => c.facts[label]]));
+    %>
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th scope="col"><span class="sr-only">Spec</span></th>
+            <% cars.forEach(c => { %>
+              <th scope="col">
+                <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="compare-car">
+                  <img src="<%= c.image %>" alt="<%= c.make %> <%= c.model %>">
+                  <span class="compare-make"><%= c.make %></span>
+                  <span class="compare-model"><%= c.model %></span>
+                </a>
+                <button type="button" class="compare-remove-btn" data-make="<%= c.make %>" data-model="<%= c.model %>">Remove</button>
+              </th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody>
+          <% specRows.forEach(([label, get]) => {
+               var vals = cars.map(get);
+               if (!vals.some(Boolean)) return; %>
+            <tr>
+              <th scope="row"><%= label %></th>
+              <% vals.forEach(v => { %><td><%= v || '—' %></td><% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="facts-source mt-3">Specs: FuelEconomy.gov · Facts: Wikidata · Years: NHTSA</p>
+  <% } %>
+</div>

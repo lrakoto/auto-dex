@@ -5,15 +5,16 @@ const rateLimit = require('express-rate-limit');
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
-const { cachedGet } = require('../lib/cache');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const carinfo = require('../lib/carinfo');
+const { getGallery, vote } = require('../lib/gallery');
+const { findOrCreateCatalogCar } = require('../lib/catalog');
+const { getMakeProgress } = require('../lib/dex');
 
 require('dotenv').config();
 
-const baseURL = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
-const endOfURL = '?format=json';
-
 const PAGE_SIZE = 12;
+const MAX_COMPARE = 3;
 
 // Mutating endpoints get their own limits — previously only auth routes were
 // throttled, so a single logged-in user could spam favorites/proposals forever.
@@ -23,6 +24,14 @@ const writeLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many requests. Please slow down.'
+});
+
+const spotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many spots in an hour. Take a breather!'
 });
 
 const proposeLimiter = rateLimit({
@@ -60,44 +69,68 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// GET route for submitted form data from home route
+// GET /cars?selectmake=Toyota[&year=2005][&page=2] — models for a make
 router.get('/', async (req, res) => {
-  let userQuery = req.query;
+  const make = typeof req.query.selectmake === 'string' ? req.query.selectmake : '';
   const page = Math.max(1, parseInt(req.query.page) || 1);
+  const year = parseInt(req.query.year, 10) || null;
   try {
+    const { Op } = require('sequelize');
     const { getModels } = require('../config/carquery');
-    const cqModels = await getModels(userQuery.selectmake);
+    let cqModels = await getModels(make);
 
-    // The list shown is the NHTSA model list, so paginate that first and only
-    // fetch DB rows for the current page (previously the whole make was loaded
-    // and sliced in JS).
+    // Year filter + dropdown come from the catalog's NHTSA model years
+    // (jobs/years.js). Models with no year data drop out when a year is picked.
+    const dated = await db.car.findAll({
+      attributes: ['model', 'model_years', 'year_min', 'year_max'],
+      where: { make, year_min: { [Op.ne]: null } }
+    });
+    const allYears = new Set();
+    dated.forEach(c => (c.model_years || []).forEach(y => allYears.add(y)));
+    const yearOptions = [...allYears].sort((a, b) => b - a);
+    if (year) {
+      const inYear = new Set(dated.filter(c => (c.model_years || []).includes(year)).map(c => c.model));
+      cqModels = cqModels.filter(m => inYear.has(m.model));
+    }
+
+    // Paginate the NHTSA model list first, then fetch DB rows for this page only
     const total = cqModels.length;
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const pageModels = cqModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-    const { Op } = require('sequelize');
     const dbCars = pageModels.length === 0 ? [] : await db.car.findAll({
-      where: { make: userQuery.selectmake, model: { [Op.in]: pageModels.map(m => m.model) } }
+      where: { make, model: { [Op.in]: pageModels.map(m => m.model) } }
     });
     const byModel = {};
     dbCars.forEach(c => { byModel[c.model] = c; });
 
-    const pagedCars = pageModels.map(c => byModel[c.model] || {
-      dataValues: {
-        make: c.make,
-        model: c.model,
-        image: PLACEHOLDER_URL,
-        favcount: 0
+    const pagedCars = pageModels.map(c => {
+      const row = byModel[c.model];
+      if (row) {
+        row.dataValues.years = carinfo.formatYears(row);
+        return row;
       }
+      return { dataValues: { make: c.make, model: c.model, image: PLACEHOLDER_URL, favcount: 0, years: null } };
     });
-    const baseUrl = `/cars?selectmake=${encodeURIComponent(userQuery.selectmake)}&page=`;
-    const viewData = { search: userQuery.selectmake, carImg: pagedCars, page, totalPages, total, baseUrl };
+    const baseUrl = `/cars?selectmake=${encodeURIComponent(make)}${year ? '&year=' + year : ''}&page=`;
+    const viewData = { search: make, carImg: pagedCars, page, totalPages, total, baseUrl };
     if (req.query.partial === '1') {
       res.locals.layout = false;
       return res.render('partials/car-grid', viewData);
     }
-    viewData.pageTitle = `${userQuery.selectmake} Models — AutoDex`;
-    viewData.pageDescription = `Browse ${total} ${userQuery.selectmake} models on AutoDex.`;
+
+    // Dex progress for logged-in users: distinct models of this make spotted
+    let dexProgress = null;
+    if (req.user) {
+      const catalogTotal = await db.car.count({ where: { make } });
+      if (catalogTotal) dexProgress = { spotted: await getMakeProgress(req.user.id, make), total: catalogTotal };
+    }
+
+    Object.assign(viewData, {
+      year, yearOptions, dexProgress,
+      pageTitle: `${make} Models${year ? ' (' + year + ')' : ''} — AutoDex`,
+      pageDescription: `Browse ${total} ${make} models${year ? ' from ' + year : ''} on AutoDex.`
+    });
     res.render('cars', viewData);
   } catch (err) {
     console.log('SEARCH ERROR:', err);
@@ -108,18 +141,16 @@ router.get('/', async (req, res) => {
   // GET /cars/car?make=Toyota&model=Camry — individual car detail page
   router.get('/car', async (req, res) => {
     const { make, model } = req.query;
-    if (!make || !model) return res.redirect('/');
+    if (typeof make !== 'string' || typeof model !== 'string' || !make || !model) return res.redirect('/');
     try {
       // Get this car from DB
-      let car = await db.car.findOne({ where: { make, model } });
+      const car = await db.car.findOne({ where: { make, model } });
       // req.query.image comes from the link, so validate its scheme before rendering it
       const queryImage = isValidImageUrl(req.query.image) ? req.query.image.trim() : null;
       const image = queryImage || (car && car.image ? car.image : PLACEHOLDER_URL);
       const favcount = car ? car.favcount : 0;
 
-      // Get other models from the same make (up to 6). Filtering in SQL means
-      // the limit actually yields 6 rows (was: limit 7 then drop the current
-      // model in JS, which returned only 5).
+      // Other models from the same make (up to 6), filtered in SQL
       const { Op } = require('sequelize');
       const related = await db.car.findAll({
         where: { make, model: { [Op.ne]: model } },
@@ -127,64 +158,15 @@ router.get('/', async (req, res) => {
       });
       const relatedCars = related.map(c => c.toJSON());
 
-      // Wikipedia summary
-      let wikiSummary = null;
-      let wikiUrl = null;
-
-      const wikiHeaders = { 'User-Agent': 'AutoDex/1.0 (https://github.com/lrakoto/auto-dex)' };
-
-      // Helper: fetch summary for a known title (cached 24h — Wikipedia content
-      // changes rarely and this ran on every single detail-page view)
-      async function wikiByTitle(title) {
-        try {
-          const data = await cachedGet(
-            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
-            { timeout: 4000, headers: wikiHeaders }
-          );
-          if (data.type === 'standard' && data.extract) return data;
-        } catch (e) {}
-        return null;
-      }
-
-      // 1. Try direct title guesses
-      const wikiTitles = [
-        `${make} ${model}`,
-        model,
-        `${make} ${model.split(' ')[0]}`
-      ];
-      for (const title of wikiTitles) {
-        const result = await wikiByTitle(title.replace(/\s+/g, '_'));
-        if (result) {
-          wikiSummary = result.extract;
-          wikiUrl = result.content_urls?.desktop?.page || null;
-          break;
-        }
-      }
-
-      // 2. If nothing found, fall back to Wikipedia search API
-      if (!wikiSummary) {
-        try {
-          const searchData = await cachedGet('https://en.wikipedia.org/w/api.php', {
-            params: {
-              action: 'opensearch',
-              search: `${make} ${model} automobile`,
-              limit: 3,
-              format: 'json'
-            },
-            timeout: 4000,
-            headers: wikiHeaders
-          });
-          const titles = searchData[1] || [];
-          for (const title of titles) {
-            const result = await wikiByTitle(title.replace(/\s+/g, '_'));
-            if (result) {
-              wikiSummary = result.extract;
-              wikiUrl = result.content_urls?.desktop?.page || null;
-              break;
-            }
-          }
-        } catch (e) { /* non-critical */ }
-      }
+      // External lookups are independent — run them in parallel
+      const [wiki, country, carSpecs] = await Promise.all([
+        carinfo.getWikiSummary(make, model),
+        carinfo.getCountry(make),
+        carinfo.getFuelSpecs(make, model, car && car.year_max)
+      ]);
+      const wikiFacts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
+      const wikiSummary = wiki ? wiki.summary : null;
+      const wikiUrl = wiki ? wiki.url : null;
 
       // YouTube search links for media section
       const searchQuery = encodeURIComponent(`${make} ${model}`);
@@ -196,70 +178,22 @@ router.get('/', async (req, res) => {
         { label: 'Throttle House', icon: '🔥', url: `https://www.youtube.com/results?search_query=${searchQuery}+throttle+house` },
       ];
 
-      // Pull manufacturer country from NHTSA (manufacturer list cached 24h —
-      // it changes essentially never and was being re-fetched on every view)
-      let country = null;
-      try {
-        const mfrList = await cachedGet(baseURL + 'getallmanufacturers' + endOfURL);
-        if (mfrList && Array.isArray(mfrList.Results)) {
-          const mfr = mfrList.Results.find(m =>
-            m.Mfr_CommonName && m.Mfr_CommonName.toLowerCase() === make.toLowerCase()
-          );
-          if (mfr) country = mfr.Country;
-        }
-      } catch (e) { /* non-critical */ }
-
-      // Car specs from FuelEconomy.gov (free, no key required).
-      // Probe years in PARALLEL — sequentially this could block ~36s per view.
-      let carSpecs = null;
-      try {
-        const fuelHeaders = { Accept: 'application/json' };
-        const currentYear = new Date().getFullYear();
-        const years = [];
-        for (let y = currentYear; y >= currentYear - 8; y--) years.push(y);
-
-        const probes = await Promise.allSettled(years.map(year =>
-          cachedGet('https://www.fueleconomy.gov/ws/rest/vehicle/menu/options', {
-            params: { year, make, model },
-            headers: fuelHeaders,
-            timeout: 4000
-          })
-        ));
-        // Keep the newest year's hit (probes are in descending-year order)
-        const hit = probes.find(r => r.status === 'fulfilled' && r.value.menuItem);
-        if (hit) {
-          const items = hit.value.menuItem;
-          const vehicleId = (Array.isArray(items) ? items[0] : items).value;
-          const d = await cachedGet(`https://www.fueleconomy.gov/ws/rest/vehicle/${vehicleId}`, {
-            headers: fuelHeaders,
-            timeout: 4000
-          });
-          carSpecs = {
-            year:         d.year,
-            type:         d.VClass,
-            cylinders:    d.cylinders,
-            displacement: d.displ,
-            transmission: d.trany,
-            drive:        d.drive,
-            fuel:         d.fuelType1 || d.fuelType,
-            cityMpg:      d.city08,
-            hwyMpg:       d.highway08,
-            combMpg:      d.comb08
-          };
-        }
-      } catch (e) { /* non-critical */ }
-
-      // Check if current user has this car in favorites
+      // Viewer-specific state: favorite, gallery votes, spot count
       let userFavorite = null;
+      let mySpotCount = 0;
       if (req.user) {
         userFavorite = await db.favorite_car.findOne({
           where: { userId: req.user.id, make, model }
         });
         if (userFavorite) userFavorite = userFavorite.toJSON();
+        if (car) mySpotCount = await db.spotting.count({ where: { userId: req.user.id, carId: car.id } });
       }
+      const gallery = car ? await getGallery(car.id, req.user && req.user.id) : [];
 
       res.render('cars/detail', {
-        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, mediaLinks, carSpecs, userFavorite,
+        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, userFavorite,
+        gallery, mySpotCount,
+        years: carinfo.formatYears(car),
         carDbId: car ? car.id : null,
         carUpdatedImg: car ? !!car.updated_img : false,
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
@@ -273,6 +207,109 @@ router.get('/', async (req, res) => {
       console.log('CAR DETAIL ERROR:', err);
       res.status(500).send('Error loading car details.');
     }
+  });
+
+  // GET /cars/compare?c=Toyota|Supra&c=Nissan|Skyline — side-by-side, up to 3
+  router.get('/compare', async (req, res) => {
+    const raw = [].concat(req.query.c || []).filter(v => typeof v === 'string');
+    const pairs = [];
+    for (const v of raw) {
+      const i = v.indexOf('|');
+      if (i <= 0 || i === v.length - 1) continue;
+      const pair = { make: v.slice(0, i), model: v.slice(i + 1) };
+      if (!pairs.some(p => p.make === pair.make && p.model === pair.model)) pairs.push(pair);
+      if (pairs.length === MAX_COMPARE) break;
+    }
+    try {
+      const cars = await Promise.all(pairs.map(async ({ make, model }) => {
+        const car = await db.car.findOne({ where: { make, model } });
+        const [wiki, carSpecs] = await Promise.all([
+          carinfo.getWikiSummary(make, model),
+          carinfo.getFuelSpecs(make, model, car && car.year_max)
+        ]);
+        const facts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
+        const factMap = {};
+        facts.forEach(f => { factMap[f.label] = f.values.join(', '); });
+        return {
+          make, model,
+          image: car && car.image ? car.image : PLACEHOLDER_URL,
+          favcount: car ? car.favcount : 0,
+          years: carinfo.formatYears(car),
+          specs: carSpecs,
+          facts: factMap
+        };
+      }));
+      // Only show fact rows at least one car actually has
+      const factLabels = [...new Set(cars.flatMap(c => Object.keys(c.facts)))];
+      res.render('cars/compare', {
+        cars, factLabels,
+        pageTitle: cars.length
+          ? `Compare ${cars.map(c => c.make + ' ' + c.model).join(' vs ')} — AutoDex`
+          : 'Compare Cars — AutoDex',
+        pageDescription: 'Side-by-side specs, years and facts for up to three cars.',
+        canonicalPath: '/cars/compare',
+        noindex: true
+      });
+    } catch (err) {
+      console.log('COMPARE ERROR:', err);
+      res.status(500).send('Error loading comparison.');
+    }
+  });
+
+  // POST /cars/spot — "Spotted it!" check-in (optional photo, location, notes)
+  router.post('/spot', isLoggedIn, spotLimiter, upload.single('spotImage'), async (req, res) => {
+    const { make, model } = req.body;
+    const back = `/cars/car?make=${encodeURIComponent(make || '')}&model=${encodeURIComponent(model || '')}`;
+    try {
+      let imageUrl = null;
+      if (req.file) {
+        imageUrl = req.file.path;
+      } else if (req.body.imageUrl && req.body.imageUrl.trim()) {
+        if (!isValidImageUrl(req.body.imageUrl)) {
+          req.flash('error', 'Photo URL must start with http(s)://');
+          return res.redirect(back);
+        }
+        imageUrl = req.body.imageUrl.trim();
+      }
+      const car = await findOrCreateCatalogCar(make, model);
+      if (!car) {
+        req.flash('error', "We couldn't find that car in the catalog.");
+        return res.redirect('/');
+      }
+      const clip = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
+      await db.spotting.create({
+        userId: req.user.id,
+        carId: car.id,
+        imageUrl,
+        location: clip(req.body.location, 120),
+        notes: clip(req.body.notes, 1000)
+      });
+      req.flash('success', `Spotted: ${car.make} ${car.model}! It's in your Dex.`);
+    } catch (err) {
+      console.log('SPOT ERROR:', err);
+      req.flash('error', 'Could not save that spot.');
+    }
+    res.redirect(back);
+  });
+
+  // POST /cars/images/:id/vote — value=1 | -1 | 0 (clear). AJAX returns JSON.
+  router.post('/images/:id/vote', isLoggedIn, writeLimiter, async (req, res) => {
+    const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
+    const imageId = parseInt(req.params.id, 10);
+    const value = parseInt(req.body.value, 10);
+    if (!Number.isInteger(imageId) || ![-1, 0, 1].includes(value)) {
+      return isAjax ? res.status(400).json({ success: false }) : res.redirect('back');
+    }
+    try {
+      const result = await vote(imageId, req.user.id, value);
+      if (!result) return isAjax ? res.status(404).json({ success: false }) : res.redirect('back');
+      if (isAjax) return res.json({ success: true, ...result });
+    } catch (err) {
+      console.log('VOTE ERROR:', err);
+      if (isAjax) return res.status(500).json({ success: false });
+      req.flash('error', 'Could not record your vote.');
+    }
+    res.redirect('back');
   });
 
   // GET /favorites → redirect to garage
@@ -383,29 +420,40 @@ router.get('/', async (req, res) => {
     }
   });
 
-  // POST /cars/propose-image — user submits an image proposal for a car
+  // POST /cars/propose-image — user submits a photo for a car's gallery.
+  // Any car qualifies (approved photos join the gallery and compete on votes);
+  // cars without a DB row yet are resolved by make/model.
   router.post('/propose-image', isLoggedIn, proposeLimiter, async (req, res) => {
     const carId = parseInt(req.body.carId, 10);
     const imageUrl = req.body.imageUrl;
-    if (!Number.isInteger(carId) || !isValidImageUrl(imageUrl)) {
+    if (!isValidImageUrl(imageUrl)) {
       req.flash('error', 'Please provide a valid http(s) image URL.');
       return res.redirect('back');
     }
     try {
-      // Only propose against a car that actually exists, and only while it
-      // still needs an image — otherwise proposals pile up for nothing.
-      const car = await db.car.findByPk(carId);
-      if (!car || car.updated_img) {
-        req.flash('error', 'That car already has an image.');
+      const car = Number.isInteger(carId)
+        ? await db.car.findByPk(carId)
+        : await findOrCreateCatalogCar(req.body.make, req.body.model);
+      if (!car) {
+        req.flash('error', "We couldn't find that car.");
+        return res.redirect('back');
+      }
+      const url = imageUrl.trim();
+      const [inGallery, alreadyProposed] = await Promise.all([
+        db.car_image.count({ where: { carId: car.id, url } }),
+        db.image_proposal.count({ where: { carId: car.id, imageUrl: url, status: 'pending' } })
+      ]);
+      if (inGallery || alreadyProposed) {
+        req.flash('error', 'That photo is already in the gallery or waiting for review.');
         return res.redirect('back');
       }
       await db.image_proposal.create({
-        carId,
+        carId: car.id,
         userId: req.user.id,
-        imageUrl: imageUrl.trim(),
+        imageUrl: url,
         status: 'pending'
       });
-      req.flash('success', 'Image proposed — thanks! An admin will review it.');
+      req.flash('success', 'Photo submitted — thanks! An admin will review it.');
     } catch (err) {
       console.log('PROPOSE ERROR:', err);
       req.flash('error', 'Could not submit proposal.');

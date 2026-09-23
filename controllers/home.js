@@ -58,11 +58,16 @@ const SITEMAP_MODEL_LIMIT = 5000;
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const siteUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-    const [makes, cars] = await Promise.all([
+    const [makes, cars, publicGarages] = await Promise.all([
       getKnownMakes(),
       db.car.findAll({
         attributes: ['make', 'model', 'updatedAt'],
         order: [['favcount', 'DESC']],
+        limit: SITEMAP_MODEL_LIMIT
+      }),
+      db.user.findAll({
+        attributes: ['username'],
+        where: { garagePublic: true, username: { [require('sequelize').Op.ne]: null } },
         limit: SITEMAP_MODEL_LIMIT
       })
     ]);
@@ -75,7 +80,8 @@ router.get('/sitemap.xml', async (req, res) => {
         loc: `/cars/car?make=${encodeURIComponent(c.make)}&model=${encodeURIComponent(c.model)}`,
         priority: '0.5',
         lastmod: c.updatedAt ? new Date(c.updatedAt).toISOString().slice(0, 10) : null
-      }))
+      })),
+      ...publicGarages.map(u => ({ loc: `/u/${encodeURIComponent(u.username)}`, priority: '0.4' }))
     ];
 
     const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
