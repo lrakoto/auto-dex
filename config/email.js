@@ -41,4 +41,29 @@ async function sendVerificationEmail(toEmail, toName, token) {
   });
 }
 
-module.exports = { sendVerificationEmail };
+async function sendPasswordResetEmail(toEmail, toName, token) {
+  if (process.env.NODE_ENV === 'test') {
+    console.log(`[test] Skipping password reset email to ${toEmail}`);
+    return;
+  }
+  const link = `${BASE_URL}/auth/reset/${encodeURIComponent(token)}`;
+  const safeName = escapeHtml(toName);
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: 'Reset your AutoDex password',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:2rem;">
+        <h2 style="margin-bottom:0.5rem;">Hi ${safeName},</h2>
+        <p style="color:#71717a;">Someone (hopefully you) asked to reset your AutoDex password. Click below to choose a new one.</p>
+        <a href="${link}" style="display:inline-block;margin:1.5rem 0;padding:0.75rem 1.75rem;background:#ed5353;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;">
+          Reset Password
+        </a>
+        <p style="color:#71717a;font-size:0.8rem;">Or copy this link: ${link}</p>
+        <p style="color:#71717a;font-size:0.8rem;">This link expires in 1 hour and works once. If you didn't ask for this, ignore this email. Your password won't change.</p>
+      </div>
+    `
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };

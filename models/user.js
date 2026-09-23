@@ -79,6 +79,22 @@ module.exports = (sequelize, DataTypes) => {
     garagePublic: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
+    },
+    // Password reset (hashed token, 1h expiry) — see controllers/auth.js
+    passwordResetToken: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    passwordResetExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    // Bumped when the password is reset; sessions carrying an older value are
+    // signed out (middleware in server.js)
+    sessionVersion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
     }
   }, {
     sequelize,
@@ -90,6 +106,14 @@ module.exports = (sequelize, DataTypes) => {
     pendingUser.password = hash; 
   }); 
 
+  // Password changes on existing users (reset) must be hashed too — the
+  // create hook alone would store the new password in plaintext.
+  user.addHook('beforeUpdate', (existingUser) => {
+    if (existingUser.changed('password')) {
+      existingUser.password = bcrypt.hashSync(existingUser.password, 12);
+    }
+  });
+
   user.prototype.validPassword = function(typedPassword) {
     let isCorrectPassword = bcrypt.compareSync(typedPassword, this.password);
 
@@ -99,6 +123,7 @@ module.exports = (sequelize, DataTypes) => {
   user.prototype.toJSON = function() {
     let userData = this.get();
     delete userData.password;
+    delete userData.passwordResetToken;
 
     return userData;
   }

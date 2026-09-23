@@ -2,13 +2,17 @@ const express = require('express');
 const router  = express.Router();
 const passport = require('../config/ppConfig');
 const db = require('../models');
-const { sendVerificationEmail } = require('../config/email');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../config/email');
 const { generateVerificationToken, hashToken, normalizeEmail } = require('../lib/tokens');
 const rateLimit = require('express-rate-limit');
 
+// The whole test suite shares one IP, so it outgrows these per-IP budgets as
+// tests are added. Loosen them for NODE_ENV=test only; production values stand.
+const limit = n => (process.env.NODE_ENV === 'test' ? n * 100 : n);
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 attempts per window
+  max: limit(10),            // 10 attempts per window
   message: 'Too many login attempts. Please try again in 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false
@@ -18,7 +22,7 @@ const loginLimiter = rateLimit({
 // spam arbitrary inboxes (and burn your Resend quota) on repeat.
 const emailSendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
+  max: limit(3),
   message: 'Too many requests. Please try again in 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false
@@ -26,11 +30,30 @@ const emailSendLimiter = rateLimit({
 
 const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  max: limit(10),
   message: 'Too many accounts created from this IP. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false
 });
+
+// Separate budget from resend-verification so one flow can't lock out the other
+const resetRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: limit(3),
+  message: 'Too many reset requests. Please try again in 15 minutes.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const resetSubmitLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: limit(10),
+  message: 'Too many attempts. Please try again in 15 minutes.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const RESET_TTL_MS = 60 * 60 * 1000; // reset links live for 1 hour
 
 // Only allow same-origin paths — blocks open redirects like ?returnTo=https://evil.example
 function safeReturnTo(url) {
@@ -71,6 +94,8 @@ router.post('/login', loginLimiter, (req, res, next) => {
     // keeps req.session.returnTo set by GET /auth/login
     req.logIn(user, { keepSessionInfo: true }, (err) => {
       if (err) return next(err);
+      // Stamp the session so a later password reset can sign it out
+      req.session.sessionVersion = user.sessionVersion || 0;
       db.user.update({ lastLoginAt: new Date() }, { where: { id: user.id } }).catch(() => {});
       req.flash('success', 'Welcome back...');
       // Re-validate at use time in case the session value ever came from elsewhere
@@ -171,6 +196,119 @@ router.post('/resend-verification', emailSendLimiter, async (req, res) => {
     console.log('RESEND ERROR:', err);
     req.flash('error', 'Could not resend. Please try again.');
     res.redirect('/auth/login');
+  }
+});
+
+// ─── PASSWORD RESET ───────────────────────────────────────────────────────────
+// 1. POST /auth/forgot emails a single-use link (only its hash is stored).
+// 2. GET /auth/reset/:token checks it, moves it into the session and redirects
+//    to /auth/reset, so the token doesn't linger in the address bar/history.
+// 3. POST /auth/reset sets the password, burns the token, verifies the email
+//    (they just proved they control it) and signs out every other session.
+
+async function findUserByResetHash(tokenHash) {
+  if (!tokenHash) return null;
+  const user = await db.user.findOne({ where: { passwordResetToken: tokenHash } });
+  if (!user || !user.passwordResetExpiresAt || new Date(user.passwordResetExpiresAt) < new Date()) return null;
+  return user;
+}
+
+router.get('/forgot', (req, res) => {
+  res.render('auth/forgot', {
+    pageTitle: 'Reset Password — AutoDex',
+    canonicalPath: '/auth/forgot',
+    noindex: true
+  });
+});
+
+router.post('/forgot', resetRequestLimiter, async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  try {
+    const user = email ? await db.user.findOne({ where: { email } }) : null;
+    if (user) {
+      const token = generateVerificationToken();
+      await user.update({
+        passwordResetToken: hashToken(token),
+        passwordResetExpiresAt: new Date(Date.now() + RESET_TTL_MS)
+      });
+      // Not awaited: the response time shouldn't reveal whether we sent anything
+      sendPasswordResetEmail(email, user.name, token)
+        .catch(err => console.log('RESET EMAIL ERROR:', err));
+    }
+  } catch (err) {
+    console.log('FORGOT ERROR:', err);
+  }
+  // Identical response either way — no account enumeration
+  req.flash('success', 'If there\'s an account for that email, a reset link is on its way. It expires in 1 hour.');
+  res.redirect('/auth/login');
+});
+
+router.get('/reset/:token', async (req, res) => {
+  try {
+    const tokenHash = hashToken(req.params.token);
+    if (!await findUserByResetHash(tokenHash)) {
+      req.flash('error', 'That reset link is invalid or has expired. Request a new one below.');
+      return res.redirect('/auth/forgot');
+    }
+    req.session.resetTokenHash = tokenHash;
+    res.redirect('/auth/reset');
+  } catch (err) {
+    console.log('RESET LINK ERROR:', err);
+    res.redirect('/auth/forgot');
+  }
+});
+
+router.get('/reset', async (req, res) => {
+  const user = await findUserByResetHash(req.session.resetTokenHash).catch(() => null);
+  if (!user) {
+    delete req.session.resetTokenHash;
+    req.flash('error', 'That reset link is invalid or has expired. Request a new one below.');
+    return res.redirect('/auth/forgot');
+  }
+  res.render('auth/reset', {
+    pageTitle: 'Choose a New Password — AutoDex',
+    canonicalPath: '/auth/reset',
+    noindex: true
+  });
+});
+
+router.post('/reset', resetSubmitLimiter, async (req, res) => {
+  const { password, confirm } = req.body;
+  try {
+    const user = await findUserByResetHash(req.session.resetTokenHash);
+    if (!user) {
+      delete req.session.resetTokenHash;
+      req.flash('error', 'That reset link is invalid or has expired. Request a new one below.');
+      return res.redirect('/auth/forgot');
+    }
+    if (typeof password !== 'string' || password.length < 8 || password.length > 99) {
+      req.flash('error', 'Passwords must be 8–99 characters.');
+      return res.redirect('/auth/reset');
+    }
+    if (password !== confirm) {
+      req.flash('error', 'Those passwords don\'t match.');
+      return res.redirect('/auth/reset');
+    }
+    // Hashed by the beforeUpdate hook in models/user.js
+    await user.update({
+      password,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+      emailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      sessionVersion: (user.sessionVersion || 0) + 1
+    });
+    delete req.session.resetTokenHash;
+    // If this browser was signed in, that session predates the reset too
+    req.logOut(() => {
+      req.flash('success', 'Password updated. Log in with your new password.');
+      res.redirect('/auth/login');
+    });
+  } catch (err) {
+    console.log('RESET ERROR:', err);
+    req.flash('error', 'Something went wrong. Please try again.');
+    res.redirect('/auth/reset');
   }
 });
 

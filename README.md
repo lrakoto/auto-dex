@@ -122,6 +122,9 @@ async function getCarData() {
 | POST | /auth/logout | auth.js | Log out (POST-only — GET is 404 by design) |
 | GET | /auth/verify/:token | auth.js | Verify email (token stored hashed) |
 | POST | /auth/resend-verification | auth.js | Resend verification email |
+| GET/POST | /auth/forgot | auth.js | Request a password reset email |
+| GET | /auth/reset/:token | auth.js | Reset link (moves token into the session) |
+| GET/POST | /auth/reset | auth.js | Choose a new password |
 | GET | /cars | cars.js | Browse models for a make (paginated) |
 | GET | /cars/search | cars.js | Text search results |
 | GET | /cars/car | cars.js | Car detail page |

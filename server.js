@@ -80,6 +80,17 @@ app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Sign out sessions created before the user's last password reset.
+// (Sessions from before this check existed carry no version and count as 0.)
+app.use((req, res, next) => {
+  if (!req.user) return next();
+  if ((req.session.sessionVersion || 0) === (req.user.sessionVersion || 0)) return next();
+  req.logOut(() => {
+    req.flash('error', 'Your password was changed. Please log in again.');
+    res.redirect('/auth/login');
+  });
+});
+
 // CSRF protection (csrf-sync, the maintained csurf successor).
 // Token is read from the x-csrf-token header, the _csrf body field, or _csrf
 // query param (multipart forms need the query param — multer parses the body

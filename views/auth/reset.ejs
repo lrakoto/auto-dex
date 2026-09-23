@@ -1,0 +1,20 @@
+<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:380px;">
+    <p class="text-uppercase mb-1" style="font-size:0.7rem;letter-spacing:0.16em;color:#52525b;">AutoDex</p>
+    <h2 class="mb-1" style="font-size:1.75rem;">Choose a new password.</h2>
+    <p class="mb-4" style="font-size:0.88rem;color:#71717a;">At least 8 characters. This signs you out everywhere else.</p>
+
+    <form action="/auth/reset" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-group">
+        <label for="reset-password">New password</label>
+        <input type="password" name="password" class="form-control" id="reset-password" minlength="8" maxlength="99" autocomplete="new-password" required>
+      </div>
+      <div class="form-group">
+        <label for="reset-confirm">Confirm new password</label>
+        <input type="password" name="confirm" class="form-control" id="reset-confirm" minlength="8" maxlength="99" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block mt-4">Update Password &rarr;</button>
+    </form>
+  </div>
+</div>

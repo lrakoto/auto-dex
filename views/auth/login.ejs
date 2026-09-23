@@ -11,7 +11,10 @@
         <input type="email" name="email" class="form-control" id="auth-email" placeholder="you@example.com" required>
       </div>
       <div class="form-group">
-        <label for="auth-password">Password</label>
+        <div class="d-flex justify-content-between align-items-baseline">
+          <label for="auth-password">Password</label>
+          <a href="/auth/forgot" style="font-size:0.78rem;color:#a1a1aa;">Forgot password?</a>
+        </div>
         <input type="password" name="password" class="form-control" id="auth-password" placeholder="••••••••" required>
       </div>
       <button type="submit" class="btn btn-primary btn-block mt-4">Log In &rarr;</button>

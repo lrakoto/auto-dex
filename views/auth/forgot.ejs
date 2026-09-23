@@ -1,0 +1,20 @@
+<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:380px;">
+    <p class="text-uppercase mb-1" style="font-size:0.7rem;letter-spacing:0.16em;color:#52525b;">AutoDex</p>
+    <h2 class="mb-1" style="font-size:1.75rem;">Forgot your password?</h2>
+    <p class="mb-4" style="font-size:0.88rem;color:#71717a;">Enter your email and we'll send you a link to choose a new one.</p>
+
+    <form action="/auth/forgot" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-group">
+        <label for="forgot-email">Email</label>
+        <input type="email" name="email" class="form-control" id="forgot-email" placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block mt-4">Send Reset Link &rarr;</button>
+    </form>
+
+    <p class="mt-4" style="font-size:0.82rem;color:#52525b;">
+      Remembered it? <a href="/auth/login" style="color:#a1a1aa;">Log in</a>
+    </p>
+  </div>
+</div>
