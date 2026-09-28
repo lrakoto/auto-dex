@@ -32,6 +32,26 @@
     <div class="custom-wrap">
       <p class="eyebrow hero-sub" style="margin-bottom:1.25rem;">Vehicle Explorer</p>
       <h1 class="cover-heading">The Car<br>Database.</h1>
+      <% if (cotd) { %>
+        <%# Under the heading, not beside it: the hero photo's car stays in view %>
+        <aside class="cotd hero-sub" style="animation-delay:0.5s;" aria-label="Car of the Day">
+          <a class="cotd-card" href="/cars/car?make=<%= encodeURIComponent(cotd.make) %>&model=<%= encodeURIComponent(cotd.model) %>">
+            <span class="cotd-photo"><img src="<%= cotd.image %>" alt="<%= cotd.make %> <%= cotd.model %>"></span>
+            <span class="cotd-body">
+              <span class="cotd-eyebrow">Car of the Day</span>
+              <span class="cotd-name" title="<%= cotd.make %> <%= cotd.model %>"><span class="cotd-make"><%= cotd.make %></span> <span class="cotd-model"><%= cotd.model %></span></span>
+              <% if (cotd.years || cotd.country) { %>
+                <span class="cotd-meta"><%= [cotd.years, cotd.country].filter(Boolean).join(' · ') %></span>
+              <% } %>
+            </span>
+            <span class="cotd-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <p class="cotd-foot">
+            <% if (cotd.credit) { %><span class="cotd-credit"><%- include('partials/photo-credit', { credit: cotd.credit }) %></span><% } %>
+            <a class="cotd-play" href="/play">Who's That Car? Name it from a photo &rarr;</a>
+          </p>
+        </aside>
+      <% } %>
       <p class="lead mb-4 hero-sub" style="animation-delay:0.65s;">Browse thousands of makes and models. Search by manufacturer, discover specs, and build your personal garage.</p>
 
       <form action="/search" method="GET" class="d-flex align-items-end hero-form" style="gap:0.75rem;flex-wrap:wrap;">
@@ -43,29 +63,6 @@
         <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.75rem;white-space:nowrap;">Search &rarr;</button>
       </form>
     </div>
-
-    <% if (cotd) { %>
-      <aside class="cotd hero-sub" style="animation-delay:0.85s;" aria-label="Car of the Day">
-        <a class="cotd-card" href="/cars/car?make=<%= encodeURIComponent(cotd.make) %>&model=<%= encodeURIComponent(cotd.model) %>">
-          <span class="cotd-photo">
-            <img src="<%= cotd.image %>" alt="<%= cotd.make %> <%= cotd.model %>">
-            <span class="cotd-eyebrow">Car of the Day</span>
-          </span>
-          <span class="cotd-body">
-            <span class="cotd-make"><%= cotd.make %></span>
-            <span class="cotd-model"><%= cotd.model %></span>
-            <% if (cotd.years || cotd.country) { %>
-              <span class="cotd-meta"><%= [cotd.years, cotd.country].filter(Boolean).join(' · ') %></span>
-            <% } %>
-          </span>
-        </a>
-        <% if (cotd.credit) { %><p class="cotd-credit"><%- include('partials/photo-credit', { credit: cotd.credit }) %></p><% } %>
-        <a class="cotd-play" href="/play">
-          <span><strong>Who's That Car?</strong> Name it from the photo.</span>
-          <span aria-hidden="true">&rarr;</span>
-        </a>
-      </aside>
-    <% } %>
   </div>
 
   <div id="recently-viewed" style="display:none;">
