@@ -32,6 +32,16 @@ describe('Garage', function() {
     await agent.get('/garage').expect(200);
   });
 
+  it('shows admins the real Unsplash queue and batch size', async function() {
+    const admin = request.agent(app);
+    const user = await createVerifiedUser(admin, db, { email: 'queue-admin@example.com' });
+    await db.user.update({ isAdmin: true }, { where: { id: user.id } });
+    const { BATCH_SIZE } = require('../jobs/images');
+    const res = await admin.get('/garage/admin').expect(200);
+    if (!res.text.includes(`hourly runs at ${BATCH_SIZE}/run`)) throw new Error('batch size missing from the queue card');
+    if (!/still on the placeholder/.test(res.text)) throw new Error('placeholder count missing');
+  });
+
   it('adds and removes a garage car, scoped to the owner', async function() {
     const owner = request.agent(app);
     await createVerifiedUser(owner, db, { email: 'owner@example.com' });

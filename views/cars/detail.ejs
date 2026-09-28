@@ -21,8 +21,11 @@
 <!-- Actions Bar -->
 <div class="detail-container">
   <div class="detail-actions d-flex justify-content-between align-items-center flex-wrap" style="gap:1rem;">
-    <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; <%= make %></a>
-    <div class="d-flex align-items-center" style="gap:1rem;">
+    <div class="d-flex align-items-center" style="gap:0.75rem;">
+      <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; <%= make %></a>
+      <% if (years) { %><a href="/cars/timeline?make=<%= encodeURIComponent(make) %>" class="browse-link">Timeline</a><% } %>
+    </div>
+    <div class="d-flex align-items-center flex-wrap" style="gap:1rem;">
       <span id="detail-fav-count" style="font-size:0.8rem;color:var(--text-muted);">&#9825; <%= favcount %></span>
       <% if (currentUser) { %>
         <div id="detail-fav-area" class="d-flex align-items-center" style="gap:0.5rem;">
@@ -264,7 +267,9 @@
 </div>
 <% } %>
 
-<% if (currentUser && userFavorite) { %>
+<% if (currentUser) { %>
+<%# Rendered even before there's a favorite: main.js points the forms at the
+    new favorite when one is added in place (pointEditFavModal) %>
 <div class="modal fade" id="detailEditFavModal" tabindex="-1" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -280,16 +285,14 @@
           <button type="button" role="tab" id="detail-fav-upload-tab" class="img-tab-btn" data-tab="detail-fav-upload" aria-controls="detail-fav-upload" aria-selected="false" tabindex="-1">Upload File</button>
         </div>
         <div id="detail-fav-url" class="img-tab-pane" role="tabpanel" aria-labelledby="detail-fav-url-tab">
-          <form id="detail-fav-url-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <input type="hidden" name="favid" value="<%= userFavorite.id %>">
+          <form id="detail-fav-url-form" method="POST" action="/cars/favorites/edit/<%= userFavorite ? userFavorite.id : '' %>?_method=PUT">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="text" class="form-control" name="newimagelink" placeholder="https://…" autocomplete="off">
           </form>
         </div>
         <div id="detail-fav-upload" class="img-tab-pane" role="tabpanel" aria-labelledby="detail-fav-upload-tab" style="display:none;">
-          <form id="detail-fav-upload-form" method="POST" action="/cars/favorites/edit/<%= userFavorite.id %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <input type="hidden" name="favid" value="<%= userFavorite.id %>">
+          <form id="detail-fav-upload-form" method="POST" action="/cars/favorites/edit/<%= userFavorite ? userFavorite.id : '' %>?_method=PUT&_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="file" class="form-control-file" name="newimage" accept="image/*">
           </form>
         </div>

@@ -103,10 +103,17 @@ const { csrfSynchronisedProtection, generateToken } = csrfSync({
 });
 app.use(csrfSynchronisedProtection);
 
+// The only POST forms a signed-out visitor sees: login/signup/reset and the quiz
+const ANON_FORM_PATHS = ['/auth', '/play'];
+const hasAnonForms = path => ANON_FORM_PATHS.some(p => path === p || path.startsWith(p + '/'));
+
 app.use((req, res, next) => {
-  res.locals.alerts = req.flash();
+  // Reading flash or minting a CSRF token writes to the session, and a
+  // written session is a Postgres row plus a cookie. So anonymous views of
+  // pages without forms (mostly crawlers) leave the session untouched.
+  res.locals.alerts = req.session.flash ? req.flash() : {};
   res.locals.currentUser = req.user;
-  res.locals.csrfToken = generateToken(req);
+  res.locals.csrfToken = req.user || req.session.csrfToken || hasAnonForms(req.path) ? generateToken(req) : '';
   // SEO: site origin + default canonical path (controllers can override
   // res.locals.canonicalPath for pages with query-driven variants).
   const proto = req.get('x-forwarded-proto') || req.protocol;
@@ -121,6 +128,7 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 app.use('/u', require('./controllers/profile'));   // public garages
+app.use('/play', require('./controllers/play'));   // Who's That Car?
 
 // Report unexpected errors to Sentry (no-op without SENTRY_DSN). Upload and
 // CSRF rejections are user mistakes handled below, not bugs.

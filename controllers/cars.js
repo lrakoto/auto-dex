@@ -7,10 +7,12 @@ const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
-const { getMakeCountry } = require('../config/carquery');
-const unsplash = require('../lib/unsplash');
+const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
+const { getMakeCountry } = carquery;
+const { photoCredit } = require('../lib/unsplash');
 const { getGallery, vote } = require('../lib/gallery');
-const { findOrCreateCatalogCar } = require('../lib/catalog');
+const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar } = require('../lib/catalog');
+const { buildTimeline } = require('../lib/timeline');
 const { getMakeProgress } = require('../lib/dex');
 
 require('dotenv').config();
@@ -18,14 +20,10 @@ require('dotenv').config();
 const PAGE_SIZE = 12;
 const MAX_COMPARE = 3;
 
-// Attribution for a displayed photo: the recorded photographer when we have
-// one, a generic Unsplash credit for Unsplash photos we couldn't attribute yet.
-function photoCredit(url, galleryRow) {
-  if (galleryRow && galleryRow.credit_name) {
-    return { name: galleryRow.credit_name, url: galleryRow.credit_url, unsplash: unsplash.isUnsplashUrl(url) };
-  }
-  if (unsplash.isUnsplashUrl(url)) return { name: null, url: null, unsplash: true };
-  return null;
+const carPath = (make, model) => `/cars/car?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+
+function notFound(res) {
+  return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
 }
 
 // Mutating endpoints get their own limits — previously only auth routes were
@@ -163,22 +161,69 @@ router.get('/explore', async (req, res) => {
   }
 });
 
+// GET /cars/timeline?make=Porsche — every dated model of a make on one year
+// axis, from the NHTSA model years (jobs/years.js)
+router.get('/timeline', async (req, res) => {
+  const requested = typeof req.query.make === 'string' ? req.query.make.trim() : '';
+  try {
+    const make = await lookupMake(requested);
+    if (!make) return notFound(res);
+    if (make !== requested) return res.redirect(301, `/cars/timeline?make=${encodeURIComponent(make)}`);
+
+    const { Op } = require('sequelize');
+    const [listed, dated] = await Promise.all([
+      carquery.getModels(make),
+      db.car.findAll({ attributes: ['make', 'model', 'model_years'], where: { make, year_min: { [Op.ne]: null } } })
+    ]);
+    // Listed passenger models only (older rows can be motorcycles). An empty
+    // list means NHTSA couldn't be reached, not that nothing is listed.
+    const names = new Set(listed.map(m => m.model));
+    const timeline = buildTimeline(names.size ? dated.filter(c => names.has(c.model)) : dated);
+
+    res.render('cars/timeline', {
+      make, timeline,
+      country: getMakeCountry(make),
+      carPath,
+      pageTitle: `${make} Timeline — Every Model, Year by Year — AutoDex`,
+      pageDescription: timeline
+        ? `${timeline.rows.length} ${make} models on one timeline, ${timeline.start}–${timeline.end}: when each was built, the gaps, and what's still on sale.`
+        : `The ${make} model timeline on AutoDex.`,
+      canonicalPath: `/cars/timeline?make=${encodeURIComponent(make)}`,
+      // Nothing to show until the year scan reaches this make
+      noindex: !timeline
+    });
+  } catch (err) {
+    console.log('TIMELINE ERROR:', err);
+    res.status(500).send('Error loading timeline.');
+  }
+});
+
 // GET /cars?selectmake=Toyota[&year=2005][&page=2] — models for a make
 router.get('/', async (req, res) => {
-  const make = typeof req.query.selectmake === 'string' ? req.query.selectmake : '';
+  const requested = typeof req.query.selectmake === 'string' ? req.query.selectmake.trim() : '';
+  if (!requested) return res.redirect('/makes');
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const year = parseInt(req.query.year, 10) || null;
   try {
     const { Op } = require('sequelize');
-    const { getModels } = require('../config/carquery');
-    let cqModels = await getModels(make);
+    // Unknown makes 404 before anything asks NHTSA about them; other
+    // spellings ("skoda", "TOYOTA") redirect to the catalog's
+    const make = await lookupMake(requested);
+    if (!make) return notFound(res);
+    if (make !== requested) {
+      return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
+    }
+    let cqModels = await carquery.getModels(make);
 
     // Year filter + dropdown come from the catalog's NHTSA model years
-    // (jobs/years.js). Models with no year data drop out when a year is picked.
-    const dated = await db.car.findAll({
+    // (jobs/years.js), for listed models only — rows seeded before the
+    // vehicle-type filter include motorcycles, not yet classified.
+    // Models with no year data drop out when a year is picked.
+    const listed = new Set(cqModels.map(m => m.model));
+    const dated = (await db.car.findAll({
       attributes: ['model', 'model_years', 'year_min', 'year_max'],
       where: { make, year_min: { [Op.ne]: null } }
-    });
+    })).filter(c => listed.has(c.model));
     const allYears = new Set();
     dated.forEach(c => (c.model_years || []).forEach(y => allYears.add(y)));
     const yearOptions = [...allYears].sort((a, b) => b - a);
@@ -237,33 +282,49 @@ router.get('/', async (req, res) => {
 
   // GET /cars/car?make=Toyota&model=Camry — individual car detail page
   router.get('/car', async (req, res) => {
-    const { make, model } = req.query;
-    if (typeof make !== 'string' || typeof model !== 'string' || !make || !model) return res.redirect('/');
+    const { make: qMake, model: qModel } = req.query;
+    if (typeof qMake !== 'string' || typeof qModel !== 'string' || !qMake || !qModel) return res.redirect('/');
     try {
-      // Get this car from DB
-      const car = await db.car.findOne({ where: { make, model } });
-      // req.query.image comes from the link, so validate its scheme before rendering it
-      const queryImage = isValidImageUrl(req.query.image) ? req.query.image.trim() : null;
-      const image = queryImage || (car && car.image ? car.image : PLACEHOLDER_URL);
+      // Only catalog cars get a page — and the Wikipedia/Wikidata/FuelEconomy
+      // lookups below, which cache whatever they're asked. Other spellings
+      // ("toyota", "supra") redirect to the catalog's.
+      const hit = await lookupCatalogCar(qMake, qModel);
+      if (!hit) return notFound(res);
+      const { make, model, car } = hit;
+      if (make !== qMake || model !== qModel) return res.redirect(301, carPath(make, model));
       const favcount = car ? car.favcount : 0;
-
-      // Other models from the same make (up to 6), filtered in SQL
       const { Op } = require('sequelize');
-      const related = await db.car.findAll({
-        where: { make, model: { [Op.ne]: model } },
-        limit: 6
-      });
-      const relatedCars = related.map(c => c.toJSON());
 
-      // External lookups are independent — run them in parallel
-      const [wiki, country, carSpecs] = await Promise.all([
+      // External lookups and the viewer's state are independent — run them together
+      const [related, wiki, carSpecs, favorite, mySpotCount, gallery] = await Promise.all([
+        // Other models from the same make, the ones with photos first
+        db.car.findAll({
+          where: { make, model: { [Op.ne]: model } },
+          order: [[db.sequelize.literal(`"car"."image" = ${db.sequelize.escape(PLACEHOLDER_URL)}`), 'ASC'], ['favcount', 'DESC']],
+          limit: 6
+        }),
         carinfo.getWikiSummary(make, model),
-        Promise.resolve(getMakeCountry(make)),
-        carinfo.getFuelSpecs(make, model, car && car.year_max)
+        carinfo.getFuelSpecs(make, model, car && car.year_max),
+        req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
+        req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
+        car ? getGallery(car.id, req.user && req.user.id) : []
       ]);
+      const relatedCars = related.map(c => c.toJSON());
+      const userFavorite = favorite ? favorite.toJSON() : null;
+      const country = getMakeCountry(make);
       const wikiFacts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
       const wikiSummary = wiki ? wiki.summary : null;
       const wikiUrl = wiki ? wiki.url : null;
+
+      // ?image= comes from the garage's favorite links. Honor it only when
+      // it's the viewer's own favorite photo or already in this car's
+      // gallery — otherwise anyone could dress the page in an arbitrary
+      // picture. Share previews always use the catalog photo.
+      const catalogImage = (car && car.image) || PLACEHOLDER_URL;
+      const wanted = isValidImageUrl(req.query.image) ? req.query.image.trim() : null;
+      const image = wanted && ((userFavorite && userFavorite.image === wanted) || gallery.some(g => g.url === wanted))
+        ? wanted
+        : catalogImage;
 
       // YouTube search links for media section
       const searchQuery = encodeURIComponent(`${make} ${model}`);
@@ -275,17 +336,6 @@ router.get('/', async (req, res) => {
         { label: 'Throttle House', icon: '🔥', url: `https://www.youtube.com/results?search_query=${searchQuery}+throttle+house` },
       ];
 
-      // Viewer-specific state: favorite, gallery votes, spot count
-      let userFavorite = null;
-      let mySpotCount = 0;
-      if (req.user) {
-        userFavorite = await db.favorite_car.findOne({
-          where: { userId: req.user.id, make, model }
-        });
-        if (userFavorite) userFavorite = userFavorite.toJSON();
-        if (car) mySpotCount = await db.spotting.count({ where: { userId: req.user.id, carId: car.id } });
-      }
-      const gallery = car ? await getGallery(car.id, req.user && req.user.id) : [];
       gallery.forEach(img => { img.credit = photoCredit(img.url, img); });
       const heroImage = gallery.find(g => g.url === image);
       const heroCredit = photoCredit(image, heroImage);
@@ -298,10 +348,10 @@ router.get('/', async (req, res) => {
         carUpdatedImg: car ? !!car.updated_img : false,
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
         pageDescription: wikiSummary ? wikiSummary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
-        canonicalPath: `/cars/car?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
+        canonicalPath: carPath(make, model),
         ogTitle: make + ' ' + model + ' — AutoDex',
         ogDescription: wikiSummary ? wikiSummary.slice(0, 160) : make + ' ' + model + ' on AutoDex.',
-        ogImage: image
+        ogImage: catalogImage === PLACEHOLDER_URL ? null : catalogImage
       });
     } catch (err) {
       console.log('CAR DETAIL ERROR:', err);
@@ -321,8 +371,13 @@ router.get('/', async (req, res) => {
       if (pairs.length === MAX_COMPARE) break;
     }
     try {
-      const cars = await Promise.all(pairs.map(async ({ make, model }) => {
-        const car = await db.car.findOne({ where: { make, model } });
+      // Catalog cars only, in the catalog's spelling — crafted pairs get no
+      // external lookups
+      const hits = [];
+      for (const hit of await Promise.all(pairs.map(p => lookupCatalogCar(p.make, p.model)))) {
+        if (hit && !hits.some(h => h.make === hit.make && h.model === hit.model)) hits.push(hit);
+      }
+      const cars = await Promise.all(hits.map(async ({ make, model, car }) => {
         const [wiki, carSpecs] = await Promise.all([
           carinfo.getWikiSummary(make, model),
           carinfo.getFuelSpecs(make, model, car && car.year_max)

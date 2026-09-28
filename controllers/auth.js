@@ -116,8 +116,19 @@ router.post('/logout', (req, res, next) => {
 });
 
 router.post('/signup', signupLimiter, async (req, res) => {
-  const { name, password } = req.body;
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
   const email = normalizeEmail(req.body.email);
+  // Validate (with the model's own rules) before looking the address up.
+  // Validation used to run only when creating, so a too-short password got
+  // "something went wrong" for a new address and "check your email" for a
+  // registered one: an account-enumeration oracle, and no hint what was wrong.
+  try {
+    await db.user.build({ name, email, password }).validate();
+  } catch (err) {
+    req.flash('error', (err.errors && err.errors[0] && err.errors[0].message) || 'Please check the form and try again.');
+    return res.redirect('/auth/signup');
+  }
   try {
     const token = generateVerificationToken();
     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours

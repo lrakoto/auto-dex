@@ -1,8 +1,20 @@
-
-
 <section class="jumbotron text-center">
-    <div class="container">
-      <h1 class="jumbotron-heading">404</h1>
-      <p class="lead text-muted">Page Not Found</p>
-    </div>
-  </section>
+  <div class="container">
+    <p class="eyebrow">404</p>
+    <h1 class="jumbotron-heading">Wrong turn.</h1>
+    <p class="lead text-muted">That page isn't in the catalog. Try a search instead.</p>
+    <form action="/search" method="GET" class="notfound-search">
+      <div class="search-input-wrap">
+        <label for="q" class="sr-only">Make or model</label>
+        <input type="text" class="form-control" name="q" id="q" placeholder="e.g. Porsche 911, Civic…" autocomplete="off">
+        <div class="suggest-dropdown"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+    <nav class="notfound-links" aria-label="Places to go">
+      <a href="/makes" class="browse-link">Manufacturers</a>
+      <a href="/cars/explore" class="browse-link">Explore</a>
+      <a href="/play" class="browse-link">Who's That Car?</a>
+    </nav>
+  </div>
+</section>

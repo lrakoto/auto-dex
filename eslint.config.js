@@ -4,8 +4,6 @@ module.exports = [
   {
     ignores: [
       'node_modules/**',
-      'public/js/main.js', // hand-written browser bundle; no build step
-      'public/js/add-car.js',
       'migrations/**',
       'seeders/**'
     ]
@@ -40,6 +38,26 @@ module.exports = [
       // matcher escapes '-' inside a character class for clarity.
       'no-control-regex': 'off',
       'no-useless-escape': 'off'
+    }
+  },
+  {
+    // Hand-written browser scripts (no build step)
+    files: ['public/js/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        location: 'readonly',
+        history: 'readonly',
+        localStorage: 'readonly',
+        fetch: 'readonly',
+        FormData: 'readonly',
+        Image: 'readonly',
+        IntersectionObserver: 'readonly',
+        requestAnimationFrame: 'readonly'
+      }
     }
   },
   {

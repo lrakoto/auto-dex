@@ -8,15 +8,15 @@
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label for="new-name">Name</label>
-        <input id="new-name" type="text" name="name" class="form-control" placeholder="Your name" required>
+        <input id="new-name" type="text" name="name" class="form-control" placeholder="Your name" maxlength="99" autocomplete="name" required>
       </div>
       <div class="form-group">
         <label for="new-email">Email</label>
-        <input id="new-email" type="email" name="email" class="form-control" placeholder="you@example.com" required>
+        <input id="new-email" type="email" name="email" class="form-control" placeholder="you@example.com" autocomplete="email" required>
       </div>
       <div class="form-group">
         <label for="new-password">Password</label>
-        <input id="new-password" type="password" name="password" class="form-control" placeholder="Min 8 characters" required>
+        <input id="new-password" type="password" name="password" class="form-control" placeholder="Min 8 characters" minlength="8" maxlength="99" autocomplete="new-password" required>
       </div>
       <button type="submit" class="btn btn-primary btn-block mt-4">Create Account &rarr;</button>
     </form>

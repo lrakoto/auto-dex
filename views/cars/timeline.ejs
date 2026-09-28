@@ -1,0 +1,71 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <p class="eyebrow"><%= country || 'Timeline' %></p>
+    <h1 class="jumbotron-heading"><%= make %> Timeline</h1>
+    <% if (timeline) { %>
+      <p class="lead text-muted">
+        <%= timeline.rows.length %> model<%= timeline.rows.length === 1 ? '' : 's' %> ·
+        <%= timeline.start %>–<%= timeline.end %> ·
+        <%= timeline.currentCount %> still on sale
+      </p>
+    <% } else { %>
+      <p class="lead text-muted">No model years for <%= make %> yet — they fill in as the daily NHTSA scan works through the catalog.</p>
+    <% } %>
+    <div class="browse-tools">
+      <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; All <%= make %> models</a>
+    </div>
+  </div>
+</section>
+
+<div class="container py-5">
+  <% if (timeline) { %>
+    <div class="timeline-scroll">
+      <div class="timeline">
+        <div class="timeline-axis" aria-hidden="true">
+          <span class="timeline-label"></span>
+          <span class="timeline-track">
+            <% timeline.ticks.forEach(t => { %>
+              <span class="timeline-tick<%= t.major ? ' major' : '' %>" style="left:<%= t.left.toFixed(3) %>%"><%= t.major || timeline.ticks.length <= 12 ? t.year : '' %></span>
+            <% }) %>
+          </span>
+        </div>
+
+        <div class="timeline-body">
+          <div class="timeline-grid" aria-hidden="true">
+            <% timeline.ticks.forEach(t => { %>
+              <span class="timeline-gridline<%= t.major ? ' major' : '' %>" style="left:<%= t.left.toFixed(3) %>%"></span>
+            <% }) %>
+            <span class="timeline-now" style="left:<%= timeline.nowLeft.toFixed(3) %>%"><span>Now</span></span>
+          </div>
+
+          <ol class="timeline-rows" aria-label="<%= make %> models by production years">
+            <% timeline.rows.forEach(r => { %>
+              <li>
+                <a class="timeline-row<%= r.current ? ' is-current' : '' %>" href="<%= carPath(r.make, r.model) %>">
+                  <span class="timeline-label" title="<%= r.model %>"><%= r.model %></span>
+                  <span class="timeline-track">
+                    <% r.segments.forEach(s => { %>
+                      <span class="timeline-seg<%= s.current ? ' current' : '' %>" style="left:<%= s.left.toFixed(3) %>%;width:<%= s.width.toFixed(3) %>%"></span>
+                    <% }) %>
+                    <span class="timeline-years<%= r.labelAt.onBar ? ' on-bar' : '' %>" style="<%= r.labelAt.side %>:calc(<%= r.labelAt.pct.toFixed(3) %>% + 0.5rem)"><%= r.label %><% if (r.current) { %><span class="sr-only">, on sale</span><% } %></span>
+                  </span>
+                </a>
+              </li>
+            <% }) %>
+          </ol>
+        </div>
+      </div>
+    </div>
+    <p class="facts-source mt-3">
+      <span class="timeline-legend"><span class="timeline-seg current"></span> on sale</span>
+      Model years: NHTSA vPIC, US-market models since 1981, so a model can predate its first bar.
+    </p>
+  <% } else { %>
+    <div class="empty-state">
+      <div class="empty-icon">⧗</div>
+      <h3>No timeline yet</h3>
+      <p>Check back once the model-year scan has reached <%= make %>.</p>
+      <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary mt-3">Browse <%= make %> models</a>
+    </div>
+  <% } %>
+</div>

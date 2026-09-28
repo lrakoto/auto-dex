@@ -10,6 +10,7 @@ const { decodeVin, getRecalls, normalizeVin } = require('../lib/nhtsa');
 const { addImage, refreshHero } = require('../lib/gallery');
 const { getDexStats, getBadges } = require('../lib/dex');
 const { validateUsername } = require('../lib/usernames');
+const { BATCH_SIZE: UNSPLASH_BATCH } = require('../jobs/images');
 
 // Mutating garage/admin routes were previously unlimited.
 const writeLimiter = rateLimit({
@@ -386,8 +387,10 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
-    const [totalCars, unsplashRemaining, favCounts, garageCounts, proposalCounts] = await Promise.all([
+    const [totalCars, unsplashQueued, placeholderCount, favCounts, garageCounts, proposalCounts] = await Promise.all([
       db.car.count(),
+      // Not yet searched on Unsplash (a search that finds nothing sets updated_img too)
+      db.car.count({ where: { updated_img: false } }),
       db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }),
       db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
@@ -418,7 +421,9 @@ router.get('/admin', isAdmin, async (req, res) => {
       unverifiedUsers: unverifiedUsers.map(u => u.toJSON()),
       allUsers: usersWithActivity,
       totalCars,
-      unsplashRemaining
+      unsplashQueued,
+      placeholderCount,
+      unsplashBatch: UNSPLASH_BATCH
     });
   } catch (err) {
     console.log('ADMIN ERROR:', err);

@@ -1,0 +1,98 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <p class="eyebrow">Photo Quiz</p>
+    <h1 class="jumbotron-heading">Who's That Car?</h1>
+    <p class="lead text-muted">Name the car in the photo. Every three in a row, the choices get closer: by nine, they're all the same make.</p>
+  </div>
+</section>
+
+<div class="container py-5">
+  <div class="play-layout">
+    <div class="play-main">
+      <% if (!round) { %>
+        <div class="empty-state">
+          <div class="empty-icon">?</div>
+          <h3>Not enough photos yet</h3>
+          <p>The quiz needs a few more cars with photos. They arrive every hour, so check back soon.</p>
+          <a href="/cars/explore" class="btn btn-outline-secondary mt-3">Explore cars</a>
+        </div>
+      <% } else { %>
+        <div class="play-card" id="play-card" data-state="question">
+          <div class="play-stats" aria-live="polite">
+            <span class="play-stat">Streak <strong id="play-streak"><%= streak %></strong></span>
+            <span class="play-stat">Best <strong id="play-best"><%= best %></strong></span>
+          </div>
+
+          <% if (last) { %>
+            <p class="play-last <%= last.correct ? 'is-correct' : 'is-wrong' %>" role="status">
+              <%= last.correct ? 'Correct!' : 'Not quite.' %>
+              <% if (last.url) { %>That was the <a href="<%= last.url %>"><%= last.make %> <%= last.model %></a>.
+                <a class="play-fix" href="<%= last.url %>#gallery">Wrong photo?</a><% } %>
+            </p>
+          <% } %>
+
+          <figure class="play-photo">
+            <img id="play-img" src="<%= round.image %>" alt="The mystery car">
+            <figcaption class="play-credit" id="play-credit"><%- include('partials/photo-credit', { credit: round.credit }) %></figcaption>
+          </figure>
+
+          <form method="POST" action="/play/guess" id="play-form" class="play-choices" aria-label="Which car is this?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <% round.choices.forEach((c, i) => { %>
+              <button type="submit" name="choice" value="<%= c.id %>" class="play-choice">
+                <span class="play-key" aria-hidden="true"><%= i + 1 %></span>
+                <span class="play-label"><%= c.label %></span>
+              </button>
+            <% }) %>
+          </form>
+
+          <div class="play-result" id="play-result" hidden>
+            <p class="play-verdict" id="play-verdict" role="status"></p>
+            <p class="play-answer">
+              <a id="play-answer-link" href="#"></a>
+              <span id="play-answer-meta"></span>
+              <%# Unsplash search results are sometimes the wrong car; the gallery votes fix that %>
+              <a class="play-fix" id="play-fix-link" href="#">Wrong photo? Vote on it</a>
+            </p>
+            <button type="button" class="btn btn-primary" id="play-next">Next car &rarr;</button>
+          </div>
+
+          <div class="play-foot">
+            <form method="POST" action="/play/skip" class="play-skip-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="play-skip">Skip (ends your streak)</button>
+            </form>
+            <span class="play-hint">Keys 1–4 to answer · Enter for the next car</span>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <aside class="play-side">
+      <div class="media-card">
+        <h5>Top streaks</h5>
+        <% if (leaders.length === 0) { %>
+          <p class="play-empty">No streaks on the board yet. Players with a public garage show up here.</p>
+        <% } else { %>
+          <ol class="play-leaders">
+            <% leaders.forEach(u => { %>
+              <li>
+                <a href="/u/<%= encodeURIComponent(u.username) %>">@<%= u.username %></a>
+                <span class="play-leader-score"><%= u.quizBest %></span>
+              </li>
+            <% }) %>
+          </ol>
+        <% } %>
+      </div>
+      <p class="play-note">
+        <% if (currentUser) { %>
+          Your best streak is saved. Reach 10 in a row for the <strong>Car Whisperer</strong> badge<% if (!currentUser.garagePublic) { %>, and <a href="/garage#settings">make your garage public</a> to join the board<% } %>.
+        <% } else { %>
+          <a href="/auth/login">Log in</a> to keep your best streak and earn the <strong>Car Whisperer</strong> badge at 10 in a row.
+        <% } %>
+      </p>
+    </aside>
+  </div>
+</div>
+
+<script src="/js/play.js" defer></script>

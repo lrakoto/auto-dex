@@ -102,4 +102,4 @@ async function unsplashImages() {
   }
 }
 
-module.exports = { unsplashImages, backfillCredits };
+module.exports = { unsplashImages, backfillCredits, BATCH_SIZE };

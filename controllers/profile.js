@@ -16,7 +16,7 @@ router.get('/:username', async (req, res) => {
     const username = String(req.params.username || '').toLowerCase();
     const owner = await db.user.findOne({
       where: { username, garagePublic: true },
-      attributes: ['id', 'name', 'username', 'createdAt']
+      attributes: ['id', 'name', 'username', 'createdAt', 'quizBest']
     });
     if (!owner) return notFound(res);
 

@@ -23,6 +23,7 @@
               </select>
               <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button></noscript>
             </form>
+            <a class="browse-link" href="/cars/timeline?make=<%= encodeURIComponent(search) %>">Timeline &rarr;</a>
           <% } %>
           <% if (dexProgress) { %>
             <div class="dex-progress" title="Distinct <%= search %> models you've spotted">

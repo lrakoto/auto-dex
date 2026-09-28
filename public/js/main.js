@@ -135,7 +135,6 @@
   var mouse  = { x: -9999, y: -9999 };
   var cursor = { x: -9999, y: -9999 }; // smoothed
   var dots   = [];
-  var raf;
 
   /* ── Angled sweep wave ─────────────────────────────────────── */
   var WAVE_ANGLE_TAN  = Math.tan(14 * Math.PI / 180); // ~0.249
@@ -281,7 +280,7 @@
     ctx.shadowBlur = 0;
 
     // Reduced motion: render one static frame, no continuous loop
-    if (!prefersReducedMotion) raf = requestAnimationFrame(draw);
+    if (!prefersReducedMotion) requestAnimationFrame(draw);
   }
 
   // Track real mouse position
@@ -469,6 +468,8 @@
 
       navSearchInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
+          // A highlighted suggestion wins; the autocomplete below opens it
+          if (navSearchOverlay.querySelector('.suggest-item.active')) return;
           var q = navSearchInput.value.trim();
           if (q) window.location.href = '/search?q=' + encodeURIComponent(q);
         }
@@ -541,15 +542,70 @@
     }
 
     // ── Search autocomplete ───────────────────────────────────────────
-    document.querySelectorAll('.search-input-wrap').forEach(function(wrap) {
+    // An ARIA combobox: ↓/↑ move through the suggestions, Enter opens the
+    // highlighted one (with none highlighted, the form searches as typed),
+    // Escape closes the list.
+    document.querySelectorAll('.search-input-wrap').forEach(function(wrap, n) {
       var input    = wrap.querySelector('input[name="q"]');
       var dropdown = wrap.querySelector('.suggest-dropdown');
       if (!input || !dropdown) return;
 
-      var debounce, reqId = 0;
+      var debounce, reqId = 0, active = -1;
+      var listId = 'suggest-list-' + n;
+      dropdown.id = listId;
+      dropdown.setAttribute('role', 'listbox');
+      input.setAttribute('role', 'combobox');
+      input.setAttribute('aria-autocomplete', 'list');
+      input.setAttribute('aria-controls', listId);
+      input.setAttribute('aria-expanded', 'false');
 
-      function hide() { dropdown.style.display = 'none'; }
-      function show() { if (dropdown.innerHTML.trim()) dropdown.style.display = 'block'; }
+      function items() { return dropdown.querySelectorAll('.suggest-item'); }
+      function highlight(i) {
+        var list = items();
+        active = i;
+        list.forEach(function (el, j) {
+          el.classList.toggle('active', j === i);
+          el.setAttribute('aria-selected', String(j === i));
+        });
+        if (i >= 0 && list[i]) {
+          input.setAttribute('aria-activedescendant', list[i].id);
+          list[i].scrollIntoView({ block: 'nearest' });
+        } else {
+          input.removeAttribute('aria-activedescendant');
+        }
+      }
+      function isOpen() { return dropdown.style.display === 'block'; }
+      function hide() {
+        dropdown.style.display = 'none';
+        input.setAttribute('aria-expanded', 'false');
+        highlight(-1);
+      }
+      function show() {
+        if (!dropdown.innerHTML.trim()) return;
+        dropdown.style.display = 'block';
+        input.setAttribute('aria-expanded', 'true');
+      }
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          if (!isOpen()) show();
+          var count = items().length;
+          if (!isOpen() || !count) return;
+          e.preventDefault();
+          var step = e.key === 'ArrowDown' ? 1 : -1;
+          highlight(active < 0 ? (step > 0 ? 0 : count - 1) : (active + step + count) % count);
+        } else if (e.key === 'Enter' && isOpen() && active >= 0) {
+          e.preventDefault();
+          window.location.href = items()[active].href;
+        } else if (e.key === 'Escape' && isOpen()) {
+          hide();
+        }
+      });
+
+      dropdown.addEventListener('mouseover', function (e) {
+        var item = e.target.closest('.suggest-item');
+        if (item) highlight(Array.prototype.indexOf.call(items(), item));
+      });
 
       input.addEventListener('input', function() {
         clearTimeout(debounce);
@@ -562,20 +618,28 @@
             .then(function(data) {
               if (id !== reqId) return; // discard stale response
               var html = '';
+              var k = 0;
+              function option(href, inner) {
+                return '<a class="suggest-item" role="option" aria-selected="false" tabindex="-1" id="' + listId + '-' + (k++) +
+                  '" href="' + href + '">' + inner + '</a>';
+              }
               if (data.makes.length) {
-                html += '<div class="suggest-label">Makes</div>';
+                html += '<div class="suggest-label" role="presentation">Makes</div>';
                 data.makes.forEach(function(m) {
-                  html += '<a class="suggest-item" href="/cars?selectmake=' + encodeURIComponent(m) + '">' + escapeHtml(m) + '</a>';
+                  html += option('/cars?selectmake=' + encodeURIComponent(m), escapeHtml(m));
                 });
               }
               if (data.models.length) {
-                html += '<div class="suggest-label">Models</div>';
+                html += '<div class="suggest-label" role="presentation">Models</div>';
                 data.models.forEach(function(c) {
-                  html += '<a class="suggest-item" href="/cars/car?make=' + encodeURIComponent(c.make) + '&model=' + encodeURIComponent(c.model) + '"><span class="suggest-make">' + escapeHtml(c.make) + '</span>' + escapeHtml(c.model) + '</a>';
+                  html += option('/cars/car?make=' + encodeURIComponent(c.make) + '&model=' + encodeURIComponent(c.model),
+                    '<span class="suggest-make">' + escapeHtml(c.make) + '</span>' + escapeHtml(c.model));
                 });
               }
               if (!html) { hide(); return; }
               dropdown.innerHTML = html;
+              active = -1;
+              input.removeAttribute('aria-activedescendant');
               show();
             })
             .catch(hide);
@@ -649,16 +713,17 @@
     e.preventDefault();
   });
 
-  // Update Image button — submits the active form (favorites)
+  // Update Image button — submits the active form (garage favorites:
+  // tabs fav-url-<id> / fav-upload-<id>, forms fav-url-form-<id> / fav-upload-form-<id>)
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.fav-update-btn');
     if (!btn) return;
     var id = btn.dataset.id;
     var modal = btn.closest('.modal-content');
     var activeTab = modal.querySelector('.img-tab-btn.active');
-    var tabId = activeTab ? activeTab.dataset.tab : ('url-' + id);
-    var isUpload = tabId.startsWith('upload-');
-    var form = document.getElementById((isUpload ? 'upload-form-' : 'url-form-') + id);
+    var tabId = activeTab ? activeTab.dataset.tab : ('fav-url-' + id);
+    var isUpload = tabId.startsWith('fav-upload-');
+    var form = document.getElementById((isUpload ? 'fav-upload-form-' : 'fav-url-form-') + id);
     if (form) form.submit();
   });
 
@@ -795,6 +860,17 @@
     detailFavCount.textContent = '\u2665 ' + Math.max(0, n + delta);
   }
 
+  // The edit modal is rendered before a favorite exists; aim its forms at the
+  // one just created (the upload form also needs the CSRF token in its URL)
+  function pointEditFavModal(favId) {
+    var token = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var urlForm = document.getElementById('detail-fav-url-form');
+    var uploadForm = document.getElementById('detail-fav-upload-form');
+    var base = '/cars/favorites/edit/' + encodeURIComponent(favId) + '?_method=PUT';
+    if (urlForm) urlForm.action = base;
+    if (uploadForm) uploadForm.action = base + '&_csrf=' + encodeURIComponent(token);
+  }
+
   function bindDetailFavForm() {
     var form = detailFavArea && detailFavArea.querySelector('.detail-fav-form');
     if (!form) return;
@@ -811,8 +887,9 @@
         if (!data.success) return;
         detailFavArea.innerHTML =
           '<button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#detailEditFavModal">Edit Favorite</button>' +
-          '<form class="detail-remove-form d-inline" style="margin:0;" data-fav-id="' + data.favId + '">' +
+          '<form class="detail-remove-form d-inline" style="margin:0;" data-fav-id="' + escapeHtml(data.favId) + '">' +
           '<button type="submit" class="btn btn-outline-danger btn-sm">Remove</button></form>';
+        pointEditFavModal(data.favId);
         bindDetailRemoveForm();
         if (!data.alreadyFavorited) adjustFavCount(1);
         showToast('Added to favorites \u2665');

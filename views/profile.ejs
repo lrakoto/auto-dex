@@ -6,6 +6,7 @@
       <%= myCars.length %> car<%= myCars.length === 1 ? '' : 's' %> ·
       <%= dex.spottedCars %> spotted ·
       <%= badges.length %> badge<%= badges.length === 1 ? '' : 's' %> ·
+      <% if (owner.quizBest > 0) { %><a href="/play">best quiz streak <%= owner.quizBest %></a> ·<% } %>
       member since <%= new Date(owner.createdAt).getFullYear() %>
     </p>
   </div>

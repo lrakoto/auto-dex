@@ -4,6 +4,7 @@ const db = require('../models');
 const carquery = require('../config/carquery');
 const rateLimit = require('express-rate-limit');
 const { fuzzyScore } = require('../lib/fuzzy');
+const { getCarOfTheDay } = require('../lib/daily');
 
 async function getKnownMakes() {
   const makes = await carquery.getMakes();
@@ -45,8 +46,27 @@ async function getMakePool(make) {
   return cars;
 }
 
-router.get('/', (req, res) => {
+// The day's first pick can wait on NHTSA (lib/catalog.js#filterListed). The
+// homepage doesn't: after this long it renders without the card, and the
+// pick finishes in the background for the next visitor.
+const COTD_WAIT_MS = 1500;
+
+function withTimeout(promise, ms, fallback) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise(resolve => { timer = setTimeout(resolve, ms, fallback); })
+  ]).finally(() => clearTimeout(timer));
+}
+
+router.get('/', async (req, res) => {
+  // Non-critical: the homepage renders fine without it
+  const cotd = await withTimeout(getCarOfTheDay().catch(err => {
+    console.log('CAR OF THE DAY ERROR:', err.message);
+    return null;
+  }), COTD_WAIT_MS, null);
   res.render('index', {
+    cotd,
     pageTitle: 'AutoDex — Car Database, Specs & Garage',
     pageDescription: 'Browse thousands of car makes and models, discover specs, save favorites, and build your personal garage.'
   });
@@ -58,7 +78,8 @@ const SITEMAP_MODEL_LIMIT = 5000;
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const siteUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-    const [makes, cars, publicGarages] = await Promise.all([
+    const { Op } = require('sequelize');
+    const [makes, cars, publicGarages, datedMakes] = await Promise.all([
       getKnownMakes(),
       db.car.findAll({
         attributes: ['make', 'model', 'updatedAt'],
@@ -67,15 +88,21 @@ router.get('/sitemap.xml', async (req, res) => {
       }),
       db.user.findAll({
         attributes: ['username'],
-        where: { garagePublic: true, username: { [require('sequelize').Op.ne]: null } },
+        where: { garagePublic: true, username: { [Op.ne]: null } },
         limit: SITEMAP_MODEL_LIMIT
-      })
+      }),
+      // Makes with a timeline to show
+      db.car.findAll({ attributes: ['make'], where: { year_min: { [Op.ne]: null } }, group: ['make'] })
     ]);
+    const timelineMakes = makes.filter(m => datedMakes.some(r => r.make === m));
 
     const urls = [
       { loc: '/', priority: '1.0' },
       { loc: '/makes', priority: '0.8' },
+      { loc: '/cars/explore', priority: '0.6' },
+      { loc: '/play', priority: '0.6' },
       ...makes.map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
+      ...timelineMakes.map(m => ({ loc: `/cars/timeline?make=${encodeURIComponent(m)}`, priority: '0.5' })),
       ...cars.map(c => ({
         loc: `/cars/car?make=${encodeURIComponent(c.make)}&model=${encodeURIComponent(c.model)}`,
         priority: '0.5',
@@ -212,11 +239,18 @@ router.get('/search', async (req, res) => {
     for (const make of KNOWN_MAKES) {
       if (q.toLowerCase().startsWith(make.toLowerCase() + ' ')) {
         const modelQ = q.slice(make.length + 1).trim();
-        const exact = await db.car.findOne({
-          where: { make, model: { [Op.like]: modelQ + '%' } },
-          order: [['favcount', 'DESC']]
+        // Any case; an exact name beats a prefix, and a shorter prefix match
+        // beats a longer one ("civic" → Civic, not Civic Type R)
+        const { fn, col, literal } = db.Sequelize;
+        const match = await db.car.findOne({
+          where: { make, model: { [Op.iLike]: modelQ.replace(/[\\%_]/g, '\\$&') + '%' } },
+          order: [
+            [literal(`lower("car"."model") = ${db.sequelize.escape(modelQ.toLowerCase())}`), 'DESC'],
+            [fn('length', col('model')), 'ASC'],
+            ['favcount', 'DESC']
+          ]
         });
-        if (exact) return res.redirect('/cars/car?make=' + encodeURIComponent(exact.make) + '&model=' + encodeURIComponent(exact.model));
+        if (match) return res.redirect('/cars/car?make=' + encodeURIComponent(match.make) + '&model=' + encodeURIComponent(match.model));
         return res.redirect('/cars?selectmake=' + encodeURIComponent(make));
       }
     }

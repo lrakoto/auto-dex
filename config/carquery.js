@@ -1,9 +1,10 @@
 /**
  * International makes list + NHTSA model lookup.
  * CarQuery blocked server-side requests, so we use a curated static makes list
- * and NHTSA's getmodelsformake endpoint (which covers international brands).
+ * and NHTSA's model lists (which cover international brands), filtered to
+ * passenger vehicle types.
  */
-const axios = require('axios');
+const { cachedGet } = require('../lib/cache');
 
 const MAKES_LIST = [
   'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Bugatti','Buick',
@@ -58,8 +59,27 @@ const EXTRA_MODELS = {
   'Vauxhall': ['Astra', 'Cavalier', 'Corsa', 'Frontera', 'Grandland', 'Insignia', 'Mokka', 'Nova', 'Vectra', 'Zafira']
 };
 
+const VPIC = 'https://vpic.nhtsa.dot.gov/api/vehicles/';
+
+// NHTSA files motorcycles, buses, trailers and bare chassis under the same
+// makes as cars (Honda: ~300 motorcycles next to ~25 cars), and
+// getmodelsformake returns all of them. Its vehicletype filter is a LIKE
+// match on the type name, so these cover passenger cars, SUVs/minivans
+// ("Multipurpose Passenger Vehicle (MPV)") and pickups.
+const PASSENGER_TYPES = ['car', 'mpv', 'truck'];
+const NON_PASSENGER_TYPES = ['motorcycle', 'bus', 'trailer', 'low speed vehicle', 'off road vehicle', 'incomplete vehicle'];
+
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
-const modelsCache = {};
+// Keyed by whatever make a request names, so bounded: unknown makes from
+// crafted URLs must not grow it forever.
+const MAX_CACHED_MAKES = 200;
+const modelsCache = new Map(); // make -> { at, data }
+
+function rememberModels(make, data) {
+  if (modelsCache.has(make)) modelsCache.delete(make);
+  if (modelsCache.size >= MAX_CACHED_MAKES) modelsCache.delete(modelsCache.keys().next().value);
+  modelsCache.set(make, { at: Date.now(), data });
+}
 
 // Compare make names across sources that disagree on case, accents and
 // punctuation (NHTSA says "SKODA", "MERCEDES-BENZ", "ROLLS ROYCE").
@@ -85,35 +105,51 @@ async function getMakes() {
   return MAKES_LIST.map(display => ({ display, id: display.toLowerCase(), country: MAKE_COUNTRIES[display] || '' }));
 }
 
+// Model names NHTSA lists for a make under one vehicle type. Durably cached
+// (lib/cache.js), so the lists survive deploys and a stale copy covers an
+// NHTSA outage.
+async function getModelsByType(makeDisplay, type) {
+  // Query with accents stripped — NHTSA files Citroën as "Citroen"
+  const ascii = String(makeDisplay).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const data = await cachedGet(
+    `${VPIC}GetModelsForMakeYear/make/${encodeURIComponent(ascii)}/vehicletype/${encodeURIComponent(type)}?format=json`,
+    { ttl: CACHE_TTL, timeout: 8000 }
+  );
+  // NHTSA matches the make as a substring, so asking for "MG" also returns
+  // models from CHEMGUARD, MGM Trailers, TMG Trailer and friends. Keep only
+  // exact make matches (mergeModels stores our own spelling of the make, so
+  // casing stays stable — "SAAB"/"smart" come back inconsistently).
+  const wanted = normalizeMake(makeDisplay);
+  return (data.Results || [])
+    .filter(m => normalizeMake(m.Make_Name) === wanted)
+    .map(m => m.Model_Name);
+}
+
+// Passenger models (cars, SUVs/minivans, pickups) for a make, plus curated
+// extras. Only a complete answer is cached, so a failed lookup is retried.
 async function getModels(makeDisplay) {
-  const now = Date.now();
-  const cached = modelsCache[makeDisplay];
-  if (cached && (now - cached.at) < CACHE_TTL) return cached.data;
+  const cached = modelsCache.get(makeDisplay);
+  if (cached && (Date.now() - cached.at) < CACHE_TTL) return cached.data;
 
   const extras = EXTRA_MODELS[canonicalMake(makeDisplay)] || [];
-  try {
-    // Query with accents stripped — NHTSA files Citroën as "Citroen"
-    const ascii = makeDisplay.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const res = await axios.get(
-      `https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${encodeURIComponent(ascii)}?format=json`,
-      { timeout: 8000 }
-    );
-    // NHTSA matches the make as a substring, so asking for "MG" also returns
-    // models from CHEMGUARD, MGM Trailers, TMG Trailer and friends. Keep only
-    // exact make matches, and store our own spelling so casing stays stable
-    // ("SAAB"/"smart" come back inconsistently).
-    const wanted = normalizeMake(makeDisplay);
-    const names = (res.data.Results || [])
-      .filter(m => normalizeMake(m.Make_Name) === wanted)
-      .map(m => m.Model_Name);
-    const models = mergeModels(makeDisplay, names, extras);
-    modelsCache[makeDisplay] = { data: models, at: now };
-    return models;
-  } catch (err) {
-    console.log(`getModels error for ${makeDisplay}:`, err.message);
-    // Curated makes still work when NHTSA is down; not cached so NHTSA is retried
-    return mergeModels(makeDisplay, [], extras);
+  const lists = await Promise.allSettled(PASSENGER_TYPES.map(type => getModelsByType(makeDisplay, type)));
+  const failed = lists.filter(r => r.status === 'rejected');
+  // Curated makes still work when NHTSA is down
+  const models = mergeModels(
+    makeDisplay,
+    lists.flatMap(r => (r.status === 'fulfilled' ? r.value : [])),
+    extras
+  );
+  if (failed.length) {
+    console.log(`getModels error for ${makeDisplay}:`, failed[0].reason.message);
+  } else {
+    rememberModels(makeDisplay, models);
   }
+  return models;
+}
+
+function clearModelsCache() {
+  modelsCache.clear();
 }
 
 // Dedupe case-insensitively (NHTSA "Octavia" vs curated "Octavia"), keeping
@@ -130,4 +166,7 @@ function mergeModels(make, ...lists) {
   return models.sort((a, b) => a.model.localeCompare(b.model));
 }
 
-module.exports = { MAKES_LIST, getMakes, getModels, normalizeMake, canonicalMake, getMakeCountry };
+module.exports = {
+  MAKES_LIST, PASSENGER_TYPES, NON_PASSENGER_TYPES,
+  getMakes, getModels, getModelsByType, clearModelsCache, normalizeMake, canonicalMake, getMakeCountry
+};

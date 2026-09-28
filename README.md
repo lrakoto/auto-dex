@@ -25,7 +25,7 @@ threeohfivestudios.com
 
 ## Introduction
 
-AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information and pulls images from the Unsplash API at intervals of 50 per hour due to limits on the free API.
+AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information and pulls images from the Unsplash API, 45 searches per hourly run to stay under the free tier's 50 per hour.
 
 ## Unsplash API pull
 
@@ -132,6 +132,7 @@ async function getCarData() {
 | DELETE | /cars/favorites/delete/:id | cars.js | Remove favorite |
 | PUT | /cars/favorites/edit/:id | cars.js | Update favorite image |
 | GET | /cars/explore | cars.js | Explore by decade, country, make, photos-only |
+| GET | /cars/timeline | cars.js | Every dated model of a make on one year axis (`?make=`) |
 | GET | /cars/compare | cars.js | Side-by-side compare (`?c=Make\|Model`, up to 3) |
 | POST | /cars/propose-image | cars.js | Propose a photo for any car's gallery |
 | POST | /cars/spot | cars.js | "Spotted it" check-in (Dex) |
@@ -149,6 +150,9 @@ async function getCarData() {
 | DELETE | /garage/spot/:id | garage.js | Remove a spot |
 | DELETE | /garage/admin/image/:id | garage.js | Remove a gallery photo (admin) |
 | GET | /u/:username | profile.js | Public garage page |
+| GET | /play | play.js | Who's That Car? photo quiz |
+| POST | /play/guess | play.js | Answer a round (JSON for fetch, redirect without JS) |
+| POST | /play/skip | play.js | Skip to a new car (ends the streak) |
 | GET | /garage/admin | garage.js | Admin panel (admin only) |
 
 
