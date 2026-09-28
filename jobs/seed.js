@@ -1,6 +1,7 @@
 // Seed all makes from the international list into the DB so Unsplash can pick them up.
 // Runs once on startup in the background — skips makes already in DB, adds a small
-// delay between makes to avoid hammering NHTSA.
+// delay between makes to avoid hammering NHTSA. Motorcycle makes are seeded with
+// their motorcycles; jobs/vehicleTypes.js adds the other type a make has.
 const db = require('../models');
 const carquery = require('../config/carquery');
 const { PLACEHOLDER_URL } = require('../lib/constants');
@@ -18,7 +19,8 @@ async function seedAllMakes() {
     for (const make of makes) {
       if (seeded.has(make.display)) continue; // already seeded
       try {
-        const models = await carquery.getModels(make.display);
+        const type = make.motorcyclesOnly ? 'motorcycle' : 'car';
+        const models = await carquery.getModels(make.display, { type });
         if (models.length > 0) {
           // Single INSERT ... ON CONFLICT DO NOTHING per make instead of a
           // findOrCreate round-trip per model. Relies on the cars(make, model)
@@ -29,7 +31,8 @@ async function seedAllMakes() {
               model: m.model,
               image: PLACEHOLDER_URL,
               favcount: 0,
-              updated_img: false
+              updated_img: false,
+              vehicle_type: type
             })),
             { ignoreDuplicates: true }
           );

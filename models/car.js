@@ -27,7 +27,9 @@ module.exports = (sequelize, DataTypes) => {
     year_min: DataTypes.INTEGER,
     year_max: DataTypes.INTEGER,
     model_years: DataTypes.ARRAY(DataTypes.INTEGER),
-    years_checked: { type: DataTypes.BOOLEAN, defaultValue: false }
+    years_checked: { type: DataTypes.BOOLEAN, defaultValue: false },
+    // car | motorcycle | offroad | commercial — lib/vehicleTypes.js
+    vehicle_type: DataTypes.STRING(20)
   }, {
     sequelize,
     modelName: 'car',

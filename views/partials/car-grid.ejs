@@ -1,3 +1,4 @@
+<% var TYPE_BADGES = { motorcycle: 'Motorcycle', offroad: 'Off-road', commercial: 'Commercial' }; %>
 <div class="row" id="cars-row">
   <% if (carImg.length === 0) { %>
     <div class="empty-state">
@@ -10,6 +11,9 @@
     <% carImg.forEach((c, i) => { %>
       <div class="col-md-4 card-col">
         <div class="card mb-4 box-shadow">
+          <% if (typeof showTypes !== 'undefined' && showTypes && TYPE_BADGES[c.dataValues.vehicle_type]) { %>
+            <span class="card-badge card-badge--type"><%= TYPE_BADGES[c.dataValues.vehicle_type] %></span>
+          <% } %>
           <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>">
             <img class="card-img-top imgresp" src="<%= c.dataValues.image %>" alt="<%= c.dataValues.model %>">
           </a>

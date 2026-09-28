@@ -8,17 +8,32 @@
   var yearSelect  = document.getElementById('yearSelect');
   if (!makeSelect || !modelSelect || !yearSelect) return;
 
+  function option(value) {
+    var opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = value;
+    return opt;
+  }
+
   function fill(select, placeholder, values) {
     select.innerHTML = '';
     var first = document.createElement('option');
     first.value = '';
     first.textContent = placeholder;
     select.appendChild(first);
-    values.forEach(function (value) {
-      var opt = document.createElement('option');
-      opt.value = value;
-      opt.textContent = value;
-      select.appendChild(opt);
+    values.forEach(function (value) { select.appendChild(option(value)); });
+  }
+
+  // Models come grouped by vehicle type ("Cars", "Motorcycles"); a make with
+  // only one kind gets a plain list
+  function fillGroups(select, placeholder, groups) {
+    if (groups.length < 2) return fill(select, placeholder, groups.length ? groups[0].models : []);
+    fill(select, placeholder, []);
+    groups.forEach(function (group) {
+      var el = document.createElement('optgroup');
+      el.label = group.label;
+      group.models.forEach(function (value) { el.appendChild(option(value)); });
+      select.appendChild(el);
     });
   }
 
@@ -52,8 +67,8 @@
     yearSelect.disabled = true;
     if (!make) { fill(modelSelect, 'Select a make first', []); return Promise.resolve(); }
     return getJSON('/garage/models?make=' + encodeURIComponent(make))
-      .then(function (models) {
-        fill(modelSelect, 'Select a model', models);
+      .then(function (data) {
+        fillGroups(modelSelect, 'Select a model', data.groups || []);
         modelSelect.disabled = false;
       })
       .catch(function () { fill(modelSelect, 'Could not load models', []); });

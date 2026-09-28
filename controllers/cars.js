@@ -11,7 +11,7 @@ const carquery = require('../config/carquery'); // getModels via the module so t
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/unsplash');
 const { getGallery, vote } = require('../lib/gallery');
-const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar } = require('../lib/catalog');
+const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
 const { getMakeProgress } = require('../lib/dex');
 
@@ -21,6 +21,12 @@ const PAGE_SIZE = 12;
 const MAX_COMPARE = 3;
 
 const carPath = (make, model) => `/cars/car?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+
+const TYPE_KEYS = Object.keys(carquery.VEHICLE_TYPES);
+// Listing nouns per vehicle type ("Honda Motorcycles")
+const TYPE_NOUNS = { car: 'Models', motorcycle: 'Motorcycles', offroad: 'Off-road Vehicles', commercial: 'Commercial Vehicles' };
+// "&type=motorcycle" on every URL but the default (cars)
+const typeParam = type => (type && type !== 'car' ? `&type=${type}` : '');
 
 function notFound(res) {
   return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
@@ -79,9 +85,10 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// GET /cars/explore — cross-make browsing: decade, country, make, photos-only,
-// sort. Decades use the NHTSA model years (jobs/years.js), so cars whose make
-// hasn't been scanned yet only appear when no decade is picked.
+// GET /cars/explore — cross-make browsing: vehicle type, decade, country,
+// make, photos-only, sort. Decades use the NHTSA model years (jobs/years.js),
+// so cars whose make hasn't been scanned yet only appear when no decade is
+// picked. Cars unless another type (or all) is chosen.
 const EXPLORE_SORTS = {
   popular: [['favcount', 'DESC'], ['year_max', 'DESC NULLS LAST'], ['model', 'ASC']],
   newest:  [['year_max', 'DESC NULLS LAST'], ['favcount', 'DESC']],
@@ -91,24 +98,26 @@ const EXPLORE_SORTS = {
 
 router.get('/explore', async (req, res) => {
   const { Op } = require('sequelize');
-  const { MAKES_LIST } = require('../config/carquery');
+  const MAKES = carquery.ALL_MAKES;
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const str = v => (typeof v === 'string' ? v : '');
   const firstDecade = 1980;
   const lastDecade = Math.floor(new Date().getFullYear() / 10) * 10;
   const decades = [];
   for (let d = lastDecade; d >= firstDecade; d -= 10) decades.push(d);
-  const countries = [...new Set(MAKES_LIST.map(getMakeCountry).filter(Boolean))].sort();
+  const countries = [...new Set(MAKES.map(getMakeCountry).filter(Boolean))].sort();
 
   const decade = decades.includes(parseInt(req.query.decade, 10)) ? parseInt(req.query.decade, 10) : null;
   const country = countries.includes(str(req.query.country)) ? str(req.query.country) : '';
-  const make = MAKES_LIST.includes(str(req.query.make)) ? str(req.query.make) : '';
+  const make = MAKES.includes(str(req.query.make)) ? str(req.query.make) : '';
+  const type = req.query.type === 'all' ? 'all' : (TYPE_KEYS.includes(req.query.type) ? req.query.type : 'car');
   const photos = req.query.photos === '1';
   const sort = EXPLORE_SORTS[req.query.sort] ? req.query.sort : 'popular';
 
   const where = {};
-  const makes = MAKES_LIST.filter(m => (!make || m === make) && (!country || getMakeCountry(m) === country));
+  const makes = MAKES.filter(m => (!make || m === make) && (!country || getMakeCountry(m) === country));
   where.make = { [Op.in]: makes };
+  if (type !== 'all') Object.assign(where, vehicleTypeWhere(type));
   if (decade) {
     const span = [];
     for (let y = decade; y < decade + 10; y++) span.push(y);
@@ -126,6 +135,7 @@ router.get('/explore', async (req, res) => {
     rows.forEach(r => { r.dataValues.years = carinfo.formatYears(r); });
 
     const params = new URLSearchParams();
+    if (type !== 'car') params.set('type', type);
     if (decade) params.set('decade', decade);
     if (country) params.set('country', country);
     if (make) params.set('make', make);
@@ -133,9 +143,11 @@ router.get('/explore', async (req, res) => {
     if (sort !== 'popular') params.set('sort', sort);
     const qs = params.toString();
     const label = [decade ? decade + 's' : '', country, make].filter(Boolean).join(' ') || 'those filters';
+    const noun = type === 'all' ? 'Vehicles' : (type === 'car' ? 'Cars' : carquery.VEHICLE_TYPES[type].label);
     const viewData = {
       search: label,
       carImg: rows,
+      showTypes: type === 'all',
       page,
       total: count,
       totalPages: Math.ceil(count / PAGE_SIZE),
@@ -146,10 +158,11 @@ router.get('/explore', async (req, res) => {
       return res.render('partials/car-grid', viewData);
     }
     Object.assign(viewData, {
-      decades, countries, makesList: MAKES_LIST,
-      filters: { decade, country, make, photos, sort },
-      pageTitle: `Explore ${label === 'those filters' ? 'Cars' : label + ' Cars'} — AutoDex`,
-      pageDescription: 'Browse cars across every make by decade, country of origin and popularity.',
+      decades, countries, makesList: MAKES,
+      vehicleTypes: TYPE_KEYS.map(k => ({ key: k, label: carquery.VEHICLE_TYPES[k].label })),
+      filters: { decade, country, make, photos, sort, type },
+      pageTitle: `Explore ${label === 'those filters' ? noun : label + ' ' + noun} — AutoDex`,
+      pageDescription: 'Browse cars and motorcycles across every make by decade, country of origin and popularity.',
       canonicalPath: '/cars/explore' + (qs ? '?' + qs : ''),
       // Filter combinations are endless; only the bare page is worth indexing
       noindex: !!qs || page > 1
@@ -161,34 +174,44 @@ router.get('/explore', async (req, res) => {
   }
 });
 
-// GET /cars/timeline?make=Porsche — every dated model of a make on one year
-// axis, from the NHTSA model years (jobs/years.js)
+// GET /cars/timeline?make=Porsche[&type=motorcycle] — every dated model of
+// one vehicle type for a make on one year axis, from the NHTSA model years
+// (jobs/years.js)
 router.get('/timeline', async (req, res) => {
   const requested = typeof req.query.make === 'string' ? req.query.make.trim() : '';
+  const type = TYPE_KEYS.includes(req.query.type) ? req.query.type : 'car';
   try {
     const make = await lookupMake(requested);
     if (!make) return notFound(res);
-    if (make !== requested) return res.redirect(301, `/cars/timeline?make=${encodeURIComponent(make)}`);
+    if (make !== requested) return res.redirect(301, `/cars/timeline?make=${encodeURIComponent(make)}${typeParam(type)}`);
 
     const { Op } = require('sequelize');
+    const listedCars = type === 'car' && carquery.MAKES_LIST.includes(make);
     const [listed, dated] = await Promise.all([
-      carquery.getModels(make),
-      db.car.findAll({ attributes: ['make', 'model', 'model_years'], where: { make, year_min: { [Op.ne]: null } } })
+      listedCars ? carquery.getModels(make) : [],
+      db.car.findAll({
+        attributes: ['make', 'model', 'model_years'],
+        where: { make, year_min: { [Op.ne]: null }, ...vehicleTypeWhere(type) }
+      })
     ]);
-    // Listed passenger models only (older rows can be motorcycles). An empty
-    // list means NHTSA couldn't be reached, not that nothing is listed.
+    // Cars of car makes: NHTSA-listed models only, since rows not classified
+    // yet can be motorcycles. An empty list means NHTSA couldn't be reached,
+    // not that nothing is listed.
     const names = new Set(listed.map(m => m.model));
     const timeline = buildTimeline(names.size ? dated.filter(c => names.has(c.model)) : dated);
+    const typeWord = type === 'car' ? '' : carquery.VEHICLE_TYPES[type].singular + ' ';
 
     res.render('cars/timeline', {
-      make, timeline,
+      make, timeline, type, typeWord,
+      typeParam: typeParam(type),
+      noun: TYPE_NOUNS[type].toLowerCase(),
       country: getMakeCountry(make),
       carPath,
-      pageTitle: `${make} Timeline — Every Model, Year by Year — AutoDex`,
+      pageTitle: `${make} ${typeWord}Timeline — Every Model, Year by Year — AutoDex`,
       pageDescription: timeline
         ? `${timeline.rows.length} ${make} models on one timeline, ${timeline.start}–${timeline.end}: when each was built, the gaps, and what's still on sale.`
         : `The ${make} model timeline on AutoDex.`,
-      canonicalPath: `/cars/timeline?make=${encodeURIComponent(make)}`,
+      canonicalPath: `/cars/timeline?make=${encodeURIComponent(make)}${typeParam(type)}`,
       // Nothing to show until the year scan reaches this make
       noindex: !timeline
     });
@@ -198,60 +221,102 @@ router.get('/timeline', async (req, res) => {
   }
 });
 
-// GET /cars?selectmake=Toyota[&year=2005][&page=2] — models for a make
+// GET /cars?selectmake=Honda[&type=motorcycle][&year=2005][&page=2] — the
+// models of one vehicle type for a make, with a tab per type the make has.
+// Cars of curated car makes come from NHTSA's list (it includes models the
+// catalog hasn't seeded yet); everything else from classified catalog rows.
 router.get('/', async (req, res) => {
   const requested = typeof req.query.selectmake === 'string' ? req.query.selectmake.trim() : '';
   if (!requested) return res.redirect('/makes');
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const year = parseInt(req.query.year, 10) || null;
+  const wantedType = TYPE_KEYS.includes(req.query.type) ? req.query.type : null;
   try {
-    const { Op } = require('sequelize');
+    const { Op, fn, col } = require('sequelize');
     // Unknown makes 404 before anything asks NHTSA about them; other
     // spellings ("skoda", "TOYOTA") redirect to the catalog's
     const make = await lookupMake(requested);
     if (!make) return notFound(res);
     if (make !== requested) {
-      return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
-    }
-    let cqModels = await carquery.getModels(make);
-
-    // Year filter + dropdown come from the catalog's NHTSA model years
-    // (jobs/years.js), for listed models only — rows seeded before the
-    // vehicle-type filter include motorcycles, not yet classified.
-    // Models with no year data drop out when a year is picked.
-    const listed = new Set(cqModels.map(m => m.model));
-    const dated = (await db.car.findAll({
-      attributes: ['model', 'model_years', 'year_min', 'year_max'],
-      where: { make, year_min: { [Op.ne]: null } }
-    })).filter(c => listed.has(c.model));
-    const allYears = new Set();
-    dated.forEach(c => (c.model_years || []).forEach(y => allYears.add(y)));
-    const yearOptions = [...allYears].sort((a, b) => b - a);
-    if (year) {
-      const inYear = new Set(dated.filter(c => (c.model_years || []).includes(year)).map(c => c.model));
-      cqModels = cqModels.filter(m => inYear.has(m.model));
+      return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${wantedType ? typeParam(wantedType) : ''}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
     }
 
-    // Paginate the NHTSA model list first, then fetch DB rows for this page only
-    const total = cqModels.length;
-    const totalPages = Math.ceil(total / PAGE_SIZE);
-    const pageModels = cqModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-    const dbCars = pageModels.length === 0 ? [] : await db.car.findAll({
-      where: { make, model: { [Op.in]: pageModels.map(m => m.model) } }
+    const listedCars = carquery.MAKES_LIST.includes(make);
+    const [nhtsaCars, typeRows] = await Promise.all([
+      listedCars ? carquery.getModels(make) : [],
+      db.car.findAll({
+        attributes: ['vehicle_type', [fn('COUNT', col('id')), 'n']],
+        where: { make },
+        group: ['vehicle_type'],
+        raw: true
+      })
+    ]);
+    // Unclassified rows count as cars until jobs/vehicleTypes.js gets to them
+    const counts = {};
+    typeRows.forEach(r => {
+      const t = r.vehicle_type || 'car';
+      counts[t] = (counts[t] || 0) + parseInt(r.n, 10);
     });
-    const byModel = {};
-    dbCars.forEach(c => { byModel[c.model] = c; });
+    if (listedCars) counts.car = nhtsaCars.length;
+    const tabs = TYPE_KEYS.filter(t => counts[t] > 0)
+      .map(t => ({ key: t, label: carquery.VEHICLE_TYPES[t].label, count: counts[t] }));
+    const type = wantedType || (tabs[0] ? tabs[0].key : (carquery.MOTORCYCLE_MAKES.includes(make) ? 'motorcycle' : 'car'));
 
-    const pagedCars = pageModels.map(c => {
-      const row = byModel[c.model];
-      if (row) {
-        row.dataValues.years = carinfo.formatYears(row);
-        return row;
+    let pagedCars, total, yearOptions;
+    if (type === 'car' && listedCars) {
+      let cqModels = nhtsaCars;
+      // Year filter + dropdown come from the catalog's NHTSA model years
+      // (jobs/years.js), for listed models only. Models with no year data
+      // drop out when a year is picked.
+      const listed = new Set(cqModels.map(m => m.model));
+      const dated = (await db.car.findAll({
+        attributes: ['model', 'model_years', 'year_min', 'year_max'],
+        where: { make, year_min: { [Op.ne]: null } }
+      })).filter(c => listed.has(c.model));
+      const allYears = new Set();
+      dated.forEach(c => (c.model_years || []).forEach(y => allYears.add(y)));
+      yearOptions = [...allYears].sort((a, b) => b - a);
+      if (year) {
+        const inYear = new Set(dated.filter(c => (c.model_years || []).includes(year)).map(c => c.model));
+        cqModels = cqModels.filter(m => inYear.has(m.model));
       }
-      return { dataValues: { make: c.make, model: c.model, image: PLACEHOLDER_URL, favcount: 0, years: null } };
-    });
-    const baseUrl = `/cars?selectmake=${encodeURIComponent(make)}${year ? '&year=' + year : ''}&page=`;
+
+      // Paginate the NHTSA model list first, then fetch DB rows for this page only
+      total = cqModels.length;
+      const pageModels = cqModels.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+      const dbCars = pageModels.length === 0 ? [] : await db.car.findAll({
+        where: { make, model: { [Op.in]: pageModels.map(m => m.model) } }
+      });
+      const byModel = {};
+      dbCars.forEach(c => { byModel[c.model] = c; });
+      pagedCars = pageModels.map(c => {
+        const row = byModel[c.model];
+        if (row) {
+          row.dataValues.years = carinfo.formatYears(row);
+          return row;
+        }
+        return { dataValues: { make: c.make, model: c.model, image: PLACEHOLDER_URL, favcount: 0, years: null } };
+      });
+    } else {
+      const where = { make, ...vehicleTypeWhere(type) };
+      const dated = await db.car.findAll({ attributes: ['model_years'], where: { ...where, year_min: { [Op.ne]: null } } });
+      const allYears = new Set();
+      dated.forEach(c => (c.model_years || []).forEach(y => allYears.add(y)));
+      yearOptions = [...allYears].sort((a, b) => b - a);
+      if (year) where.model_years = { [Op.contains]: [year] };
+      const { rows, count } = await db.car.findAndCountAll({
+        where,
+        order: [['model', 'ASC']],
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE
+      });
+      rows.forEach(r => { r.dataValues.years = carinfo.formatYears(r); });
+      pagedCars = rows;
+      total = count;
+    }
+
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const baseUrl = `/cars?selectmake=${encodeURIComponent(make)}${typeParam(type)}${year ? '&year=' + year : ''}&page=`;
     const viewData = { search: make, carImg: pagedCars, page, totalPages, total, baseUrl };
     if (req.query.partial === '1') {
       res.locals.layout = false;
@@ -265,13 +330,15 @@ router.get('/', async (req, res) => {
       if (catalogTotal) dexProgress = { spotted: await getMakeProgress(req.user.id, make), total: catalogTotal };
     }
 
+    const noun = TYPE_NOUNS[type];
     Object.assign(viewData, {
-      year, yearOptions, dexProgress,
+      year, yearOptions, dexProgress, type, tabs,
+      typeParam: typeParam(type),
       // Each make is its own page to search engines (req.path alone made
       // every make canonicalize to /cars). Year filters point at the make.
-      canonicalPath: `/cars?selectmake=${encodeURIComponent(make)}${page > 1 && !year ? '&page=' + page : ''}`,
-      pageTitle: `${make} Models${year ? ' (' + year + ')' : ''} — AutoDex`,
-      pageDescription: `Browse ${total} ${make} models${year ? ' from ' + year : ''} on AutoDex.`
+      canonicalPath: `/cars?selectmake=${encodeURIComponent(make)}${typeParam(type)}${page > 1 && !year ? '&page=' + page : ''}`,
+      pageTitle: `${make} ${noun}${year ? ' (' + year + ')' : ''} — AutoDex`,
+      pageDescription: `Browse ${total} ${make} ${noun.toLowerCase()}${year ? ' from ' + year : ''} on AutoDex.`
     });
     res.render('cars', viewData);
   } catch (err) {
@@ -290,16 +357,16 @@ router.get('/', async (req, res) => {
       // ("toyota", "supra") redirect to the catalog's.
       const hit = await lookupCatalogCar(qMake, qModel);
       if (!hit) return notFound(res);
-      const { make, model, car } = hit;
+      const { make, model, car, type } = hit;
       if (make !== qMake || model !== qModel) return res.redirect(301, carPath(make, model));
       const favcount = car ? car.favcount : 0;
       const { Op } = require('sequelize');
 
       // External lookups and the viewer's state are independent — run them together
       const [related, wiki, carSpecs, favorite, mySpotCount, gallery] = await Promise.all([
-        // Other models from the same make, the ones with photos first
+        // Other models of the same make and type, the ones with photos first
         db.car.findAll({
-          where: { make, model: { [Op.ne]: model } },
+          where: { make, model: { [Op.ne]: model }, ...vehicleTypeWhere(type) },
           order: [[db.sequelize.literal(`"car"."image" = ${db.sequelize.escape(PLACEHOLDER_URL)}`), 'ASC'], ['favcount', 'DESC']],
           limit: 6
         }),
@@ -344,6 +411,8 @@ router.get('/', async (req, res) => {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, userFavorite,
         gallery, mySpotCount, heroCredit,
         years: carinfo.formatYears(car),
+        typeLabel: type === 'car' ? null : carquery.VEHICLE_TYPES[type].singular,
+        typeParam: typeParam(type),
         carDbId: car ? car.id : null,
         carUpdatedImg: car ? !!car.updated_img : false,
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,

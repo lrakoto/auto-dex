@@ -131,13 +131,20 @@ router.get('/makes', async (req, res) => {
 });
 
 // GET /garage/models?make=Toyota — returns models for a make
+// → { groups: [{ label: 'Cars', models: [...] }, { label: 'Motorcycles', ... }] },
+// only the groups the make has
 router.get('/models', async (req, res) => {
   try {
     const make = req.query.make;
     if (!make) return res.status(400).json({ error: 'make is required' });
-    const { getModels } = require('../config/carquery');
-    const models = await getModels(make);
-    res.json(models.map(m => m.model));
+    const carquery = require('../config/carquery');
+    const types = ['car', 'motorcycle'];
+    const lists = await Promise.all(types.map(type => carquery.getModels(make, { type })));
+    res.json({
+      groups: types
+        .map((type, i) => ({ label: carquery.VEHICLE_TYPES[type].label, models: lists[i].map(m => m.model) }))
+        .filter(g => g.models.length)
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch models' });
   }

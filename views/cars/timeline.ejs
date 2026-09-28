@@ -1,7 +1,7 @@
 <section class="jumbotron text-center">
   <div class="container">
     <p class="eyebrow"><%= country || 'Timeline' %></p>
-    <h1 class="jumbotron-heading"><%= make %> Timeline</h1>
+    <h1 class="jumbotron-heading"><%= make %> <%= typeWord %>Timeline</h1>
     <% if (timeline) { %>
       <p class="lead text-muted">
         <%= timeline.rows.length %> model<%= timeline.rows.length === 1 ? '' : 's' %> ·
@@ -12,7 +12,7 @@
       <p class="lead text-muted">No model years for <%= make %> yet — they fill in as the daily NHTSA scan works through the catalog.</p>
     <% } %>
     <div class="browse-tools">
-      <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary btn-sm">&larr; All <%= make %> models</a>
+      <a href="/cars?selectmake=<%= encodeURIComponent(make) %><%= typeParam %>" class="btn btn-outline-secondary btn-sm">&larr; All <%= make %> <%= noun %></a>
     </div>
   </div>
 </section>
@@ -65,7 +65,7 @@
       <div class="empty-icon">⧗</div>
       <h3>No timeline yet</h3>
       <p>Check back once the model-year scan has reached <%= make %>.</p>
-      <a href="/cars?selectmake=<%= encodeURIComponent(make) %>" class="btn btn-outline-secondary mt-3">Browse <%= make %> models</a>
+      <a href="/cars?selectmake=<%= encodeURIComponent(make) %><%= typeParam %>" class="btn btn-outline-secondary mt-3">Browse <%= make %> <%= noun %></a>
     </div>
   <% } %>
 </div>

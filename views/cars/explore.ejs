@@ -1,8 +1,17 @@
 <section class="jumbotron text-center">
   <div class="container">
     <h1 class="jumbotron-heading">Explore</h1>
-    <p class="lead text-muted">Every make at once. Try the 1990s + Japan.</p>
+    <p class="lead text-muted">Every make at once. Try the 1990s + Japan, or switch to motorcycles.</p>
     <form action="/cars/explore" method="GET" class="explore-filters">
+      <label>
+        <span>Type</span>
+        <select name="type" class="form-control form-control-sm auto-submit">
+          <% vehicleTypes.forEach(t => { %>
+            <option value="<%= t.key %>" <%= filters.type === t.key ? 'selected' : '' %>><%= t.label %></option>
+          <% }) %>
+          <option value="all" <%= filters.type === 'all' ? 'selected' : '' %>>All vehicles</option>
+        </select>
+      </label>
       <label>
         <span>Decade</span>
         <select name="decade" class="form-control form-control-sm auto-submit">
@@ -45,7 +54,8 @@
       </label>
       <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
     </form>
-    <p class="explore-count"><%= total.toLocaleString('en-US') %> car<%= total === 1 ? '' : 's' %></p>
+    <% var countNoun = { car: 'car', motorcycle: 'motorcycle', offroad: 'off-road vehicle', commercial: 'commercial vehicle' }[filters.type] || 'vehicle'; %>
+    <p class="explore-count"><%= total.toLocaleString('en-US') %> <%= countNoun %><%= total === 1 ? '' : 's' %></p>
   </div>
 </section>
 
