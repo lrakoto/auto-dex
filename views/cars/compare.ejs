@@ -37,7 +37,7 @@
             <% cars.forEach(c => { %>
               <th scope="col">
                 <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="compare-car">
-                  <img src="<%= c.image %>" alt="<%= c.make %> <%= c.model %>">
+                  <img src="<%= cardPhoto(c.image) %>" alt="<%= c.make %> <%= c.model %>">
                   <span class="compare-make"><%= c.make %></span>
                   <span class="compare-model"><%= c.model %></span>
                 </a>

@@ -9,7 +9,7 @@ const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
-const { photoCredit } = require('../lib/unsplash');
+const { photoCredit } = require('../lib/photos');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
@@ -374,7 +374,7 @@ router.get('/', async (req, res) => {
         carinfo.getFuelSpecs(make, model, car && car.year_max),
         req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
         req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
-        car ? getGallery(car.id, req.user && req.user.id) : []
+        car ? getGallery(car.id, req.user && req.user.id, car.image) : []
       ]);
       const relatedCars = related.map(c => c.toJSON());
       const userFavorite = favorite ? favorite.toJSON() : null;

@@ -26,7 +26,7 @@ and, for anyone whose own policy already permits it, where the terms live.
 
 ## Introduction
 
-AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information and pulls images from the Unsplash API, 45 searches per hourly run to stay under the free tier's 50 per hour.
+AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information. Photos come from Wikipedia first — the lead image of each car's article, credited to its author and license on Wikimedia Commons — with the Unsplash API as the fallback, 45 searches per hourly run to stay under the free tier's 50 per hour.
 
 ## Unsplash API pull
 

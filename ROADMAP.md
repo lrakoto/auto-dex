@@ -49,7 +49,7 @@ Check an item off in the same PR that finishes it. Research behind this list
   car pages.
 
 ### R2 — Accurate photos from Wikipedia / Wikimedia Commons
-- [ ] Use the lead image of the car's Wikipedia article as the default hero
+- [x] Use the lead image of the car's Wikipedia article as the default hero
   (the summary endpoint `lib/carinfo.js` already calls returns it as
   `originalimage`). Record author and license from the Commons `imageinfo`
   API (`extmetadata`: Artist, LicenseShortName, LicenseUrl) and show them in
@@ -59,6 +59,9 @@ Check an item off in the same PR that finishes it. Research behind this list
   ("EQB-Class" vs "Mercedes-Benz EQB"); better title matching raises coverage.
 - Unsplash stays as the fallback. New photos join the gallery, so votes still
   pick the hero.
+- Shipped matching is strict (make and whole model in the title; search
+  results must name the model exactly). On the dev catalog it found photos
+  for 19 of 30 random cars and 5 of 10 motorcycles.
 
 ### R3 — Safety and owner-reported problems on car pages
 - [ ] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
@@ -126,6 +129,11 @@ Check an item off in the same PR that finishes it. Research behind this list
   Reached", which is wrong for every car still waiting for a photo.
 - [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
   up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
+- [ ] Wikipedia photos for trim-level names: BMW "525i" or "750Li" live in
+  series articles ("BMW 5 Series"). A small model → article map in
+  `lib/wikimedia.js` would cover them.
+- [ ] Re-check Wikipedia now and then for cars it had nothing for
+  (`cars.wiki_checked` is a single pass; articles gain photos over time).
 
 ## Sources
 

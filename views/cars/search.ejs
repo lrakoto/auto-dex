@@ -30,7 +30,7 @@
             <div class="card mb-4">
               <% if (TYPE_BADGES[c.vehicle_type]) { %><span class="card-badge card-badge--type"><%= TYPE_BADGES[c.vehicle_type] %></span><% } %>
               <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
-                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+                <img class="card-img-top imgresp" src="<%= cardPhoto(c.image) %>" alt="<%= c.model %>">
               </a>
               <div class="card-body">
                 <p class="card-text mb-0">
