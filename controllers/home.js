@@ -79,7 +79,7 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const siteUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
     const { Op } = require('sequelize');
-    const [makes, cars, publicGarages, datedMakes] = await Promise.all([
+    const [makes, cars, publicGarages, datedMakes, bikeMakes] = await Promise.all([
       getKnownMakes(),
       db.car.findAll({
         attributes: ['make', 'model', 'updatedAt'],
@@ -92,7 +92,9 @@ router.get('/sitemap.xml', async (req, res) => {
         limit: SITEMAP_MODEL_LIMIT
       }),
       // Makes with a timeline to show
-      db.car.findAll({ attributes: ['make'], where: { year_min: { [Op.ne]: null } }, group: ['make'] })
+      db.car.findAll({ attributes: ['make'], where: { year_min: { [Op.ne]: null } }, group: ['make'] }),
+      // Makes with a motorcycle listing
+      db.car.findAll({ attributes: ['make'], where: { vehicle_type: 'motorcycle' }, group: ['make'] })
     ]);
     const timelineMakes = makes.filter(m => datedMakes.some(r => r.make === m));
 
@@ -101,8 +103,12 @@ router.get('/sitemap.xml', async (req, res) => {
       { loc: '/makes', priority: '0.8' },
       { loc: '/cars/explore', priority: '0.6' },
       { loc: '/play', priority: '0.6' },
-      ...makes.map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
+      // Motorcycle makes are listed once, at their canonical &type=motorcycle URL below
+      ...makes.filter(m => !carquery.MOTORCYCLE_MAKES.includes(m))
+        .map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
       ...timelineMakes.map(m => ({ loc: `/cars/timeline?make=${encodeURIComponent(m)}`, priority: '0.5' })),
+      ...makes.filter(m => bikeMakes.some(r => r.make === m))
+        .map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}&type=motorcycle`, priority: '0.5' })),
       ...cars.map(c => ({
         loc: `/cars/car?make=${encodeURIComponent(c.make)}&model=${encodeURIComponent(c.model)}`,
         priority: '0.5',
@@ -261,30 +267,54 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// GET /makes — manufacturers on three shelves: cars (the curated car makes,
+// plus any other make whose catalog rows are mostly cars), motorcycles (every
+// make with motorcycles, Honda and BMW included), and trucks, buses and more
 router.get('/makes', async (req, res) => {
   try {
-    const [dbMakes, cqMakes] = await Promise.all([
-      db.car.findAll({
-        attributes: ['make', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'modelCount']],
-        group: ['make']
-      }),
-      carquery.getMakes()
-    ]);
-    const countMap = {};
-    dbMakes.forEach(m => { countMap[m.make] = parseInt(m.getDataValue('modelCount')); });
+    const { fn, col } = db.Sequelize;
+    const rows = await db.car.findAll({
+      attributes: ['make', 'vehicle_type', [fn('COUNT', col('id')), 'n']],
+      group: ['make', 'vehicle_type'],
+      raw: true
+    });
+    // make -> { car, motorcycle, offroad, commercial }; unclassified rows count as cars
+    const counts = {};
+    rows.forEach(r => {
+      const c = counts[r.make] || (counts[r.make] = {});
+      const t = r.vehicle_type || 'car';
+      c[t] = (c[t] || 0) + parseInt(r.n, 10);
+    });
 
-    // Union of CarQuery makes + any DB makes not already included
-    const allNames = new Set(cqMakes.map(m => m.display));
-    Object.keys(countMap).forEach(m => allNames.add(m));
-    const makes = Array.from(allNames).sort((a, b) => a.localeCompare(b)).map(name => ({
-      make: name,
-      modelCount: countMap[name] != null ? countMap[name] : null
-    }));
+    const carMakes = new Set(carquery.MAKES_LIST);
+    const bikeMakes = new Set(carquery.MOTORCYCLE_MAKES);
+    const shelves = [
+      { id: 'cars', title: 'Cars', makes: [] },
+      { id: 'motorcycles', title: 'Motorcycles', makes: [] },
+      { id: 'more', title: 'Trucks, buses and more', makes: [] }
+    ];
+    const plural = (n, word) => (n ? `${n.toLocaleString('en-US')} ${word}` : 'Browse');
+    for (const make of new Set([...carquery.ALL_MAKES, ...Object.keys(counts)])) {
+      const c = counts[make] || {};
+      const [primary] = Object.entries(c).sort((a, b) => b[1] - a[1])[0] || ['car'];
+      const href = `/cars?selectmake=${encodeURIComponent(make)}`;
+      if (carMakes.has(make) || (!bikeMakes.has(make) && primary === 'car')) {
+        shelves[0].makes.push({ make, label: plural(c.car, 'models'), href });
+      }
+      if (bikeMakes.has(make) || c.motorcycle) {
+        shelves[1].makes.push({ make, label: plural(c.motorcycle, 'motorcycles'), href: href + '&type=motorcycle' });
+      }
+      if (!carMakes.has(make) && !bikeMakes.has(make) && primary !== 'car' && primary !== 'motorcycle') {
+        const total = Object.values(c).reduce((a, b) => a + b, 0);
+        shelves[2].makes.push({ make, label: plural(total, 'vehicles'), href });
+      }
+    }
+    shelves.forEach(sh => sh.makes.sort((a, b) => a.make.localeCompare(b.make)));
 
     res.render('makes', {
-      makes,
-      pageTitle: 'Browse Car Manufacturers — AutoDex',
-      pageDescription: `Browse ${makes.length} car manufacturers and their models on AutoDex.`
+      shelves,
+      pageTitle: 'Browse Car and Motorcycle Manufacturers — AutoDex',
+      pageDescription: `Browse ${shelves[0].makes.length} car makers and ${shelves[1].makes.length} motorcycle makers and their models on AutoDex.`
     });
   } catch (err) {
     console.log('MAKES ERROR:', err);

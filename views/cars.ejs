@@ -1,6 +1,15 @@
 <section class="jumbotron text-center">
     <div class="container">
       <h1 class="jumbotron-heading">Search Results for <%= search %></h1>
+      <% if (tabs.length > 1) { %>
+        <nav class="type-tabs" aria-label="<%= search %> vehicle types">
+          <% tabs.forEach(t => { %>
+            <a class="type-tab<%= t.key === type ? ' active' : '' %>" href="/cars?selectmake=<%= encodeURIComponent(search) %><%= t.key === 'car' ? '' : '&type=' + t.key %>"<% if (t.key === type) { %> aria-current="page"<% } %>>
+              <%= t.label %> <span class="type-count"><%= t.count.toLocaleString('en-US') %></span>
+            </a>
+          <% }) %>
+        </nav>
+      <% } %>
       <form action="/search" method="GET" class="d-flex justify-content-center align-items-end mt-4" style="gap:0.75rem;flex-wrap:wrap;max-width:480px;margin:1.5rem auto 0;">
         <div class="search-input-wrap" style="flex:1;min-width:200px;text-align:left;">
           <label for="q" style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:0.35rem;display:block;">Make or Model</label>
@@ -14,6 +23,7 @@
           <% if (yearOptions.length > 0) { %>
             <form action="/cars" method="GET" class="year-filter">
               <input type="hidden" name="selectmake" value="<%= search %>">
+              <% if (type !== 'car') { %><input type="hidden" name="type" value="<%= type %>"><% } %>
               <label for="yearFilter">Model year</label>
               <select id="yearFilter" name="year" class="form-control form-control-sm auto-submit">
                 <option value="">All years</option>
@@ -23,7 +33,7 @@
               </select>
               <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button></noscript>
             </form>
-            <a class="browse-link" href="/cars/timeline?make=<%= encodeURIComponent(search) %>">Timeline &rarr;</a>
+            <a class="browse-link" href="/cars/timeline?make=<%= encodeURIComponent(search) %><%= typeParam %>">Timeline &rarr;</a>
           <% } %>
           <% if (dexProgress) { %>
             <div class="dex-progress" title="Distinct <%= search %> models you've spotted">

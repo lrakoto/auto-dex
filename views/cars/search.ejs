@@ -23,10 +23,12 @@
         <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
       </div>
     <% } else { %>
+      <% var TYPE_BADGES = { motorcycle: 'Motorcycle', offroad: 'Off-road', commercial: 'Commercial' }; %>
       <div class="row">
         <% cars.forEach(function(c, i) { %>
           <div class="col-md-4 card-col">
             <div class="card mb-4">
+              <% if (TYPE_BADGES[c.vehicle_type]) { %><span class="card-badge card-badge--type"><%= TYPE_BADGES[c.vehicle_type] %></span><% } %>
               <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
                 <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
               </a>

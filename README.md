@@ -114,7 +114,7 @@ async function getCarData() {
 | GET | / | home.js | Home page |
 | GET | /search | home.js | Unified search (redirects to make/model/results) |
 | GET | /suggest | home.js | Autocomplete JSON |
-| GET | /makes | home.js | Browse manufacturers |
+| GET | /makes | home.js | Manufacturers, shelved as cars, motorcycles, and trucks/buses |
 | GET | /sitemap.xml | home.js | XML sitemap |
 | GET | /auth/login | auth.js | Login form |
 | GET | /auth/signup | auth.js | Signup form |
@@ -126,14 +126,14 @@ async function getCarData() {
 | GET/POST | /auth/forgot | auth.js | Request a password reset email |
 | GET | /auth/reset/:token | auth.js | Reset link (moves token into the session) |
 | GET/POST | /auth/reset | auth.js | Choose a new password |
-| GET | /cars | cars.js | Browse models for a make (paginated) |
+| GET | /cars | cars.js | Models for a make, one vehicle type per tab (`?selectmake=&type=motorcycle`) |
 | GET | /cars/search | cars.js | Text search results |
 | GET | /cars/car | cars.js | Car detail page |
 | POST | /cars/fav | cars.js | Add favorite (AJAX) |
 | DELETE | /cars/favorites/delete/:id | cars.js | Remove favorite |
 | PUT | /cars/favorites/edit/:id | cars.js | Update favorite image |
-| GET | /cars/explore | cars.js | Explore by decade, country, make, photos-only |
-| GET | /cars/timeline | cars.js | Every dated model of a make on one year axis (`?make=`) |
+| GET | /cars/explore | cars.js | Explore by vehicle type, decade, country, make, photos-only |
+| GET | /cars/timeline | cars.js | Every dated model of a make on one year axis (`?make=&type=`) |
 | GET | /cars/compare | cars.js | Side-by-side compare (`?c=Make\|Model`, up to 3) |
 | POST | /cars/propose-image | cars.js | Propose a photo for any car's gallery |
 | POST | /cars/spot | cars.js | "Spotted it" check-in (Dex) |

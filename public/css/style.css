@@ -2432,6 +2432,58 @@ textarea:focus-visible,
   .cotd-name { font-size: 0.98rem; }
 }
 
+/* ─── VEHICLE TYPES: tabs, shelves, badges ────────────────────────────────── */
+.type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+.type-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border-hover);
+  border-radius: 100px;
+  transition: color var(--ease), border-color var(--ease), background var(--ease);
+}
+.type-tab:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.35); opacity: 1; }
+.type-tab.active {
+  color: #fff;
+  background: var(--red-dim);
+  border-color: rgba(237, 83, 83, 0.6);
+}
+.type-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+.type-tab.active .type-count { color: rgba(255, 255, 255, 0.75); }
+.makes-container + .makes-container { padding-top: 0; }
+.makes-shelf-title {
+  margin: 0 0 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  scroll-margin-top: 72px;
+}
+.makes-container[id] { scroll-margin-top: 56px; }
+.card-badge--type {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 /* ─── SEARCH SUGGESTIONS: keyboard highlight ───────────────────────────────── */
 .suggest-item.active { background: rgba(255, 255, 255, 0.09); box-shadow: inset 2px 0 0 var(--red); }
 

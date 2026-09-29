@@ -70,28 +70,50 @@ const domainMap = {
   'Vauxhall': 'vauxhall.co.uk',
   'Volkswagen': 'vw.com',
   'Volvo': 'volvocars.com',
+  // Motorcycles
+  'Aprilia': 'aprilia.com',
+  'Ducati': 'ducati.com',
+  'Harley-Davidson': 'harley-davidson.com',
+  'Indian': 'indianmotorcycle.com',
+  'Kawasaki': 'kawasaki.com',
+  'KTM': 'ktm.com',
+  'Moto Guzzi': 'motoguzzi.com',
+  'MV Agusta': 'mvagusta.com',
+  'Royal Enfield': 'royalenfield.com',
+  'Triumph': 'triumphmotorcycles.com',
+  'Yamaha': 'yamaha-motor.com',
+  'Zero': 'zeromotorcycles.com',
 };
 %>
 
 <section class="jumbotron text-center">
   <div class="container">
     <h1 class="jumbotron-heading">Browse Manufacturers</h1>
-    <p class="lead text-muted"><%= makes.length %> manufacturers</p>
+    <% var makers = (n, kind) => n + ' ' + kind + ' maker' + (n === 1 ? '' : 's'); %>
+    <p class="lead text-muted">
+      <%= makers(shelves[0].makes.length, 'car') %> · <%= makers(shelves[1].makes.length, 'motorcycle') %><% if (shelves[2].makes.length) { %> · <%= makers(shelves[2].makes.length, 'truck, bus and trailer') %><% } %>
+    </p>
+    <nav class="type-tabs" aria-label="Manufacturer shelves">
+      <% shelves.filter(s => s.makes.length).forEach(s => { %>
+        <a class="type-tab" href="#<%= s.id %>"><%= s.title %> <span class="type-count"><%= s.makes.length %></span></a>
+      <% }) %>
+    </nav>
   </div>
 </section>
 
-<div class="makes-container">
+<% shelves.filter(s => s.makes.length).forEach(function(shelf) { %>
+<div class="makes-container" id="<%= shelf.id %>">
+  <h2 class="makes-shelf-title"><%= shelf.title %></h2>
   <div class="makes-grid">
     <%
-    const withLogo = makes.filter(m => domainMap[m.make]);
-    const withoutLogo = makes.filter(m => !domainMap[m.make]);
-    const sortedMakes = [...withLogo, ...withoutLogo];
-    sortedMakes.forEach(function(m) {
+    const withLogo = shelf.makes.filter(m => domainMap[m.make]);
+    const withoutLogo = shelf.makes.filter(m => !domainMap[m.make]);
+    [...withLogo, ...withoutLogo].forEach(function(m) {
       const domain = domainMap[m.make] || null;
       const initials = m.make.split(/[\s\-]/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     %>
       <div class="make-tile-wrap">
-        <a href="/cars?selectmake=<%= encodeURIComponent(m.make) %>" class="make-tile">
+        <a href="<%= m.href %>" class="make-tile">
           <div class="make-logo-wrap">
             <span class="make-logo-initials"><%= initials %></span>
             <% if (domain) { %>
@@ -108,9 +130,10 @@ const domainMap = {
             <% } %>
           </div>
           <span class="make-name"><%= m.make %></span>
-          <span class="make-count"><%= m.modelCount != null ? m.modelCount + ' models' : 'Browse' %></span>
+          <span class="make-count"><%= m.label %></span>
         </a>
       </div>
     <% }); %>
   </div>
 </div>
+<% }); %>

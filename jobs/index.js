@@ -3,6 +3,7 @@
 const { unsplashImages } = require('./images');
 const { seedAllMakes } = require('./seed');
 const { scanYears } = require('./years');
+const { classifyVehicleTypes } = require('./vehicleTypes');
 const { pruneCache } = require('../lib/cache');
 
 const UNSPLASH_INTERVAL_MS = 3700000; // ~1 hour
@@ -25,23 +26,25 @@ function startBackgroundJobs() {
   unsplashTimer.unref(); // don't hold the process open
   unsplashImagesGuarded(); // run once on startup
 
-  // Run after a short delay so the server is fully up first. The year scan
-  // follows the seed (it needs the rows) and then repeats daily.
-  let yearsRunning = false;
-  async function scanYearsGuarded() {
-    if (yearsRunning) return;
-    yearsRunning = true;
+  // Run after a short delay so the server is fully up first. Vehicle types
+  // and the year scan follow the seed (they need the rows; typing can add
+  // models, which the year scan then dates) and repeat daily.
+  let upkeepRunning = false;
+  async function catalogUpkeep() {
+    if (upkeepRunning) return;
+    upkeepRunning = true;
     try {
+      await classifyVehicleTypes();
       await scanYears();
     } finally {
-      yearsRunning = false;
+      upkeepRunning = false;
     }
   }
   setTimeout(async () => {
     await seedAllMakes();
-    await scanYearsGuarded();
+    await catalogUpkeep();
   }, 5000).unref();
-  setInterval(scanYearsGuarded, YEARS_INTERVAL_MS).unref();
+  setInterval(catalogUpkeep, YEARS_INTERVAL_MS).unref();
 
   // Daily: clear month-old rows out of the durable API cache
   setInterval(() => {

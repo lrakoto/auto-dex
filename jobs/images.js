@@ -20,9 +20,15 @@ const PRIORITY_MAKES = [
 const BATCH_SIZE = 45;
 
 async function fillPlaceholders(budget) {
-  // First pass: priority makes. Second pass: everything else.
+  // First pass: cars of the priority makes (Honda and BMW motorcycles wait).
+  // Second pass: everything else.
+  const { Op } = db.Sequelize;
   let cars = await db.car.findAll({
-    where: { updated_img: false, make: PRIORITY_MAKES },
+    where: {
+      updated_img: false,
+      make: PRIORITY_MAKES,
+      [Op.or]: [{ vehicle_type: 'car' }, { vehicle_type: null }]
+    },
     limit: budget
   });
   if (cars.length === 0) {

@@ -32,7 +32,7 @@ Check an item off in the same PR that finishes it. Research behind this list
 ## Items
 
 ### R1 — Integrate motorcycles and other vehicles *(requested by the owner)*
-- [ ] Add a vehicle type per catalog row (car, SUV/minivan, pickup, motorcycle,
+- [x] Add a vehicle type per catalog row (car, SUV/minivan, pickup, motorcycle,
   off-road/ATV, commercial/bus, chassis). Source: NHTSA
   `GetModelsForMakeYear/make/{make}/vehicletype/{type}` lists, via
   `carquery.getModelsByType`. Classify existing rows in a migration-safe
@@ -121,6 +121,11 @@ Check an item off in the same PR that finishes it. Research behind this list
 ### R14 — Smaller ideas
 - [ ] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
+- [ ] A motorcycle round for Who's That Car? (the pool is cars only for now).
+- [ ] Replace the placeholder photo: it reads "Unsplash Image API Limit
+  Reached", which is wrong for every car still waiting for a photo.
+- [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
+  up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
 
 ## Sources
 
