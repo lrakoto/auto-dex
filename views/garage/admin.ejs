@@ -11,6 +11,7 @@
       <div class="text-muted mt-1" style="font-size:0.78rem;">
         cars queued &middot; ~<%= Math.ceil(unsplashQueued / unsplashBatch) %> hourly runs at <%= unsplashBatch %>/run
         <br><%= placeholderCount.toLocaleString() %> still on the placeholder
+        <% if (wikiQueued > 0) { %><br><%= wikiQueued.toLocaleString() %> still to look up on Wikipedia first &middot; <%= wikiBatch %>/run<% } %>
       </div>
       <% if (placeholderCount > unsplashQueued) { %>
         <form method="POST" action="/garage/admin/reset-unsplash-queue" class="mt-3">

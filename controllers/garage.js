@@ -10,7 +10,8 @@ const { decodeVin, getRecalls, normalizeVin } = require('../lib/nhtsa');
 const { addImage, refreshHero } = require('../lib/gallery');
 const { getDexStats, getBadges } = require('../lib/dex');
 const { validateUsername } = require('../lib/usernames');
-const { BATCH_SIZE: UNSPLASH_BATCH } = require('../jobs/images');
+const { BATCH_SIZE: UNSPLASH_BATCH, WIKI_BATCH } = require('../jobs/images');
+const { ALL_MAKES } = require('../config/carquery');
 
 // Mutating garage/admin routes were previously unlimited.
 const writeLimiter = rateLimit({
@@ -394,8 +395,10 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
-    const [totalCars, unsplashQueued, placeholderCount, favCounts, garageCounts, proposalCounts] = await Promise.all([
+    const [totalCars, wikiQueued, unsplashQueued, placeholderCount, favCounts, garageCounts, proposalCounts] = await Promise.all([
       db.car.count(),
+      // Not yet looked up on Wikipedia (Unsplash waits for that lookup)
+      db.car.count({ where: { wiki_checked: false, make: ALL_MAKES } }),
       // Not yet searched on Unsplash (a search that finds nothing sets updated_img too)
       db.car.count({ where: { updated_img: false } }),
       db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }),
@@ -428,6 +431,8 @@ router.get('/admin', isAdmin, async (req, res) => {
       unverifiedUsers: unverifiedUsers.map(u => u.toJSON()),
       allUsers: usersWithActivity,
       totalCars,
+      wikiQueued,
+      wikiBatch: WIKI_BATCH,
       unsplashQueued,
       placeholderCount,
       unsplashBatch: UNSPLASH_BATCH

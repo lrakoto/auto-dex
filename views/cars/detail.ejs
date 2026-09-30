@@ -151,7 +151,7 @@
           <figure class="gallery-item" data-image-id="<%= img.id %>">
             <button type="button" class="gallery-thumb" data-full="<%= img.url %>"
                     data-credit-html="<%= include('../partials/photo-credit', { credit: img.credit }) %>" aria-label="Preview this photo">
-              <img src="<%= img.url %>" alt="<%= make %> <%= model %> photo" loading="lazy">
+              <img src="<%= cardPhoto(img.url) %>" alt="<%= make %> <%= model %> photo" loading="lazy">
             </button>
             <figcaption class="gallery-meta">
               <% if (currentUser) { %>
@@ -192,7 +192,7 @@
           <div class="col-md-4 col-6 mb-4 card-col">
             <div class="card h-100">
               <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
-                <img class="card-img-top imgresp" src="<%= c.image %>" alt="<%= c.model %>">
+                <img class="card-img-top imgresp" src="<%= cardPhoto(c.image) %>" alt="<%= c.model %>">
               </a>
               <div class="card-body">
                 <p class="card-text mb-0">

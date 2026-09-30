@@ -36,7 +36,7 @@
         <%# Under the heading, not beside it: the hero photo's car stays in view %>
         <aside class="cotd hero-sub" style="animation-delay:0.5s;" aria-label="Car of the Day">
           <a class="cotd-card" href="/cars/car?make=<%= encodeURIComponent(cotd.make) %>&model=<%= encodeURIComponent(cotd.model) %>">
-            <span class="cotd-photo"><img src="<%= cotd.image %>" alt="<%= cotd.make %> <%= cotd.model %>"></span>
+            <span class="cotd-photo"><img src="<%= cardPhoto(cotd.image) %>" alt="<%= cotd.make %> <%= cotd.model %>"></span>
             <span class="cotd-body">
               <span class="cotd-eyebrow">Car of the Day</span>
               <span class="cotd-name" title="<%= cotd.make %> <%= cotd.model %>"><span class="cotd-make"><%= cotd.make %></span> <span class="cotd-model"><%= cotd.model %></span></span>

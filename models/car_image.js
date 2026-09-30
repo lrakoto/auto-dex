@@ -20,7 +20,10 @@ module.exports = (sequelize, DataTypes) => {
     // Photographer credit (Unsplash guidelines) — see lib/unsplash.js
     credit_name:    { type: DataTypes.TEXT },
     credit_url:     { type: DataTypes.TEXT },
-    credit_checked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
+    credit_checked: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    // Wikimedia Commons photos: license short name and link (lib/wikimedia.js)
+    license:     { type: DataTypes.TEXT },
+    license_url: { type: DataTypes.TEXT }
   }, {
     sequelize,
     modelName: 'car_image'

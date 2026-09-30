@@ -26,6 +26,8 @@ if (IS_MAIN && process.env.ENABLE_BACKGROUND_JOBS !== 'false' && process.env.NOD
 
 app.set('view engine', 'ejs');
 app.set('trust proxy', 1); // Required for secure cookies behind a reverse proxy
+// View helper: a catalog photo at card size (500px Commons thumbnails)
+app.locals.cardPhoto = require('./lib/photos').cardPhoto;
 
 // Security headers (helmet). CSP is configured around the resources this app
 // actually loads: Bootstrap/Popper/jQuery from jsdelivr & code.jquery.com,

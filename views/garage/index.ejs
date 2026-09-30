@@ -129,7 +129,7 @@
         <div class="col-md-3 col-6 mb-4 card-col">
           <div class="card h-100">
             <a href="/cars/car?make=<%= encodeURIComponent(sp.car.make) %>&model=<%= encodeURIComponent(sp.car.model) %>">
-              <img class="card-img-top imgresp spot-img" src="<%= sp.imageUrl || sp.car.image %>" alt="<%= sp.car.make %> <%= sp.car.model %>">
+              <img class="card-img-top imgresp spot-img" src="<%= sp.imageUrl || cardPhoto(sp.car.image) %>" alt="<%= sp.car.make %> <%= sp.car.model %>">
             </a>
             <div class="card-body text-left">
               <p class="card-text mb-1"><strong><%= sp.car.make %> <%= sp.car.model %></strong></p>
@@ -157,7 +157,7 @@
           <div class="card box-shadow">
             <span class="card-badge card-badge--favorite">&#9825; Favorite</span>
             <a href="/cars/car?make=<%= encodeURIComponent(f.make) %>&model=<%= encodeURIComponent(f.model) %>&image=<%= encodeURIComponent(f.image) %>">
-              <img class="card-img-top imgresp" src="<%= f.image %>" alt="<%= f.make %> <%= f.model %>">
+              <img class="card-img-top imgresp" src="<%= cardPhoto(f.image) %>" alt="<%= f.make %> <%= f.model %>">
             </a>
             <div class="card-body text-left">
               <p class="card-text mb-2"><strong><%= f.make %> <%= f.model %></strong></p>
