@@ -6,6 +6,7 @@ const router = express.Router();
 const db = require('../models');
 const { getDexStats, getBadges } = require('../lib/dex');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const { favoritePhoto } = require('../lib/photos');
 
 function notFound(res) {
   return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
@@ -27,7 +28,11 @@ router.get('/:username', async (req, res) => {
         attributes: ['id', 'make', 'model', 'year', 'image'],
         order: [['createdAt', 'DESC']]
       }),
-      db.favorite_car.findAll({ where: { userId: owner.id }, attributes: ['make', 'model', 'image'] }),
+      db.favorite_car.findAll({
+        where: { userId: owner.id },
+        attributes: ['make', 'model', 'image'],
+        include: [{ model: db.car, attributes: ['image'] }]
+      }),
       getDexStats(owner.id),
       db.spotting.findAll({
         where: { userId: owner.id },
@@ -40,7 +45,8 @@ router.get('/:username', async (req, res) => {
     const badges = (await getBadges(owner.id, dex)).filter(b => b.earned);
 
     const cars = myCars.map(c => c.toJSON());
-    const shareImage = [...cars.map(c => c.image), ...favorites.map(f => f.image)]
+    const favs = favorites.map(f => ({ make: f.make, model: f.model, photo: favoritePhoto(f) }));
+    const shareImage = [...cars.map(c => c.image), ...favs.map(f => f.photo)]
       .find(url => url && url !== PLACEHOLDER_URL);
     const displayName = owner.name || owner.username;
     const summary = `${cars.length} car${cars.length === 1 ? '' : 's'} in the garage, ${dex.spottedCars} spotted across ${dex.spottedMakes} make${dex.spottedMakes === 1 ? '' : 's'}.`;
@@ -49,7 +55,7 @@ router.get('/:username', async (req, res) => {
       owner: owner.toJSON(),
       displayName,
       myCars: cars,
-      favorites: favorites.map(f => f.toJSON()),
+      favorites: favs,
       dex, badges,
       recentSpots: recentSpots.map(s => s.toJSON()),
       pageTitle: `${displayName}'s Garage — AutoDex`,

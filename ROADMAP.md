@@ -74,7 +74,7 @@ Check an item off in the same PR that finishes it. Research behind this list
 ### R15 — Quick wins: placeholder, photo coverage, motorcycle quiz
 Small, independent fixes, one checkbox per PR, in this order. Moved up from
 R14 on 2026-10-01 so they ship before R4.
-- [ ] Replace the placeholder photo: it reads "Unsplash Image API Limit
+- [x] Replace the placeholder photo: it reads "Unsplash Image API Limit
   Reached", which is wrong for every car still waiting for a photo. Serve a
   neutral local image and repoint existing placeholder rows in a migration
   (rows only change their `image`; nothing is deleted).
