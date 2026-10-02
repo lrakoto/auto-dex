@@ -60,7 +60,7 @@ async function addWikipediaPhoto(car, photo) {
 // retried next run; three in a row end this run.
 async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } = {}) {
   const cars = await db.car.findAll({
-    attributes: ['id', 'make', 'model'],
+    attributes: ['id', 'make', 'model', 'year_max'],
     where: { wiki_checked: false, make: carquery.ALL_MAKES },
     order: [['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
     limit: budget
@@ -69,7 +69,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   let failures = 0;
   for (const car of cars) {
     try {
-      const photo = await wikimedia.findLeadPhoto(car.make, car.model);
+      const photo = await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max });
       failures = 0;
       if (photo) {
         await addWikipediaPhoto(car, photo);

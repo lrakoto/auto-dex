@@ -148,6 +148,35 @@ describe('Wikipedia photos (R2)', function() {
       try { await wikimedia.findLeadPhoto('Honda', 'Pilot'); } catch (e) { threw = true; }
       if (!threw) throw new Error('outage treated as "no photo"');
     });
+
+    it('maps trim-level names to their series', function() {
+      const cases = [
+        ['BMW', '525i', '5 Series'], ['BMW', '750Li', '7 Series'], ['BMW', 'M235i', '2 Series'], ['BMW', '325/325e', '3 Series'],
+        ['BMW', '633 csi', '6 Series'], ['BMW', 'ActiveHybrid 3', '3 Series'],
+        ['BMW', 'M3', null], ['BMW', 'i4', null], ['BMW', 'F 800 GS', null], ['BMW', '1M', null],
+        ['Infiniti', 'G35', 'G Line'], ['Infiniti', 'FX35', 'QX70'], ['Infiniti', 'M35h', 'M'], ['Infiniti', 'EX35', null], ['Infiniti', 'Q50', null],
+        ['Audi', 'A8 L', 'A8'], ['Audi', 'RS 6 Avant', 'RS 6'], ['Audi', 'A8', null], ['Audi', 'e-tron GT', null],
+        ['Toyota', '86', null]
+      ];
+      for (const [make, model, want] of cases) {
+        const got = wikimedia.seriesOf(make, model);
+        if (got !== want) throw new Error(`${make} ${model}: ${got}, wanted ${want}`);
+      }
+    });
+
+    it('falls back to the series article only for a trim still on sale', async function() {
+      // "BMW 530i" redirects to the series article, whose title doesn't name the trim
+      const series = { ...pilot, title: 'BMW 5 Series', description: 'Executive car', extract: 'The BMW 5 Series is an executive car.' };
+      cache.cachedGet = fakeWikipedia({
+        summaries: { 'BMW 530i': series, 'BMW 5 Series': series },
+        files: { '2025_Honda_Pilot.jpg': commonsInfo() }
+      });
+      const thisYear = new Date().getFullYear();
+      const current = await wikimedia.findLeadPhoto('BMW', '530i', { yearMax: thisYear + 1 });
+      if (!current || current.article !== 'BMW 5 Series') throw new Error(JSON.stringify(current));
+      if (await wikimedia.findLeadPhoto('BMW', '530i', { yearMax: thisYear - 5 })) throw new Error('old trim got the current generation');
+      if (await wikimedia.findLeadPhoto('BMW', '530i')) throw new Error('unknown years got a series photo');
+    });
   });
 
   describe('credits', function() {

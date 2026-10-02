@@ -78,9 +78,10 @@ R14 on 2026-10-01 so they ship before R4.
   Reached", which is wrong for every car still waiting for a photo. Serve a
   neutral local image and repoint existing placeholder rows in a migration
   (rows only change their `image`; nothing is deleted).
-- [ ] Wikipedia photos for trim-level names: BMW "525i" or "750Li" live in
+- [x] Wikipedia photos for trim-level names: BMW "525i" or "750Li" live in
   series articles ("BMW 5 Series"). A small model → article map in
-  `lib/wikimedia.js` would cover them.
+  `lib/wikimedia.js` would cover them. Shipped as `seriesOf` (BMW, Infiniti,
+  Audi; 138 dev-catalog rows), used only for trims still on sale.
 - [ ] Re-check Wikipedia now and then for cars it had nothing for
   (`cars.wiki_checked` is a single pass; articles gain photos over time).
   Record when a car was checked and retry after a few weeks.
@@ -140,6 +141,10 @@ R14 on 2026-10-01 so they ship before R4.
 ### R14 — Smaller ideas
 - [ ] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
+- [ ] Generation photos for older trims: a series article leads with its
+  current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
+  series photo. Generation articles ("BMW 5 Series (E34)") have the right car;
+  pick one from the trim's `model_years`.
 - [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
   up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
 
