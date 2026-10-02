@@ -151,7 +151,7 @@ async function getCarData() {
 | DELETE | /garage/spot/:id | garage.js | Remove a spot |
 | DELETE | /garage/admin/image/:id | garage.js | Remove a gallery photo (admin) |
 | GET | /u/:username | profile.js | Public garage page |
-| GET | /play | play.js | Who's That Car? photo quiz |
+| GET | /play | play.js | Who's That Car? photo quiz (`?type=motorcycle` for the motorcycle round) |
 | POST | /play/guess | play.js | Answer a round (JSON for fetch, redirect without JS) |
 | POST | /play/skip | play.js | Skip to a new car (ends the streak) |
 | GET | /garage/admin | garage.js | Admin panel (admin only) |

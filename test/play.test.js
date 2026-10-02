@@ -170,6 +170,71 @@ describe("Who's That Car?", function() {
     });
   });
 
+  describe('motorcycle round', function() {
+    let bikes, atv;
+    const moto = attrs => ({ favcount: 0, updated_img: true, vehicle_type: 'motorcycle', ...attrs });
+
+    before(async function() {
+      bikes = await db.car.bulkCreate([
+        moto({ make: 'Ducati', model: 'Monster', image: photo('monster') }),
+        moto({ make: 'Ducati', model: 'Diavel', image: photo('diavel') }),
+        moto({ make: 'Harley-Davidson', model: 'Fat Boy', image: photo('fat-boy') }),
+        moto({ make: 'Kawasaki', model: 'Ninja ZX-6R', image: photo('zx6r') })
+      ], { returning: true });
+      // NHTSA lists ATVs like this one as motorcycles
+      atv = await db.car.create(moto({ make: 'Honda', model: 'TRX450R', image: photo('trx') }));
+      await db.car.create(moto({ make: 'Kawasaki', model: 'Vulcan No Photo', image: PLACEHOLDER_URL, updated_img: false }));
+    });
+
+    it('deals only motorcycles with photos, never ATVs', async function() {
+      const bikeIds = bikes.map(b => b.id).sort().join();
+      for (let i = 0; i < 6; i++) {
+        const round = await quiz.newRound({ streak: 0, recent: [] }, 'motorcycle');
+        if (!round || [...round.choices].sort().join() !== bikeIds) throw new Error('motorcycle round: ' + JSON.stringify(round));
+        if (round.choices.includes(atv.id)) throw new Error('ATV dealt');
+      }
+    });
+
+    it('keeps motorcycles out of the car round', async function() {
+      const bikeIds = new Set([...bikes.map(b => b.id), atv.id]);
+      for (let i = 0; i < 6; i++) {
+        const round = await quiz.newRound({ streak: 0, recent: [] });
+        if (round.choices.some(id => bikeIds.has(id))) throw new Error('motorcycle in a car round');
+      }
+    });
+
+    it('has its own page and streak, and leaves the saved car best alone', async function() {
+      const realNewRound = quiz.newRound;
+      const motoRound = { answer: bikes[0].id, choices: bikes.map(b => b.id) };
+      quiz.newRound = async (s, type) => (type === 'motorcycle' ? { ...motoRound, choices: [...motoRound.choices] } : realNewRound(s, type));
+      try {
+        const agent = request.agent(app);
+        const user = await createVerifiedUser(agent, db, { email: 'biker@example.com', name: 'Biker' });
+        const page = await agent.get('/play?type=motorcycle').expect(200);
+        if (!page.text.includes("Who's That Motorcycle?")) throw new Error('heading');
+        if (!page.text.includes('<input type="hidden" name="type" value="motorcycle">')) throw new Error('type not carried in the forms');
+        if (!page.text.includes(photo('monster'))) throw new Error('photo missing');
+
+        const token = await getCsrfToken(agent, '/play?type=motorcycle');
+        const res = await agent.post('/play/guess').type('form').set('X-Requested-With', 'XMLHttpRequest')
+          .send({ choice: bikes[0].id, type: 'motorcycle', _csrf: token }).expect(200);
+        if (!res.body.correct || res.body.streak !== 1 || res.body.model !== 'Monster') throw new Error('scoring: ' + JSON.stringify(res.body));
+
+        const carPage = await agent.get('/play').expect(200);
+        if (!/id="play-streak">0</.test(carPage.text)) throw new Error('car streak picked up the motorcycle answer');
+        await user.reload();
+        if (user.quizBest !== 0) throw new Error('motorcycle streak saved as the car best');
+
+        // Without JS, the answer comes back to the motorcycle round
+        const token2 = await getCsrfToken(agent, '/play?type=motorcycle');
+        await agent.post('/play/guess').type('form').send({ choice: bikes[0].id, type: 'motorcycle', _csrf: token2 })
+          .expect(302).expect('Location', '/play?type=motorcycle');
+      } finally {
+        quiz.newRound = realNewRound;
+      }
+    });
+  });
+
   describe('Car of the Day', function() {
     after(function() { clearDailyCache(); });
 

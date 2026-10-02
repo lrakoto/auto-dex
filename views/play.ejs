@@ -1,8 +1,12 @@
 <section class="jumbotron text-center">
   <div class="container">
     <p class="eyebrow">Photo Quiz</p>
-    <h1 class="jumbotron-heading">Who's That Car?</h1>
-    <p class="lead text-muted">Name the car in the photo. Every three in a row, the choices get closer: by nine, they're all the same make.</p>
+    <h1 class="jumbotron-heading">Who's That <%= noun %>?</h1>
+    <p class="lead text-muted">Name the <%= noun.toLowerCase() %> in the photo. Every three in a row, the choices get closer: by nine, they're all the same make.</p>
+    <nav class="type-tabs" aria-label="Quiz rounds">
+      <a class="type-tab<%= type === 'car' ? ' active' : '' %>" href="/play"<% if (type === 'car') { %> aria-current="page"<% } %>>Cars</a>
+      <a class="type-tab<%= type === 'motorcycle' ? ' active' : '' %>" href="/play?type=motorcycle"<% if (type === 'motorcycle') { %> aria-current="page"<% } %>>Motorcycles</a>
+    </nav>
   </div>
 </section>
 
@@ -13,8 +17,8 @@
         <div class="empty-state">
           <div class="empty-icon">?</div>
           <h3>Not enough photos yet</h3>
-          <p>The quiz needs a few more cars with photos. They arrive every hour, so check back soon.</p>
-          <a href="/cars/explore" class="btn btn-outline-secondary mt-3">Explore cars</a>
+          <p>The quiz needs a few more <%= noun.toLowerCase() %>s with photos. They arrive every hour, so check back soon.</p>
+          <a href="/cars/explore<%= type === 'car' ? '' : '?type=' + type %>" class="btn btn-outline-secondary mt-3">Explore <%= noun.toLowerCase() %>s</a>
         </div>
       <% } else { %>
         <div class="play-card" id="play-card" data-state="question">
@@ -32,12 +36,13 @@
           <% } %>
 
           <figure class="play-photo">
-            <img id="play-img" src="<%= round.image %>" alt="The mystery car">
+            <img id="play-img" src="<%= round.image %>" alt="The mystery <%= noun.toLowerCase() %>">
             <figcaption class="play-credit" id="play-credit"><%- include('partials/photo-credit', { credit: round.credit }) %></figcaption>
           </figure>
 
-          <form method="POST" action="/play/guess" id="play-form" class="play-choices" aria-label="Which car is this?">
+          <form method="POST" action="/play/guess" id="play-form" class="play-choices" aria-label="Which <%= noun.toLowerCase() %> is this?">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="type" value="<%= type %>">
             <% round.choices.forEach((c, i) => { %>
               <button type="submit" name="choice" value="<%= c.id %>" class="play-choice">
                 <span class="play-key" aria-hidden="true"><%= i + 1 %></span>
@@ -54,15 +59,16 @@
               <%# Unsplash search results are sometimes the wrong car; the gallery votes fix that %>
               <a class="play-fix" id="play-fix-link" href="#">Wrong photo? Vote on it</a>
             </p>
-            <button type="button" class="btn btn-primary" id="play-next">Next car &rarr;</button>
+            <button type="button" class="btn btn-primary" id="play-next">Next <%= noun.toLowerCase() %> &rarr;</button>
           </div>
 
           <div class="play-foot">
             <form method="POST" action="/play/skip" class="play-skip-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="type" value="<%= type %>">
               <button type="submit" class="play-skip">Skip (ends your streak)</button>
             </form>
-            <span class="play-hint">Keys 1–4 to answer · Enter for the next car</span>
+            <span class="play-hint">Keys 1–4 to answer · Enter for the next <%= noun.toLowerCase() %></span>
           </div>
         </div>
       <% } %>

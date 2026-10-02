@@ -2,6 +2,8 @@
 // the session, so refreshing re-shows the same car (no skipping one you don't
 // know) and the answer never leaves the server until it's guessed. Works
 // without JS (form posts + redirect); public/js/play.js makes it instant.
+// ?type=motorcycle plays the motorcycle round: its own streak in the session,
+// while saved bests, the badge and the leaderboard stay with cars.
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
@@ -20,41 +22,48 @@ const guessLimiter = rateLimit({
 
 const carPath = (make, model) => `/cars/car?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
 
-function state(req) {
-  if (!req.session.quiz) req.session.quiz = { round: null, streak: 0, best: 0, recent: [] };
-  return req.session.quiz;
+const quizType = v => (quiz.QUIZ_TYPES.includes(v) ? v : 'car');
+const playPath = type => (type === 'car' ? '/play' : `/play?type=${type}`);
+
+// Cars keep the original session key, so rounds in progress survive deploys
+function state(req, type = 'car') {
+  const key = type === 'car' ? 'quiz' : `quiz_${type}`;
+  if (!req.session[key]) req.session[key] = { round: null, streak: 0, best: 0, recent: [] };
+  return req.session[key];
 }
 
 // The pending round's view, starting a fresh round if there's none (or its
 // cars left the catalog)
-async function currentRound(s) {
+async function currentRound(s, type) {
   let view = await quiz.roundView(s.round);
   if (!view) {
-    s.round = await quiz.newRound(s);
+    s.round = await quiz.newRound(s, type);
     view = await quiz.roundView(s.round);
   }
   return view;
 }
 
-// Signed-in players' records outlive the session
-function bestFor(req, s) {
-  return Math.max(s.best, (req.user && req.user.quizBest) || 0);
+// Signed-in players' records outlive the session (cars only, for now)
+function bestFor(req, s, type) {
+  return type === 'car' ? Math.max(s.best, (req.user && req.user.quizBest) || 0) : s.best;
 }
 
 router.get('/', async (req, res) => {
   try {
-    const s = state(req);
-    const [round, leaders] = await Promise.all([currentRound(s), quiz.getLeaders()]);
+    const type = quizType(req.query.type);
+    const s = state(req, type);
+    const [round, leaders] = await Promise.all([currentRound(s, type), quiz.getLeaders()]);
     const last = s.last || null; // result of a no-JS guess, shown once
     delete s.last;
+    const noun = type === 'car' ? 'Car' : 'Motorcycle';
     res.render('play', {
-      round, last,
+      round, last, type, noun,
       streak: s.streak,
-      best: bestFor(req, s),
+      best: bestFor(req, s, type),
       leaders: leaders.map(u => u.toJSON()),
-      pageTitle: "Who's That Car? — Photo Quiz — AutoDex",
-      pageDescription: 'Name the car in the photo. Four choices, a streak to protect, and the choices get closer every three in a row.',
-      canonicalPath: '/play'
+      pageTitle: `Who's That ${noun}? — Photo Quiz — AutoDex`,
+      pageDescription: `Name the ${noun.toLowerCase()} in the photo. Four choices, a streak to protect, and the choices get closer every three in a row.`,
+      canonicalPath: playPath(type)
     });
   } catch (err) {
     console.log('PLAY ERROR:', err);
@@ -65,19 +74,20 @@ router.get('/', async (req, res) => {
 // POST /play/guess — { choice: carId }. JSON for fetch(), redirect otherwise.
 router.post('/guess', guessLimiter, async (req, res) => {
   const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
-  const s = state(req);
+  const type = quizType(req.body.type);
+  const s = state(req, type);
   const round = s.round;
   const choice = parseInt(req.body.choice, 10);
   // No round, or a stale tab answering a round that's already over
   if (!round || !round.choices.includes(choice)) {
-    return isAjax ? res.status(409).json({ success: false, stale: true }) : res.redirect('/play');
+    return isAjax ? res.status(409).json({ success: false, stale: true }) : res.redirect(playPath(type));
   }
   try {
     const correct = choice === round.answer;
     s.streak = correct ? s.streak + 1 : 0;
     s.best = Math.max(s.best, s.streak);
     s.round = null;
-    if (correct && req.user && s.streak > (req.user.quizBest || 0)) {
+    if (type === 'car' && correct && req.user && s.streak > (req.user.quizBest || 0)) {
       await quiz.saveBest(req.user.id, s.streak);
     }
 
@@ -92,24 +102,25 @@ router.post('/guess', guessLimiter, async (req, res) => {
       country: car ? getMakeCountry(car.make) : null,
       url: car ? carPath(car.make, car.model) : null
     };
-    const next = await currentRound(s);
+    const next = await currentRound(s, type);
 
-    if (isAjax) return res.json({ success: true, ...reveal, streak: s.streak, best: bestFor(req, s), next });
+    if (isAjax) return res.json({ success: true, ...reveal, streak: s.streak, best: bestFor(req, s, type), next });
     s.last = reveal;
-    res.redirect('/play');
+    res.redirect(playPath(type));
   } catch (err) {
     console.log('GUESS ERROR:', err);
     if (isAjax) return res.status(500).json({ success: false });
-    res.redirect('/play');
+    res.redirect(playPath(type));
   }
 });
 
 // POST /play/skip — a new car; skipping ends the streak
 router.post('/skip', guessLimiter, async (req, res) => {
-  const s = state(req);
+  const type = quizType(req.body.type);
+  const s = state(req, type);
   s.round = null;
   s.streak = 0;
-  res.redirect('/play');
+  res.redirect(playPath(type));
 });
 
 module.exports = router;
