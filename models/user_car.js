@@ -16,7 +16,10 @@ module.exports = (sequelize, DataTypes) => {
     year:    { type: DataTypes.STRING,  allowNull: false },
     image:   { type: DataTypes.TEXT,    defaultValue: PLACEHOLDER_URL },
     notes:   { type: DataTypes.TEXT },
-    vin:     { type: DataTypes.STRING(17) }
+    vin:     { type: DataTypes.STRING(17) },
+    // Recall campaigns already known for this car (jobs/recalls.js)
+    recalls_seen:       { type: DataTypes.ARRAY(DataTypes.TEXT) },
+    recalls_checked_at: { type: DataTypes.DATE }
   }, {
     sequelize,
     modelName: 'user_car'

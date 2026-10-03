@@ -3,7 +3,7 @@ const router  = express.Router();
 const passport = require('../config/ppConfig');
 const db = require('../models');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../config/email');
-const { generateVerificationToken, hashToken, normalizeEmail } = require('../lib/tokens');
+const { generateVerificationToken, hashToken, normalizeEmail, checkRecallUnsubscribeToken } = require('../lib/tokens');
 const rateLimit = require('express-rate-limit');
 
 // The whole test suite shares one IP, so it outgrows these per-IP budgets as
@@ -164,6 +164,24 @@ router.post('/signup', signupLimiter, async (req, res) => {
 });
 
 // GET /auth/verify/:token
+// GET /auth/recall-alerts/off?u=&t= — the one-click link in recall alert
+// emails (jobs/recalls.js). Works signed out; the HMAC token proves the link
+// came from us for this user. Turning alerts off twice is harmless.
+router.get('/recall-alerts/off', async (req, res) => {
+  const userId = parseInt(req.query.u, 10);
+  if (!userId || !checkRecallUnsubscribeToken(userId, req.query.t)) {
+    return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
+  }
+  try {
+    await db.user.update({ recallAlerts: false }, { where: { id: userId } });
+    req.flash('success', 'Recall alerts are off. You can turn them back on in your garage settings.');
+  } catch (err) {
+    console.log('RECALL UNSUBSCRIBE ERROR:', err);
+    req.flash('error', 'Could not turn off recall alerts. Please try again.');
+  }
+  res.redirect('/');
+});
+
 router.get('/verify/:token', async (req, res) => {
   try {
     // Look up by hash — the plaintext token only ever existed in the email link

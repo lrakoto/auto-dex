@@ -4,6 +4,7 @@ const { updatePhotos } = require('./images');
 const { seedAllMakes } = require('./seed');
 const { scanYears } = require('./years');
 const { classifyVehicleTypes } = require('./vehicleTypes');
+const { checkRecalls } = require('./recalls');
 const { pruneCache } = require('../lib/cache');
 
 const PHOTOS_INTERVAL_MS = 3700000; // ~1 hour
@@ -45,6 +46,12 @@ function startBackgroundJobs() {
     await catalogUpkeep();
   }, 5000).unref();
   setInterval(catalogUpkeep, YEARS_INTERVAL_MS).unref();
+
+  // Daily: recall alerts. Each car is due a week after its last check, so
+  // restarts (every deploy) don't reset the schedule.
+  const recallsRun = () => checkRecalls().catch(err => console.log('Recall alerts error:', err.message));
+  setTimeout(recallsRun, 10 * 60 * 1000).unref();
+  setInterval(recallsRun, 24 * 60 * 60 * 1000).unref();
 
   // Daily: clear month-old rows out of the durable API cache
   setInterval(() => {

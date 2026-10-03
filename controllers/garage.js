@@ -73,12 +73,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /garage/settings — public garage handle + visibility
+// POST /garage/settings — public garage handle + visibility, recall alerts
 router.post('/settings', writeLimiter, async (req, res) => {
   try {
     const wantsPublic = req.body.garagePublic === 'on';
     const rawName = (req.body.username || '').trim();
-    const updates = { garagePublic: wantsPublic };
+    const updates = { garagePublic: wantsPublic, recallAlerts: req.body.recallAlerts === 'on' };
     if (rawName) {
       const check = validateUsername(rawName);
       if (!check.ok) {
