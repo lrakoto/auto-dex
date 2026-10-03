@@ -1,6 +1,7 @@
 # AutoDex Roadmap
 
-Work items in priority order. Each has a stable ID; pull requests for an item
+Work items in priority order, top to bottom (an item can sit above a
+lower-numbered one). Each has a stable ID; pull requests for an item
 put it in the title (`[R1] Integrate motorcycles`) so nobody starts it twice.
 Check an item off in the same PR that finishes it. Research behind this list
 (photo sources tested, car sites and apps surveyed): see "Sources" below.
@@ -70,6 +71,21 @@ Check an item off in the same PR that finishes it. Research behind this list
   count per model year and the top components (the 2016 Civic has 1,080
   complaints, 444 about steering). Cached like the recalls lookup.
 
+### R15 — Quick wins: placeholder, photo coverage, motorcycle quiz
+Small, independent fixes, one checkbox per PR, in this order. Moved up from
+R14 on 2026-10-01 so they ship before R4.
+- [ ] Replace the placeholder photo: it reads "Unsplash Image API Limit
+  Reached", which is wrong for every car still waiting for a photo. Serve a
+  neutral local image and repoint existing placeholder rows in a migration
+  (rows only change their `image`; nothing is deleted).
+- [ ] Wikipedia photos for trim-level names: BMW "525i" or "750Li" live in
+  series articles ("BMW 5 Series"). A small model → article map in
+  `lib/wikimedia.js` would cover them.
+- [ ] Re-check Wikipedia now and then for cars it had nothing for
+  (`cars.wiki_checked` is a single pass; articles gain photos over time).
+  Record when a car was checked and retry after a few weeks.
+- [ ] A motorcycle round for Who's That Car? (the pool is cars only for now).
+
 ### R4 — Daily car puzzle
 - [ ] One mystery car per day, the same for everyone: guess by name; each
   guess reveals tiles for make, country, era, body class, drivetrain and fuel
@@ -124,16 +140,8 @@ Check an item off in the same PR that finishes it. Research behind this list
 ### R14 — Smaller ideas
 - [ ] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
-- [ ] A motorcycle round for Who's That Car? (the pool is cars only for now).
-- [ ] Replace the placeholder photo: it reads "Unsplash Image API Limit
-  Reached", which is wrong for every car still waiting for a photo.
 - [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
   up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
-- [ ] Wikipedia photos for trim-level names: BMW "525i" or "750Li" live in
-  series articles ("BMW 5 Series"). A small model → article map in
-  `lib/wikimedia.js` would cover them.
-- [ ] Re-check Wikipedia now and then for cars it had nothing for
-  (`cars.wiki_checked` is a single pass; articles gain photos over time).
 
 ## Sources
 
