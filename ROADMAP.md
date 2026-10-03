@@ -86,7 +86,9 @@ R14 on 2026-10-01 so they ship before R4.
   (`cars.wiki_checked` is a single pass; articles gain photos over time).
   Record when a car was checked and retry after a few weeks. Shipped as
   `cars.wiki_checked_at`; re-checks after 30 days, after never-checked cars.
-- [ ] A motorcycle round for Who's That Car? (the pool is cars only for now).
+- [x] A motorcycle round for Who's That Car? (the pool is cars only for now).
+  Shipped at `/play?type=motorcycle`, with its own session streak; saved
+  bests, the badge and the leaderboard stay cars-only.
 
 ### R4 — Daily car puzzle
 - [ ] One mystery car per day, the same for everyone: guess by name; each
@@ -146,6 +148,12 @@ R14 on 2026-10-01 so they ship before R4.
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;
   pick one from the trim's `model_years`.
+- [ ] Reclassify ATVs and side-by-sides as off-road. NHTSA lists many as
+  motorcycles (Honda TRX/Rancher/Pioneer, Suzuki KingQuad/LT-, Kawasaki
+  MULE/Brute Force, Yamaha Grizzly/YF-): 48 of 434 photographed
+  "motorcycles" on the dev catalog. `isAtvName` in `lib/vehicleTypes.js`
+  already spots them (the motorcycle quiz skips them); use it in
+  `classifyModel` and update existing rows' `vehicle_type` (no deletes).
 - [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
   up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
 

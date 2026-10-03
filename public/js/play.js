@@ -19,11 +19,13 @@
   var fixLink = document.getElementById('play-fix-link');
   var nextBtn = document.getElementById('play-next');
   var csrf = form.querySelector('input[name="_csrf"]').value;
+  var typeInput = form.querySelector('input[name="type"]');
+  var quizType = typeInput ? typeInput.value : 'car';
 
   var next = null;  // the round that comes with each answer
   var busy = false;
 
-  var CHEERS = ['Nailed it.', 'Correct!', 'You know your cars.', 'Spot on.', 'Easy money.'];
+  var CHEERS = ['Nailed it.', 'Correct!', 'You know your stuff.', 'Spot on.', 'Easy money.'];
 
   function choices() {
     return Array.prototype.slice.call(form.querySelectorAll('.play-choice'));
@@ -99,7 +101,7 @@
     fetch(form.action, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-      body: new URLSearchParams({ _csrf: csrf, choice: btn.value })
+      body: new URLSearchParams({ _csrf: csrf, choice: btn.value, type: quizType })
     })
       .then(function (r) {
         // 409: this tab's round is over (answered elsewhere, session expired)
