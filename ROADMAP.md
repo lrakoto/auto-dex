@@ -82,9 +82,10 @@ R14 on 2026-10-01 so they ship before R4.
   series articles ("BMW 5 Series"). A small model → article map in
   `lib/wikimedia.js` would cover them. Shipped as `seriesOf` (BMW, Infiniti,
   Audi; 138 dev-catalog rows), used only for trims still on sale.
-- [ ] Re-check Wikipedia now and then for cars it had nothing for
+- [x] Re-check Wikipedia now and then for cars it had nothing for
   (`cars.wiki_checked` is a single pass; articles gain photos over time).
-  Record when a car was checked and retry after a few weeks.
+  Record when a car was checked and retry after a few weeks. Shipped as
+  `cars.wiki_checked_at`; re-checks after 30 days, after never-checked cars.
 - [ ] A motorcycle round for Who's That Car? (the pool is cars only for now).
 
 ### R4 — Daily car puzzle

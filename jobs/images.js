@@ -29,6 +29,10 @@ const BATCH_SIZE = 45;
 const WIKI_BATCH = 150;
 const WIKI_DELAY_MS = 500;
 
+// Cars Wikipedia had no photo for are asked again after this long: articles
+// gain photos, and model years (which unlock series photos) fill in later
+const WIKI_RECHECK_DAYS = 30;
+
 // Photos the jobs chose, as opposed to people (proposals, admin uploads)
 const AUTOMATED_SOURCES = ['unsplash', 'catalog'];
 
@@ -55,14 +59,26 @@ async function addWikipediaPhoto(car, photo) {
   }
 }
 
-// Look up the next batch of catalog cars on Wikipedia: placeholders first,
-// then the most favourited. A failed lookup (Wikipedia down, throttled) is
-// retried next run; three in a row end this run.
+// Look up the next batch of catalog cars on Wikipedia: cars never asked
+// about first, then re-checks of cars it had no photo for a month ago; within
+// each, placeholders first, then the most favourited. A failed lookup
+// (Wikipedia down, throttled) is retried next run; three in a row end this run.
 async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } = {}) {
+  const { Op } = db.Sequelize;
+  const recheckBefore = new Date(Date.now() - WIKI_RECHECK_DAYS * 24 * 60 * 60 * 1000);
   const cars = await db.car.findAll({
     attributes: ['id', 'make', 'model', 'year_max'],
-    where: { wiki_checked: false, make: carquery.ALL_MAKES },
-    order: [['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
+    where: {
+      make: carquery.ALL_MAKES,
+      [Op.or]: [
+        { wiki_checked: false },
+        {
+          wiki_checked_at: { [Op.lt]: recheckBefore },
+          [Op.and]: db.sequelize.literal('NOT EXISTS (SELECT 1 FROM car_images ci WHERE ci."carId" = "car"."id" AND ci.source = \'wikimedia\')')
+        }
+      ]
+    },
+    order: [['wiki_checked', 'ASC'], ['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
     limit: budget
   });
   let found = 0;
@@ -75,7 +91,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
         await addWikipediaPhoto(car, photo);
         found++;
       }
-      await db.car.update({ wiki_checked: true }, { where: { id: car.id } });
+      await db.car.update({ wiki_checked: true, wiki_checked_at: new Date() }, { where: { id: car.id } });
     } catch (err) {
       console.log(`Wikipedia photo error for ${car.make} ${car.model} (retried next run):`, err.message);
       if (++failures >= 3) break;
@@ -187,4 +203,4 @@ async function updatePhotos() {
   await unsplashImages();
 }
 
-module.exports = { updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits, BATCH_SIZE, WIKI_BATCH };
+module.exports = { updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits, BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS };

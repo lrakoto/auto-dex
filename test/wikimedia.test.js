@@ -6,7 +6,7 @@ const wikimedia = require('../lib/wikimedia');
 const unsplash = require('../lib/unsplash');
 const { photoCredit, cardPhoto } = require('../lib/photos');
 const { refreshHero } = require('../lib/gallery');
-const { wikipediaPhotos, addWikipediaPhoto, unsplashImages } = require('../jobs/images');
+const { wikipediaPhotos, addWikipediaPhoto, unsplashImages, WIKI_RECHECK_DAYS } = require('../jobs/images');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 
 const PILOT_ORIGINAL = 'https://upload.wikimedia.org/wikipedia/commons/3/36/2025_Honda_Pilot.jpg?utm_source=en.wikipedia.org';
@@ -284,6 +284,33 @@ describe('Wikipedia photos (R2)', function() {
       }
       await wikipediaPhotos(50, { delayMs: 0 });
       if (lookups.length !== 3) throw new Error(`looked up ${lookups.length} cars`);
+    });
+
+    it('asks again a month later about cars it had no photo for', async function() {
+      await db.car.update({ wiki_checked: true }, { where: {} });
+      const daysAgo = n => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+      const stale = await newCar('Wiki Dedra', { wiki_checked: true, wiki_checked_at: daysAgo(WIKI_RECHECK_DAYS + 5) });
+      const recent = await newCar('Wiki Trevi', { wiki_checked: true, wiki_checked_at: daysAgo(5) });
+      const hasPhoto = await newCar('Wiki Prisma', { wiki_checked: true, wiki_checked_at: daysAgo(WIKI_RECHECK_DAYS + 5) });
+      await db.car_image.create({ carId: hasPhoto.id, url: photoFor('Wiki_Prisma').url, source: 'wikimedia' });
+      found['Wiki Dedra'] = photoFor('Wiki_Dedra');
+
+      await wikipediaPhotos(50, { delayMs: 0 });
+      if (lookups.join() !== 'Wiki Dedra') throw new Error(`looked up: ${lookups.join()}`);
+      await stale.reload(); await recent.reload();
+      if (stale.image !== photoFor('Wiki_Dedra').url) throw new Error('re-check photo not used');
+      if (Date.now() - stale.wiki_checked_at > 60 * 1000) throw new Error('re-check not stamped');
+      if (recent.image !== PLACEHOLDER_URL) throw new Error('recent check redone');
+    });
+
+    it('looks up cars never checked before re-checking old ones', async function() {
+      await db.car.update({ wiki_checked: true }, { where: {} });
+      await newCar('Wiki Aurelia', { wiki_checked: true, wiki_checked_at: new Date(Date.now() - (WIKI_RECHECK_DAYS + 5) * 24 * 60 * 60 * 1000), favcount: 99 });
+      const fresh = await newCar('Wiki Flavia');
+      await wikipediaPhotos(1, { delayMs: 0 });
+      if (lookups.join() !== 'Wiki Flavia') throw new Error(`looked up: ${lookups.join()}`);
+      await fresh.reload();
+      if (!fresh.wiki_checked || !fresh.wiki_checked_at) throw new Error('first check not stamped');
     });
   });
 

@@ -31,7 +31,8 @@ module.exports = (sequelize, DataTypes) => {
     // car | motorcycle | offroad | commercial — lib/vehicleTypes.js
     vehicle_type: DataTypes.STRING(20),
     // Looked up on Wikipedia for a lead photo — jobs/images.js
-    wiki_checked: { type: DataTypes.BOOLEAN, defaultValue: false }
+    wiki_checked: { type: DataTypes.BOOLEAN, defaultValue: false },
+    wiki_checked_at: { type: DataTypes.DATE }
   }, {
     sequelize,
     modelName: 'car',
