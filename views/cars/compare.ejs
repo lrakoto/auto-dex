@@ -25,7 +25,11 @@
         ['Drive', c => c.specs && c.specs.drive],
         ['Fuel', c => c.specs && c.specs.fuel],
         ['MPG (city / hwy)', c => c.specs && c.specs.cityMpg ? c.specs.cityMpg + ' / ' + c.specs.hwyMpg : null],
-        ['Specs year', c => c.specs && c.specs.year]
+        ['Specs year', c => c.specs && c.specs.year],
+        ['NHTSA Overall', c => c.ratings && c.ratings.overall ? '★'.repeat(c.ratings.overall) + '☆'.repeat(5 - c.ratings.overall) : null],
+        ['NHTSA Frontal', c => c.ratings && c.ratings.frontal ? '★'.repeat(c.ratings.frontal) + '☆'.repeat(5 - c.ratings.frontal) : null],
+        ['NHTSA Side', c => c.ratings && c.ratings.side ? '★'.repeat(c.ratings.side) + '☆'.repeat(5 - c.ratings.side) : null],
+        ['NHTSA Rollover', c => c.ratings && c.ratings.rollover ? '★'.repeat(c.ratings.rollover) + '☆'.repeat(5 - c.ratings.rollover) : null]
       ];
       factLabels.forEach(label => specRows.push([label, c => c.facts[label]]));
     %>
@@ -58,6 +62,6 @@
         </tbody>
       </table>
     </div>
-    <p class="facts-source mt-3">Specs: FuelEconomy.gov · Facts: Wikidata · Years: NHTSA</p>
+    <p class="facts-source mt-3">Specs: FuelEconomy.gov · Facts: Wikidata · Years &amp; Safety: NHTSA</p>
   <% } %>
 </div>

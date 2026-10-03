@@ -104,6 +104,19 @@
           </div>
         </div>
       <% } %>
+      <% if (typeof safetyRatings !== 'undefined' && safetyRatings) { %>
+        <div class="specs-grid" style="margin-top:2rem;">
+          <div class="accent-line"></div>
+          <h5 style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-subtle);margin:1rem 0 1rem;">NHTSA Safety Ratings</h5>
+          <div class="specs-row">
+            <% if (safetyRatings.overall) { %><div class="spec-item"><span class="spec-label">Overall</span><span class="spec-value"><%= '★'.repeat(safetyRatings.overall) %><%= '☆'.repeat(5 - safetyRatings.overall) %></span></div><% } %>
+            <% if (safetyRatings.frontal) { %><div class="spec-item"><span class="spec-label">Frontal Crash</span><span class="spec-value"><%= '★'.repeat(safetyRatings.frontal) %><%= '☆'.repeat(5 - safetyRatings.frontal) %></span></div><% } %>
+            <% if (safetyRatings.side) { %><div class="spec-item"><span class="spec-label">Side Crash</span><span class="spec-value"><%= '★'.repeat(safetyRatings.side) %><%= '☆'.repeat(5 - safetyRatings.side) %></span></div><% } %>
+            <% if (safetyRatings.rollover) { %><div class="spec-item"><span class="spec-label">Rollover</span><span class="spec-value"><%= '★'.repeat(safetyRatings.rollover) %><%= '☆'.repeat(5 - safetyRatings.rollover) %></span></div><% } %>
+          </div>
+          <p class="facts-source">Source: <a href="https://www.nhtsa.gov/ratings" target="_blank" rel="noopener">NHTSA</a></p>
+        </div>
+      <% } %>
       <% if (wikiFacts && wikiFacts.length) { %>
         <div class="facts-panel">
           <div class="accent-line"></div>

@@ -7,6 +7,7 @@ const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
+const nhtsa = require('../lib/nhtsa'); // getSafetyRatings via the module so tests can stub it
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
@@ -363,7 +364,7 @@ router.get('/', async (req, res) => {
       const { Op } = require('sequelize');
 
       // External lookups and the viewer's state are independent — run them together
-      const [related, wiki, carSpecs, favorite, mySpotCount, gallery] = await Promise.all([
+      const [related, wiki, carSpecs, safetyRatings, favorite, mySpotCount, gallery] = await Promise.all([
         // Other models of the same make and type, the ones with photos first
         db.car.findAll({
           where: { make, model: { [Op.ne]: model }, ...vehicleTypeWhere(type) },
@@ -372,6 +373,7 @@ router.get('/', async (req, res) => {
         }),
         carinfo.getWikiSummary(make, model),
         carinfo.getFuelSpecs(make, model, car && car.year_max),
+        nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null),
         req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
         req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
         car ? getGallery(car.id, req.user && req.user.id, car.image) : []
@@ -408,7 +410,7 @@ router.get('/', async (req, res) => {
       const heroCredit = photoCredit(image, heroImage);
 
       res.render('cars/detail', {
-        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, userFavorite,
+        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
         gallery, mySpotCount, heroCredit,
         years: carinfo.formatYears(car),
         typeLabel: type === 'car' ? null : carquery.VEHICLE_TYPES[type].singular,
@@ -447,9 +449,10 @@ router.get('/', async (req, res) => {
         if (hit && !hits.some(h => h.make === hit.make && h.model === hit.model)) hits.push(hit);
       }
       const cars = await Promise.all(hits.map(async ({ make, model, car }) => {
-        const [wiki, carSpecs] = await Promise.all([
+        const [wiki, carSpecs, safetyRatings] = await Promise.all([
           carinfo.getWikiSummary(make, model),
-          carinfo.getFuelSpecs(make, model, car && car.year_max)
+          carinfo.getFuelSpecs(make, model, car && car.year_max),
+          nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null)
         ]);
         const facts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
         const factMap = {};
@@ -460,6 +463,7 @@ router.get('/', async (req, res) => {
           favcount: car ? car.favcount : 0,
           years: carinfo.formatYears(car),
           specs: carSpecs,
+          ratings: safetyRatings,
           facts: factMap
         };
       }));

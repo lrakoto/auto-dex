@@ -64,7 +64,7 @@ Check an item off in the same PR that finishes it. Research behind this list
   for 19 of 30 random cars and 5 of 10 motorcycles.
 
 ### R3 — Safety and owner-reported problems on car pages
-- [ ] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
+- [x] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
   frontal, side, rollover) on the detail and compare pages.
 - [ ] Owner complaints summary from `api.nhtsa.gov/complaints/complaintsByVehicle`:
   count per model year and the top components (the 2016 Civic has 1,080
