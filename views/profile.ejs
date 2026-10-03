@@ -82,7 +82,7 @@
           <div class="card h-100">
             <span class="card-badge card-badge--favorite">&#9825;</span>
             <a href="/cars/car?make=<%= encodeURIComponent(f.make) %>&model=<%= encodeURIComponent(f.model) %>">
-              <img class="card-img-top imgresp spot-img" src="<%= cardPhoto(f.image) %>" alt="<%= f.make %> <%= f.model %>">
+              <img class="card-img-top imgresp spot-img" src="<%= cardPhoto(f.photo) %>" alt="<%= f.make %> <%= f.model %>">
             </a>
             <div class="card-body text-left">
               <p class="card-text mb-0"><strong><%= f.make %> <%= f.model %></strong></p>

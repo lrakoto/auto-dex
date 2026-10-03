@@ -56,7 +56,7 @@
       <% proposals.forEach(p => { %>
         <div class="col-md-4 mb-4">
           <div class="card box-shadow">
-            <img class="card-img-top imgresp" src="<%= p.imageUrl %>" alt="Proposed image" data-onerror-fallback="https://i.ibb.co/PwkqdSy/placeholder.png">
+            <img class="card-img-top imgresp" src="<%= p.imageUrl %>" alt="Proposed image" data-onerror-fallback="/assets/no-photo.svg">
             <div class="card-body text-left">
               <h6 class="card-title mb-1"><%= p.car.make %> <%= p.car.model %></h6>
               <p class="text-muted mb-2" style="font-size:0.75rem;">By <%= p.user.name %> &middot; <%= new Date(p.createdAt).toLocaleDateString() %></p>

@@ -10,6 +10,7 @@ const { decodeVin, getRecalls, normalizeVin } = require('../lib/nhtsa');
 const { addImage, refreshHero } = require('../lib/gallery');
 const { getDexStats, getBadges } = require('../lib/dex');
 const { validateUsername } = require('../lib/usernames');
+const { favoritePhoto } = require('../lib/photos');
 const { BATCH_SIZE: UNSPLASH_BATCH, WIKI_BATCH } = require('../jobs/images');
 const { ALL_MAKES } = require('../config/carquery');
 
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
     const userId = req.user.id;
     const [myCars, favorites, dex, recentSpots] = await Promise.all([
       db.user_car.findAll({ where: { userId }, order: [['createdAt', 'DESC']] }),
-      db.favorite_car.findAll({ where: { userId } }),
+      db.favorite_car.findAll({ where: { userId }, include: [{ model: db.car, attributes: ['image'] }] }),
       getDexStats(userId),
       db.spotting.findAll({
         where: { userId },
@@ -59,7 +60,7 @@ router.get('/', async (req, res) => {
     const badges = await getBadges(userId, dex);
     res.render('garage/index', {
       myCars: myCars.map(c => c.toJSON()),
-      favorites: favorites.map(f => f.toJSON()),
+      favorites: favorites.map(f => ({ ...f.toJSON(), photo: favoritePhoto(f) })),
       dex, badges,
       recentSpots: recentSpots.map(s => s.toJSON()),
       pageTitle: 'My Garage — AutoDex',
