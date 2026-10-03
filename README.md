@@ -122,6 +122,7 @@ async function getCarData() {
 | POST | /auth/signup | auth.js | Create user |
 | POST | /auth/logout | auth.js | Log out (POST-only — GET is 404 by design) |
 | GET | /auth/verify/:token | auth.js | Verify email (token stored hashed) |
+| GET | /auth/recall-alerts/off | auth.js | One-click unsubscribe from recall alert emails (signed link) |
 | POST | /auth/resend-verification | auth.js | Resend verification email |
 | GET/POST | /auth/forgot | auth.js | Request a password reset email |
 | GET | /auth/reset/:token | auth.js | Reset link (moves token into the session) |

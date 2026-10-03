@@ -98,9 +98,11 @@ R14 on 2026-10-01 so they ship before R4.
   THROTTLE, Cardle.
 
 ### R5 — Recall alerts for garage cars
-- [ ] Weekly job compares each garage car's NHTSA recalls with the last check
+- [x] Weekly job compares each garage car's NHTSA recalls with the last check
   and emails the owner about new ones (Resend is already set up). Opt-in
   setting on the garage page; unsubscribe link.
+  Shipped as `jobs/recalls.js` (daily run, each car due weekly) with
+  `users.recallAlerts` and a signed `/auth/recall-alerts/off` link.
 
 ### R6 — Running costs and a fuel log
 - [ ] Show FuelEconomy.gov's annual fuel cost, 5-year savings versus the

@@ -66,4 +66,33 @@ async function sendPasswordResetEmail(toEmail, toName, token) {
   });
 }
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail };
+// New recalls for a user's garage cars: [{ car: 'Year Make Model', carUrl,
+// recalls: [{ campaign, component, summary }] }]. NHTSA text is escaped too.
+async function sendRecallAlertEmail(toEmail, toName, cars, unsubscribeUrl) {
+  if (process.env.NODE_ENV === 'test') {
+    console.log(`[test] Skipping recall alert email to ${toEmail}`);
+    return;
+  }
+  const count = cars.reduce((n, c) => n + c.recalls.length, 0);
+  const items = cars.map(c => `
+        <h3 style="margin:1.5rem 0 0.5rem;"><a href="${BASE_URL}${c.carUrl}" style="color:#ed5353;">${escapeHtml(c.car)}</a></h3>
+        ${c.recalls.map(r => `
+        <p style="margin:0 0 0.25rem;font-weight:600;">${escapeHtml(r.component)} <span style="color:#71717a;font-weight:400;">(NHTSA ${escapeHtml(r.campaign)})</span></p>
+        <p style="color:#71717a;margin:0 0 1rem;">${escapeHtml(r.summary)}</p>`).join('')}`).join('');
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: count === 1 ? 'A new recall for a car in your AutoDex garage' : `${count} new recalls for cars in your AutoDex garage`,
+    headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>` },
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:2rem;">
+        <h2 style="margin-bottom:0.5rem;">Hi ${escapeHtml(toName)},</h2>
+        <p style="color:#71717a;">NHTSA has posted ${count === 1 ? 'a new recall' : 'new recalls'} for ${cars.length === 1 ? 'a car' : 'cars'} in your garage. Your dealer fixes recalls for free.</p>
+        ${items}
+        <p style="color:#71717a;font-size:0.8rem;margin-top:2rem;">You get these because recall alerts are on in your garage settings. <a href="${unsubscribeUrl}" style="color:#71717a;">Turn off recall alerts</a></p>
+      </div>
+    `
+  });
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendRecallAlertEmail };

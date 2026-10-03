@@ -231,6 +231,11 @@
       <label class="form-check-label" for="garagePublic">Make my garage public</label>
       <small class="d-block text-muted">Shows your cars, favorites, Dex and badges. Never your email, VINs or notes.</small>
     </div>
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="recallAlerts" name="recallAlerts" <%= currentUser.recallAlerts ? 'checked' : '' %>>
+      <label class="form-check-label" for="recallAlerts">Email me new recalls for my cars</label>
+      <small class="d-block text-muted">Checked weekly with NHTSA for every car in My Cars that has a year. Only recalls posted after you turn this on.</small>
+    </div>
     <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
   </form>
 </div>
