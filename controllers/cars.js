@@ -7,7 +7,7 @@ const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const carinfo = require('../lib/carinfo');
-const nhtsa = require('../lib/nhtsa'); // getSafetyRatings via the module so tests can stub it
+const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via the module so tests can stub them
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
@@ -364,7 +364,7 @@ router.get('/', async (req, res) => {
       const { Op } = require('sequelize');
 
       // External lookups and the viewer's state are independent — run them together
-      const [related, wiki, carSpecs, safetyRatings, favorite, mySpotCount, gallery] = await Promise.all([
+      const [related, wiki, carSpecs, safetyRatings, favorite, mySpotCount, gallery, complaints] = await Promise.all([
         // Other models of the same make and type, the ones with photos first
         db.car.findAll({
           where: { make, model: { [Op.ne]: model }, ...vehicleTypeWhere(type) },
@@ -376,7 +376,9 @@ router.get('/', async (req, res) => {
         nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null),
         req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
         req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
-        car ? getGallery(car.id, req.user && req.user.id, car.image) : []
+        car ? getGallery(car.id, req.user && req.user.id, car.image) : [],
+        // NHTSA outage shouldn't break the page — same three-state pattern as garage recalls
+        nhtsa.getComplaints(make, model, car && car.year_max).catch(() => null)
       ]);
       const relatedCars = related.map(c => c.toJSON());
       const userFavorite = favorite ? favorite.toJSON() : null;
@@ -411,7 +413,8 @@ router.get('/', async (req, res) => {
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
-        gallery, mySpotCount, heroCredit,
+        gallery, mySpotCount, heroCredit, complaints,
+        complaintsYear: car && car.year_max,
         years: carinfo.formatYears(car),
         typeLabel: type === 'car' ? null : carquery.VEHICLE_TYPES[type].singular,
         typeParam: typeParam(type),

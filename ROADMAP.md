@@ -66,7 +66,7 @@ Check an item off in the same PR that finishes it. Research behind this list
 ### R3 — Safety and owner-reported problems on car pages
 - [x] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
   frontal, side, rollover) on the detail and compare pages.
-- [ ] Owner complaints summary from `api.nhtsa.gov/complaints/complaintsByVehicle`:
+- [x] Owner complaints summary from `api.nhtsa.gov/complaints/complaintsByVehicle`:
   count per model year and the top components (the 2016 Civic has 1,080
   complaints, 444 about steering). Cached like the recalls lookup.
 

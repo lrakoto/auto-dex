@@ -134,6 +134,30 @@
           <p class="facts-source">Source: <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> (CC0)</p>
         </div>
       <% } %>
+      <% if (complaints) { %>
+        <div class="facts-panel">
+          <div class="accent-line"></div>
+          <h5 class="section-label">Owner Complaints<% if (complaintsYear) { %> — <%= complaintsYear %><% } %></h5>
+          <% if (complaints.count > 0) { %>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+              <%= complaints.count.toLocaleString() %> complaint<%= complaints.count === 1 ? '' : 's' %> filed with NHTSA<% if (complaintsYear) { %> for the <%= complaintsYear %> model year<% } %>.
+            </p>
+            <% if (complaints.topComponents.length) { %>
+              <dl class="facts-list">
+                <% complaints.topComponents.forEach(c => { %>
+                  <div class="fact-row">
+                    <dt><%= c.component %></dt>
+                    <dd><%= c.count %></dd>
+                  </div>
+                <% }) %>
+              </dl>
+            <% } %>
+            <p class="facts-source">Source: <a href="https://www.nhtsa.gov/nhtsa-datasets-and-apis" target="_blank" rel="noopener">NHTSA</a> owner complaints</p>
+          <% } else { %>
+            <p style="font-size:0.85rem;color:var(--text-muted);">No owner complaints on file with NHTSA<% if (complaintsYear) { %> for the <%= complaintsYear %> model year<% } %>.</p>
+          <% } %>
+        </div>
+      <% } %>
     </div>
 
     <!-- Media Links -->
