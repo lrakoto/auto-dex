@@ -6,7 +6,7 @@
 const db = require('../models');
 const carquery = require('../config/carquery'); // via the module so tests can stub it
 const { PLACEHOLDER_URL } = require('../lib/constants');
-const { classifyModel } = require('../lib/vehicleTypes');
+const { classifyModel, isAtvName } = require('../lib/vehicleTypes');
 
 const NHTSA_TYPES = [...new Set(Object.values(carquery.VEHICLE_TYPES).flatMap(t => t.nhtsa))];
 
@@ -32,7 +32,8 @@ async function addMissingModels(make) {
       const key = model.toLowerCase();
       if (existing.has(key)) continue;
       existing.add(key);
-      rows.push({ make, model, image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: type });
+      const vehicleType = type === 'motorcycle' && isAtvName(model) ? 'offroad' : type;
+      rows.push({ make, model, image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: vehicleType });
     }
   }
   if (rows.length) await db.car.bulkCreate(rows, { ignoreDuplicates: true });
@@ -56,8 +57,22 @@ async function classifyMake(make, options) {
   return { classified: rows.length, added, byType: Object.fromEntries(Object.entries(byType).map(([t, ids]) => [t, ids.length])) };
 }
 
+// Rows typed as motorcycles before classifyModel knew ATVs (Honda TRX,
+// Kawasaki MULE…) become off-road. Only vehicle_type changes. Idempotent, so
+// it runs with every classification pass.
+async function reclassifyAtvs() {
+  const bikes = await db.car.findAll({ attributes: ['id', 'model'], where: { vehicle_type: 'motorcycle' } });
+  const ids = bikes.filter(b => isAtvName(b.model)).map(b => b.id);
+  if (ids.length) {
+    await db.car.update({ vehicle_type: 'offroad' }, { where: { id: ids } });
+    console.log(`Vehicle types: ${ids.length} ATVs and side-by-sides moved from motorcycle to off-road`);
+  }
+  return ids.length;
+}
+
 async function classifyVehicleTypes({ maxMakes = Infinity, delayMs = 100 } = {}) {
   try {
+    await reclassifyAtvs();
     const pending = await db.car.findAll({
       attributes: ['make'],
       where: { vehicle_type: null },
@@ -81,4 +96,4 @@ async function classifyVehicleTypes({ maxMakes = Infinity, delayMs = 100 } = {})
   }
 }
 
-module.exports = { classifyVehicleTypes, classifyMake };
+module.exports = { classifyVehicleTypes, classifyMake, reclassifyAtvs };
