@@ -105,8 +105,9 @@ const { csrfSynchronisedProtection, generateToken } = csrfSync({
 });
 app.use(csrfSynchronisedProtection);
 
-// The only POST forms a signed-out visitor sees: login/signup/reset and the quiz
-const ANON_FORM_PATHS = ['/auth', '/play'];
+// The only POST forms a signed-out visitor sees: login/signup/reset, the quiz
+// and the daily puzzle
+const ANON_FORM_PATHS = ['/auth', '/play', '/puzzle'];
 const hasAnonForms = path => ANON_FORM_PATHS.some(p => path === p || path.startsWith(p + '/'));
 
 app.use((req, res, next) => {
@@ -131,6 +132,7 @@ app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 app.use('/u', require('./controllers/profile'));   // public garages
 app.use('/play', require('./controllers/play'));   // Who's That Car?
+app.use('/puzzle', require('./controllers/puzzle')); // Daily car puzzle
 
 // Report unexpected errors to Sentry (no-op without SENTRY_DSN). Upload and
 // CSRF rejections are user mistakes handled below, not bugs.

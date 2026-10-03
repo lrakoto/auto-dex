@@ -1,0 +1,84 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <p class="eyebrow">Daily Puzzle</p>
+    <h1 class="jumbotron-heading">Guess the Mystery Car</h1>
+    <p class="lead text-muted">One car, the same for everyone today. Six guesses — each one checks the make, country and decade against the answer.</p>
+  </div>
+</section>
+
+<div class="container py-5">
+  <div class="puzzle-layout">
+    <div class="puzzle-main">
+      <% if (!answer) { %>
+        <div class="empty-state">
+          <div class="empty-icon">?</div>
+          <h3>Not enough dated cars yet</h3>
+          <p>The puzzle needs catalog cars with known production years. They're added every day, so check back soon.</p>
+          <a href="/cars/explore" class="btn btn-outline-secondary mt-3">Explore cars</a>
+        </div>
+      <% } else { %>
+        <div class="puzzle-card">
+          <div class="puzzle-stats" aria-live="polite">
+            <span class="puzzle-stat">Guess <strong><%= guesses.length + (done ? 0 : 1) %></strong> of <%= maxGuesses %></span>
+          </div>
+
+          <% if (error) { %>
+            <p class="puzzle-error" role="alert"><%= error %></p>
+          <% } %>
+
+          <% if (guesses.length) { %>
+            <table class="puzzle-board" aria-label="Your guesses so far">
+              <thead>
+                <tr><th>Guess</th><th>Make</th><th>Country</th><th>Decade</th></tr>
+              </thead>
+              <tbody>
+                <% guesses.forEach(g => { %>
+                  <tr class="<%= g.correct ? 'is-correct-row' : '' %>">
+                    <td class="puzzle-guess-name"><%= g.make %> <%= g.model %></td>
+                    <td><span class="puzzle-tile puzzle-tile--<%= g.makeState %>"><%= g.make %></span></td>
+                    <td><span class="puzzle-tile puzzle-tile--<%= g.countryState %>"><%= g.country %></span></td>
+                    <td>
+                      <span class="puzzle-tile puzzle-tile--<%= g.decadeState %>">
+                        <%= g.decade %>s
+                        <% if (g.decadeDirection === 'higher') { %><span class="puzzle-arrow" aria-label="guess a later decade">&uarr;</span><% } %>
+                        <% if (g.decadeDirection === 'lower') { %><span class="puzzle-arrow" aria-label="guess an earlier decade">&darr;</span><% } %>
+                      </span>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+
+          <% if (done) { %>
+            <div class="puzzle-result">
+              <p class="puzzle-verdict <%= won ? 'is-correct' : 'is-wrong' %>" role="status">
+                <% if (won) { %>Got it in <%= guesses.length %><% } else { %>Out of guesses<% } %> —
+                it was the <a href="<%= answerUrl %>"><%= answer.make %> <%= answer.model %></a>.
+              </p>
+              <p class="puzzle-note">A new car is up at midnight UTC.</p>
+            </div>
+          <% } else { %>
+            <form method="POST" action="/puzzle/guess" id="puzzle-form" class="puzzle-form" autocomplete="off">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <label for="puzzle-guess" class="sr-only">Guess a car</label>
+              <input type="text" name="guess" id="puzzle-guess" class="puzzle-input" list="puzzle-suggestions" placeholder="Make and model, e.g. Honda Civic" required>
+              <datalist id="puzzle-suggestions"></datalist>
+              <button type="submit" class="btn btn-primary">Guess</button>
+            </form>
+            <p class="puzzle-hint"><%= guessesLeft %> guess<%= guessesLeft === 1 ? '' : 'es' %> left.</p>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <aside class="puzzle-side">
+      <div class="media-card">
+        <h5>How to read a tile</h5>
+        <p class="puzzle-note"><span class="puzzle-tile puzzle-tile--exact">Green</span> is an exact match. <span class="puzzle-tile puzzle-tile--close">Yellow</span> means the decade is one off. An arrow points to a later (&uarr;) or earlier (&darr;) decade than your guess.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="/js/puzzle.js" defer></script>
