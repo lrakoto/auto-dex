@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const passport = require('../config/ppConfig');
 const db = require('../models');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../config/email');
+const emailSender = require('../config/email');
 const { generateVerificationToken, hashToken, normalizeEmail, checkRecallUnsubscribeToken } = require('../lib/tokens');
 const rateLimit = require('express-rate-limit');
 
@@ -147,7 +147,7 @@ router.post('/signup', signupLimiter, async (req, res) => {
     if (created) {
       console.log(`----- ${user.name} was created -----`);
       try {
-        await sendVerificationEmail(email, name, token);
+        await emailSender.sendVerificationEmail(email, name, token);
       } catch (emailErr) {
         console.log('EMAIL SEND ERROR:', emailErr);
       }
@@ -215,7 +215,10 @@ router.post('/resend-verification', emailSendLimiter, async (req, res) => {
         verificationToken: hashToken(token),
         verificationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
       });
-      await sendVerificationEmail(email, user.name, token);
+      // Keep provider failures and response time from revealing an unverified
+      // account, just as the password-reset flow does.
+      emailSender.sendVerificationEmail(email, user.name, token)
+        .catch(err => console.log('RESEND EMAIL ERROR:', err));
     }
     // Same response regardless of whether the account exists / is unverified,
     // so this endpoint can't be used to enumerate addresses.
@@ -261,7 +264,7 @@ router.post('/forgot', resetRequestLimiter, async (req, res) => {
         passwordResetExpiresAt: new Date(Date.now() + RESET_TTL_MS)
       });
       // Not awaited: the response time shouldn't reveal whether we sent anything
-      sendPasswordResetEmail(email, user.name, token)
+      emailSender.sendPasswordResetEmail(email, user.name, token)
         .catch(err => console.log('RESET EMAIL ERROR:', err));
     }
   } catch (err) {
