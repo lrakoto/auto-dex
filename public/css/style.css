@@ -329,6 +329,16 @@ p { color: var(--text-muted); }
   color: var(--text) !important;
 }
 
+.card-make {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.card-make, .card-model { overflow-wrap: anywhere; }
+
 /* Full-card cover link — stretches the title link to fill the whole card */
 .card-cover::after {
   content: '';
@@ -2068,7 +2078,16 @@ textarea:focus-visible,
 .explore-filters .form-control { min-width: 130px; }
 .explore-filters .explore-check { flex-direction: row; align-items: center; gap: 0.4rem; padding-bottom: 0.35rem; }
 .explore-filters .explore-check > span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 0.8rem; }
-.explore-count { font-size: 0.78rem; color: var(--text-subtle); margin: 1rem 0 0; }
+.explore-count { font-size: 0.78rem; color: #a1a1aa; margin: 1rem 0 0; }
+.explore-reset, .empty-state--results .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--text);
+}
+.empty-state--results h3 { color: var(--text); }
+.empty-state--results p { color: #a1a1aa; }
 
 /* ─── TIMELINE ─────────────────────────────────────────────────────────────── */
 .timeline-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
