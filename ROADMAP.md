@@ -105,9 +105,11 @@ R14 on 2026-10-01 so they ship before R4.
   `users.recallAlerts` and a signed `/auth/recall-alerts/off` link.
 
 ### R6 — Running costs and a fuel log
-- [ ] Show FuelEconomy.gov's annual fuel cost, 5-year savings versus the
+- [x] Show FuelEconomy.gov's annual fuel cost, 5-year savings versus the
   average car, CO₂ g/mi and EPA scores on detail and compare pages (fields
   `fuelCost08`, `youSaveSpend`, `co2TailpipeGpm`, `feScore`, `ghgScore`).
+  Shipped on the existing `carinfo.getFuelSpecs` lookup (`lib/carinfo.js`) —
+  no new route, migration or env var.
 - [ ] Fuel log for garage cars: fill-ups, real MPG versus EPA, cost per mile.
 
 ### R7 — Dex rarity tiers and levels

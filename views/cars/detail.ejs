@@ -101,6 +101,11 @@
             <% if (carSpecs.drive) { %><div class="spec-item"><span class="spec-label">Drive</span><span class="spec-value"><%= carSpecs.drive %></span></div><% } %>
             <% if (carSpecs.fuel) { %><div class="spec-item"><span class="spec-label">Fuel</span><span class="spec-value"><%= carSpecs.fuel %></span></div><% } %>
             <% if (carSpecs.cityMpg && carSpecs.hwyMpg) { %><div class="spec-item"><span class="spec-label">MPG</span><span class="spec-value"><%= carSpecs.cityMpg %> city &middot; <%= carSpecs.hwyMpg %> hwy</span></div><% } %>
+            <% if (carSpecs.annualFuelCost) { %><div class="spec-item"><span class="spec-label">Annual Fuel Cost</span><span class="spec-value">$<%= carSpecs.annualFuelCost.toLocaleString('en-US') %></span></div><% } %>
+            <% if (carSpecs.fiveYearSavings) { %><div class="spec-item"><span class="spec-label">5-Yr vs Avg Car</span><span class="spec-value"><%= carSpecs.fiveYearSavings > 0 ? 'Save $' + carSpecs.fiveYearSavings.toLocaleString('en-US') : 'Spend $' + Math.abs(carSpecs.fiveYearSavings).toLocaleString('en-US') %></span></div><% } %>
+            <% if (carSpecs.co2) { %><div class="spec-item"><span class="spec-label">CO&#8322; Emissions</span><span class="spec-value"><%= carSpecs.co2 %> g/mi</span></div><% } %>
+            <% if (carSpecs.feScore) { %><div class="spec-item"><span class="spec-label">EPA Fuel Economy Score</span><span class="spec-value"><%= carSpecs.feScore %>/10</span></div><% } %>
+            <% if (carSpecs.ghgScore) { %><div class="spec-item"><span class="spec-label">EPA GHG Score</span><span class="spec-value"><%= carSpecs.ghgScore %>/10</span></div><% } %>
           </div>
         </div>
       <% } %>
