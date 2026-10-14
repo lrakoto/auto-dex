@@ -1,11 +1,17 @@
 <% var TYPE_BADGES = { motorcycle: 'Motorcycle', offroad: 'Off-road', commercial: 'Commercial' }; %>
 <div class="row" id="cars-row">
   <% if (carImg.length === 0) { %>
-    <div class="empty-state">
+    <div class="empty-state<%= typeof emptyState !== 'undefined' && emptyState ? ' empty-state--results' : '' %>">
       <div class="empty-icon">⊘</div>
-      <h3>No models found</h3>
-      <p>We don't have any models on record for <strong><%= search %></strong> yet.</p>
-      <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
+      <% if (typeof emptyState !== 'undefined' && emptyState) { %>
+        <h3><%= emptyState.title %></h3>
+        <p><%= emptyState.message %></p>
+        <a href="<%= emptyState.href %>" class="btn btn-outline-secondary mt-3"><%= emptyState.action %></a>
+      <% } else { %>
+        <h3>No models found</h3>
+        <p>We don't have any models on record for <strong><%= search %></strong> yet.</p>
+        <a href="/" class="btn btn-outline-secondary mt-3">Back to Search</a>
+      <% } %>
     </div>
   <% } else { %>
     <% carImg.forEach((c, i) => { %>
@@ -15,11 +21,11 @@
             <span class="card-badge card-badge--type"><%= TYPE_BADGES[c.dataValues.vehicle_type] %></span>
           <% } %>
           <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>">
-            <img class="card-img-top imgresp" src="<%= cardPhoto(c.dataValues.image) %>" alt="<%= c.dataValues.model %>">
+            <img class="card-img-top imgresp" src="<%= cardPhoto(c.dataValues.image) %>" alt="<%= c.dataValues.make %> <%= c.dataValues.model %>">
           </a>
           <div class="card-body">
             <p class="card-text mb-0">
-              <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark card-cover"><%= c.dataValues.model %></a>
+              <a href="/cars/car?make=<%= encodeURIComponent(c.dataValues.make) %>&model=<%= encodeURIComponent(c.dataValues.model) %>" class="text-dark card-cover"><% if (typeof showMakes !== 'undefined' && showMakes) { %><span class="card-make"><%= c.dataValues.make %></span> <% } %><span class="card-model"><%= c.dataValues.model %></span></a>
             </p>
             <% if (c.dataValues.years) { %><p class="card-years"><%= c.dataValues.years %></p><% } %>
             <div class="card-actions">

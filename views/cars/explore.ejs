@@ -56,6 +56,9 @@
     </form>
     <% var countNoun = { car: 'car', motorcycle: 'motorcycle', offroad: 'off-road vehicle', commercial: 'commercial vehicle' }[filters.type] || 'vehicle'; %>
     <p class="explore-count"><%= total.toLocaleString('en-US') %> <%= countNoun %><%= total === 1 ? '' : 's' %></p>
+    <% if (resetFiltersUrl) { %>
+      <a href="<%= resetFiltersUrl %>" class="btn btn-sm btn-outline-secondary mt-3 explore-reset">Clear filters</a>
+    <% } %>
   </div>
 </section>
 
