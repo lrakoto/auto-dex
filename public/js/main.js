@@ -78,7 +78,7 @@
 
   // Fade out on internal link click
   document.addEventListener('click', function (e) {
-    // Another handler (AJAX pagination, modal triggers, etc.) already handled it
+    // Another handler (modal triggers, etc.) already handled it
     if (e.defaultPrevented) return;
     var link = e.target.closest('a[href]');
     if (!link) return;
@@ -928,38 +928,8 @@
   bindDetailRemoveForm();
 
 
-  /* ═══════════════════════════════════════════════════════════════
-     AJAX PAGINATION — updates just the grid, no full page reload
-  ═══════════════════════════════════════════════════════════════ */
-
-  var carsGrid = document.getElementById('cars-grid');
-  if (carsGrid) {
-    carsGrid.addEventListener('click', function (e) {
-      var link = e.target.closest('a.pg-btn');
-      if (!link || link.classList.contains('disabled')) return;
-      e.preventDefault();
-
-      var url = link.getAttribute('href');
-      var partialUrl = url + (url.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
-
-      carsGrid.style.opacity = '0.4';
-      carsGrid.style.transition = 'opacity 0.15s ease';
-
-      fetch(partialUrl)
-        .then(function (r) { return r.text(); })
-        .then(function (html) {
-          carsGrid.innerHTML = html;
-          carsGrid.style.opacity = '1';
-          window.history.pushState({}, '', url);
-          initFavForms(carsGrid);
-          carsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        })
-        .catch(function () {
-          carsGrid.style.opacity = '1';
-          window.location.href = url;
-        });
-    });
-  }
+  // Pagination uses normal links. The browser keeps each page's results,
+  // history, focus and modified clicks together without replacing the grid.
 
 
   /* ═══════════════════════════════════════════════════════════════
