@@ -4,7 +4,7 @@ const db = require('../models');
 const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
 const { classifyModel, isCommercialName } = require('../lib/vehicleTypes');
-const { classifyMake } = require('../jobs/vehicleTypes');
+const { classifyVehicleTypes, classifyMake, reclassifyAtvs } = require('../jobs/vehicleTypes');
 const { photoPoolWhere } = require('../lib/catalog');
 const { createVerifiedUser } = require('./helpers');
 const { PLACEHOLDER_URL } = require('../lib/constants');
@@ -59,6 +59,20 @@ describe('Vehicle types', function() {
       if (classifyModel('Fisker', 'Ocean', lists({ mpv: ['Ocean'] })) !== 'car') throw new Error('Fisker');
       if (classifyModel('Buell', '1125R', lists({ motorcycle: ['1125R'] })) !== 'motorcycle') throw new Error('Buell');
     });
+
+    it('files ATVs and side-by-sides NHTSA lists as motorcycles as off-road', function() {
+      const kawasaki = lists({ motorcycle: ['Ninja 650', 'MULE 4010', 'Brute Force 750', 'KFX450R'] });
+      const got = ['Ninja 650', 'MULE 4010', 'Brute Force 750', 'KFX450R'].map(m => classifyModel('Kawasaki', m, kawasaki));
+      if (got.join() !== 'motorcycle,offroad,offroad,offroad') throw new Error(got.join());
+      // Unlisted names in a motorcycle-dominated make, too
+      if (classifyModel('Honda', 'TRX450R', honda) !== 'offroad') throw new Error('Honda TRX unlisted');
+      if (classifyModel('Honda', 'CBR600RR', honda) !== 'motorcycle') throw new Error('Honda bike');
+      const yamaha = lists({ motorcycle: ['TRX850'] });
+      if (classifyModel('Yamaha', 'TRX850', yamaha) !== 'motorcycle') throw new Error('Yamaha TRX850 road bike');
+      if (classifyModel('Yamaha', 'TRX850', lists({})) !== 'motorcycle') throw new Error('retired Yamaha TRX850 road bike');
+      // Only ever instead of "motorcycle": a car called Viking stays a car
+      if (classifyModel('Ford', 'Viking', lists({ car: ['Viking'] })) !== 'car') throw new Error('car named Viking');
+    });
   });
 
   // Shared fixtures for the job and the pages: BMW builds cars and bikes
@@ -105,6 +119,60 @@ describe('Vehicle types', function() {
       if (got !== 'M3=car, R 1250 GS=motorcycle, S 1000 RR=motorcycle, X5=car') throw new Error(got);
       if (result.classified !== 2 || result.added !== 2) throw new Error(JSON.stringify(result));
       if (await db.car.count() !== before + 2) throw new Error('rows were removed');
+    });
+
+    it('adds newly listed ATVs as off-road while keeping road bikes as motorcycles', async function() {
+      const previous = { getModels: carquery.getModels, getModelsByType: carquery.getModelsByType };
+      const models = ['MULE 4010', 'Ninja 650'];
+      carquery.getModelsByType = async (make, type) => type === 'motorcycle' ? models : [];
+      carquery.getModels = async (make, { type } = {}) => type === 'motorcycle' ? models.map(model => ({ make, model })) : [];
+      try {
+        await classifyMake('Kawasaki', { delayMs: 0 });
+        const mule = await db.car.findOne({ where: { make: 'Kawasaki', model: 'MULE 4010' } });
+        const ninja = await db.car.findOne({ where: { make: 'Kawasaki', model: 'Ninja 650' } });
+        if (!mule || mule.vehicle_type !== 'offroad') throw new Error('new ATV should be off-road');
+        if (!ninja || ninja.vehicle_type !== 'motorcycle') throw new Error('new road bike should remain a motorcycle');
+      } finally {
+        Object.assign(carquery, previous);
+      }
+    });
+
+    it('moves ATVs already typed as motorcycles to off-road, deleting nothing', async function() {
+      const rows = await db.car.bulkCreate([
+        { make: 'Suzuki', model: 'KingQuad 750AXi', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'motorcycle' },
+        { make: 'Suzuki', model: 'LT-Z400', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'motorcycle' },
+        { make: 'Suzuki', model: 'Hayabusa', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'motorcycle' },
+        { make: 'Honda', model: 'TRX400EX', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'motorcycle' },
+        { make: 'Yamaha', model: 'TRX850', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'motorcycle' }
+      ], { returning: true });
+      const before = await db.car.count();
+      await reclassifyAtvs();
+      const types = await Promise.all(rows.map(r => r.reload().then(x => x.vehicle_type)));
+      if (types.join() !== 'offroad,offroad,motorcycle,offroad,motorcycle') throw new Error(types.join());
+      if (await db.car.count() !== before) throw new Error('rows deleted');
+      if (await reclassifyAtvs() !== 0) throw new Error('second pass changed rows');
+    });
+
+    it('repairs typed ATVs even when the upkeep finds no untyped makes', async function() {
+      const atv = await db.car.create({
+        make: 'Honda', model: 'TRX300EX', image: 'https://example.com/trx.jpg',
+        favcount: 4, updated_img: true, vehicle_type: 'motorcycle'
+      });
+      const previous = db.car.findAll;
+      db.car.findAll = function(options) {
+        if (options.where && options.where.vehicle_type === null) return Promise.resolve([]);
+        return previous.call(this, options);
+      };
+      try {
+        await classifyVehicleTypes({ delayMs: 0 });
+        await atv.reload();
+        if (atv.vehicle_type !== 'offroad') throw new Error('upkeep skipped the ATV repair');
+        if (atv.image !== 'https://example.com/trx.jpg' || atv.favcount !== 4 || !atv.updated_img) {
+          throw new Error('repair changed unrelated car data');
+        }
+      } finally {
+        db.car.findAll = previous;
+      }
     });
 
     it('leaves a make untyped when one of its NHTSA lists fails', async function() {
