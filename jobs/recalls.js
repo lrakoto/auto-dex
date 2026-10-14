@@ -2,7 +2,7 @@
 // garage car's NHTSA recalls once a week and email the owner the campaigns
 // that weren't there last time. A car's first check only records what's
 // already out (its garage page lists those). A failed lookup is retried the
-// next day; nothing is marked checked until it succeeds.
+// next day. New campaigns are acknowledged only after the alert is accepted.
 const db = require('../models');
 const nhtsa = require('../lib/nhtsa'); // via the module so tests can stub getRecalls
 const email = require('../config/email'); // likewise sendRecallAlertEmail
@@ -27,38 +27,56 @@ async function checkRecalls({ batch = BATCH, delayMs = DELAY_MS } = {}) {
     limit: batch
   });
 
-  const news = new Map(); // userId → { user, cars: [...] }
+  const news = new Map(); // userId → { user, cars: [...], pending: [...] }
   for (const car of cars) {
     const year = parseInt(car.year, 10);
     try {
       const recalls = year ? await nhtsa.getRecalls(car.make, car.model, year) : [];
       const seen = car.recalls_seen;
       const fresh = seen ? recalls.filter(r => r.campaign && !seen.includes(r.campaign)) : [];
+      const campaigns = [...new Set([...(seen || []), ...recalls.map(r => r.campaign).filter(Boolean)])];
       if (fresh.length) {
-        if (!news.has(car.user.id)) news.set(car.user.id, { user: car.user, cars: [] });
-        news.get(car.user.id).cars.push({
+        if (!news.has(car.user.id)) news.set(car.user.id, { user: car.user, cars: [], pending: [] });
+        const group = news.get(car.user.id);
+        group.cars.push({
           car: `${car.year} ${car.make} ${car.model}`,
           carUrl: `/garage/car/${car.id}`,
           recalls: fresh.map(r => ({ campaign: r.campaign, component: r.component, summary: r.summary }))
         });
+        group.pending.push({ car, campaigns });
+      } else {
+        // First-check baseline, or no new campaigns: no email is required.
+        await car.update({ recalls_seen: campaigns, recalls_checked_at: new Date() });
       }
-      const campaigns = [...new Set([...(seen || []), ...recalls.map(r => r.campaign).filter(Boolean)])];
-      await car.update({ recalls_seen: campaigns, recalls_checked_at: new Date() });
     } catch (err) {
       console.log(`Recall check error for garage car ${car.id} (retried tomorrow):`, err.message);
     }
     if (delayMs) await new Promise(r => setTimeout(r, delayMs));
   }
 
-  for (const { user, cars: list } of news.values()) {
+  let emailed = 0;
+  for (const { user, cars: list, pending } of news.values()) {
     try {
       await email.sendRecallAlertEmail(user.email, user.name, list, unsubscribeUrl(user.id));
+      emailed++;
     } catch (err) {
-      console.log(`Recall alert email error for user ${user.id}:`, err.message);
+      console.log(`Recall alert email error for user ${user.id} (retried tomorrow):`, err.message);
+      continue;
+    }
+    try {
+      // Keep every car in the grouped email pending until the provider accepts it.
+      // A DB failure after acceptance can resend the alert on the next run.
+      await db.sequelize.transaction(async (transaction) => {
+        for (const { car, campaigns } of pending) {
+          await car.update({ recalls_seen: campaigns, recalls_checked_at: new Date() }, { transaction });
+        }
+      });
+    } catch (err) {
+      console.log(`Recall alert acknowledgement error for user ${user.id} (may be sent again):`, err.message);
     }
   }
-  if (cars.length) console.log(`Recall alerts: ${cars.length} garage cars checked, ${news.size} owners emailed`);
-  return { checked: cars.length, emailed: news.size };
+  if (cars.length) console.log(`Recall alerts: ${cars.length} garage cars checked, ${emailed} owners emailed`);
+  return { checked: cars.length, emailed };
 }
 
 module.exports = { checkRecalls, unsubscribeUrl, RECHECK_DAYS };

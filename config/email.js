@@ -15,6 +15,13 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Resend resolves API and network failures with { error }, rather than
+// rejecting. Callers need a rejection so failures can be logged/retried.
+async function sendEmail(message) {
+  const { error } = await resend.emails.send(message);
+  if (error) throw new Error(error.message || 'Email provider rejected the message.');
+}
+
 async function sendVerificationEmail(toEmail, toName, token) {
   // Never hit the Resend API (or spend quota) from the test suite
   if (process.env.NODE_ENV === 'test') {
@@ -23,7 +30,7 @@ async function sendVerificationEmail(toEmail, toName, token) {
   }
   const link = `${BASE_URL}/auth/verify/${encodeURIComponent(token)}`;
   const safeName = escapeHtml(toName);
-  await resend.emails.send({
+  await sendEmail({
     from: FROM,
     to: toEmail,
     subject: 'Verify your AutoDex account',
@@ -48,7 +55,7 @@ async function sendPasswordResetEmail(toEmail, toName, token) {
   }
   const link = `${BASE_URL}/auth/reset/${encodeURIComponent(token)}`;
   const safeName = escapeHtml(toName);
-  await resend.emails.send({
+  await sendEmail({
     from: FROM,
     to: toEmail,
     subject: 'Reset your AutoDex password',
@@ -79,7 +86,7 @@ async function sendRecallAlertEmail(toEmail, toName, cars, unsubscribeUrl) {
         ${c.recalls.map(r => `
         <p style="margin:0 0 0.25rem;font-weight:600;">${escapeHtml(r.component)} <span style="color:#71717a;font-weight:400;">(NHTSA ${escapeHtml(r.campaign)})</span></p>
         <p style="color:#71717a;margin:0 0 1rem;">${escapeHtml(r.summary)}</p>`).join('')}`).join('');
-  await resend.emails.send({
+  await sendEmail({
     from: FROM,
     to: toEmail,
     subject: count === 1 ? 'A new recall for a car in your AutoDex garage' : `${count} new recalls for cars in your AutoDex garage`,

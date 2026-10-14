@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
+const emailSender = require('../config/email');
 const { getCsrfToken } = require('./helpers');
 const { hashToken } = require('../lib/tokens');
 
@@ -111,6 +112,37 @@ describe('Auth Controller', function() {
 
     it('GET /auth/logout should not exist (logout is POST-only)', async function() {
       await request(app).get('/auth/logout').expect(404);
+    });
+  });
+
+  describe('POST /auth/resend-verification', function() {
+    it('keeps the generic response for unknown, verified and unverified addresses when the provider fails', async function() {
+      const unverified = await db.user.create({
+        email: 'resend-failure@example.com', name: 'Resend', password: 'password123', emailVerified: false
+      });
+      const realSend = emailSender.sendVerificationEmail;
+      const attempts = [];
+      emailSender.sendVerificationEmail = async to => {
+        attempts.push(to);
+        throw new Error('Provider unavailable');
+      };
+      try {
+        for (const email of [unverified.email, 'resend-unknown@example.com', testUser.email]) {
+          const visitor = request.agent(app);
+          const token = await getCsrfToken(visitor, '/auth/login');
+          await visitor.post('/auth/resend-verification').type('form')
+            .send({ email, _csrf: token }).expect(302).expect('Location', '/auth/login');
+          const page = await visitor.get('/auth/login').expect(200);
+          if (!page.text.includes('If that address needs verification, a new link is on its way.') || page.text.includes('Could not resend')) {
+            throw new Error('provider failure exposed account state');
+          }
+        }
+        if (attempts.join() !== unverified.email) throw new Error('sent to an unknown or verified address');
+        await unverified.reload();
+        if (!unverified.verificationToken || unverified.verificationToken.length !== 64) throw new Error('no hashed verification token');
+      } finally {
+        emailSender.sendVerificationEmail = realSend;
+      }
     });
   });
 
