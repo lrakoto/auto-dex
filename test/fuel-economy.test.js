@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const axios = require('axios');
 const app = require('../server');
@@ -44,10 +45,41 @@ describe('FuelEconomy.gov running-cost specs', function() {
       const specs = await carinfo.getFuelSpecs('Ford', 'F-150', 2024);
       if (specs.fiveYearSavings !== -1800) throw new Error('expected negative savings, got ' + specs.fiveYearSavings);
     });
+
+    it('normalizes numeric strings while preserving zero and signed savings', async function() {
+      axios.get = async url => url.includes('/menu/options')
+        ? { data: { menuItem: { value: 'r6-numeric-strings' } } }
+        : { data: { year: 2024, fuelCost08: '0', youSaveSpend: '-1', co2TailpipeGpm: '0', feScore: '10', ghgScore: '1' } };
+      const specs = await carinfo.getFuelSpecs('Fixture', 'Numeric strings', 2024);
+      assert.deepEqual([specs.annualFuelCost, specs.fiveYearSavings, specs.co2, specs.feScore, specs.ghgScore], [0, -1, 0, 10, 1]);
+    });
+
+    it('rejects blank, nonnumeric and nonfinite values instead of inventing zero', async function() {
+      const values = [null, undefined, '', '  ', true, false, {}, [], 'unknown', Infinity, -Infinity, NaN];
+      for (const [i, value] of values.entries()) {
+        axios.get = async url => url.includes('/menu/options')
+          ? { data: { menuItem: { value: `r6-invalid-${i}` } } }
+          : { data: { fuelCost08: value, youSaveSpend: value, co2TailpipeGpm: value, feScore: value, ghgScore: value } };
+        const specs = await carinfo.getFuelSpecs('Fixture', `Invalid ${i}`, 2024);
+        assert.deepEqual([specs.annualFuelCost, specs.fiveYearSavings, specs.co2, specs.feScore, specs.ghgScore], [null, null, null, null, null]);
+      }
+    });
+
+    it('hides negative costs/emissions and unavailable or out-of-range scores, keeping negative savings', async function() {
+      for (const [i, score] of [-1, 0, 11, 7.5].entries()) {
+        axios.get = async url => url.includes('/menu/options')
+          ? { data: { menuItem: { value: `r6-sentinel-${i}` } } }
+          : { data: { fuelCost08: -1, youSaveSpend: -1, co2TailpipeGpm: -1, feScore: score, ghgScore: score } };
+        const specs = await carinfo.getFuelSpecs('Fixture', `Sentinel ${i}`, 2024);
+        assert.deepEqual([specs.annualFuelCost, specs.fiveYearSavings, specs.co2, specs.feScore, specs.ghgScore], [null, -1, null, null, null]);
+      }
+    });
   });
 
   describe('detail and compare pages', function() {
-    let real;
+    let real, fixtureSpecs;
+
+    beforeEach(function() { fixtureSpecs = null; });
 
     before(async function() {
       real = {
@@ -62,6 +94,7 @@ describe('FuelEconomy.gov running-cost specs', function() {
       carinfo.getWikidataFacts = async () => [];
       nhtsa.getSafetyRatings = async () => null;
       carinfo.getFuelSpecs = async (make, model) => {
+        if (fixtureSpecs) return fixtureSpecs;
         if (make === 'Honda' && model === 'Civic') {
           return { year: 2024, annualFuelCost: 1500, fiveYearSavings: 2250, co2: 250, feScore: 7, ghgScore: 7 };
         }
@@ -111,9 +144,38 @@ describe('FuelEconomy.gov running-cost specs', function() {
       if (!res.text.includes('$3,000')) throw new Error('F-150 fuel cost missing');
       if (!res.text.includes('Save $2,250')) throw new Error('Civic savings missing');
       if (!res.text.includes('Spend $1,800')) throw new Error('F-150 overspend missing');
-      if (!res.text.includes('CO₂ (g/mi)')) throw new Error('CO2 row missing');
+      if (!res.text.includes('Tailpipe CO₂')) throw new Error('CO2 row missing');
       if (!res.text.includes('EPA Fuel Economy Score')) throw new Error('fe score row missing');
       if (!res.text.includes('EPA GHG Score')) throw new Error('ghg score row missing');
+    });
+
+    const pages = ['/cars/car?make=Honda&model=Civic', '/cars/compare?c=Honda|Civic&c=Ford|F-150'];
+    it('shows zero costs/emissions, neutral savings and the estimate assumptions on both pages', async function() {
+      fixtureSpecs = { year: 2024, annualFuelCost: 0, fiveYearSavings: 0, co2: 0, feScore: 10, ghgScore: 10 };
+      for (const url of pages) {
+        const res = await request(app).get(url).expect(200);
+        for (const text of ['$0', 'Same as average', '0 g/mi', '10/10', '15,000 miles/year', '55% city', 'one available configuration', 'average new vehicle', 'tailpipe only', 'higher is better']) {
+          assert.ok(res.text.includes(text), `missing ${text} on ${url}`);
+        }
+      }
+    });
+
+    it('omits unavailable estimate rows and their note', async function() {
+      fixtureSpecs = { year: 2024, annualFuelCost: null, fiveYearSavings: null, co2: null, feScore: null, ghgScore: null };
+      for (const url of pages) {
+        const res = await request(app).get(url).expect(200);
+        for (const text of ['Annual Fuel Cost', '5-Yr vs Avg New Vehicle', 'Tailpipe CO₂', 'EPA Fuel Economy Score', 'EPA GHG Score', '15,000 miles/year']) {
+          assert.ok(!res.text.includes(text), `unavailable ${text} shown on ${url}`);
+        }
+      }
+    });
+
+    it('shows minus-one savings as spending, not as an unavailable sentinel', async function() {
+      fixtureSpecs = { year: 2024, fiveYearSavings: -1 };
+      for (const url of pages) {
+        const res = await request(app).get(url).expect(200);
+        assert.ok(res.text.includes('Spend $1'));
+      }
     });
   });
 });

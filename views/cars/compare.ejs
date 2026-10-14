@@ -25,11 +25,11 @@
         ['Drive', c => c.specs && c.specs.drive],
         ['Fuel', c => c.specs && c.specs.fuel],
         ['MPG (city / hwy)', c => c.specs && c.specs.cityMpg ? c.specs.cityMpg + ' / ' + c.specs.hwyMpg : null],
-        ['Annual Fuel Cost', c => c.specs && c.specs.annualFuelCost ? '$' + c.specs.annualFuelCost.toLocaleString('en-US') : null],
-        ['5-Yr vs Avg Car', c => c.specs && c.specs.fiveYearSavings ? (c.specs.fiveYearSavings > 0 ? 'Save $' + c.specs.fiveYearSavings.toLocaleString('en-US') : 'Spend $' + Math.abs(c.specs.fiveYearSavings).toLocaleString('en-US')) : null],
-        ['CO₂ (g/mi)', c => c.specs && c.specs.co2],
-        ['EPA Fuel Economy Score', c => c.specs && c.specs.feScore],
-        ['EPA GHG Score', c => c.specs && c.specs.ghgScore],
+        ['Annual Fuel Cost', c => c.specs && c.specs.annualFuelCost != null ? '$' + c.specs.annualFuelCost.toLocaleString('en-US') : null],
+        ['5-Yr vs Avg New Vehicle', c => c.specs && c.specs.fiveYearSavings != null ? (c.specs.fiveYearSavings === 0 ? 'Same as average' : c.specs.fiveYearSavings > 0 ? 'Save $' + c.specs.fiveYearSavings.toLocaleString('en-US') : 'Spend $' + Math.abs(c.specs.fiveYearSavings).toLocaleString('en-US')) : null],
+        ['Tailpipe CO₂', c => c.specs && c.specs.co2 != null ? c.specs.co2 + ' g/mi' : null],
+        ['EPA Fuel Economy Score', c => c.specs && c.specs.feScore != null ? c.specs.feScore + '/10' : null],
+        ['EPA GHG Score', c => c.specs && c.specs.ghgScore != null ? c.specs.ghgScore + '/10' : null],
         ['Specs year', c => c.specs && c.specs.year],
         ['NHTSA Overall', c => c.ratings && c.ratings.overall ? '★'.repeat(c.ratings.overall) + '☆'.repeat(5 - c.ratings.overall) : null],
         ['NHTSA Frontal', c => c.ratings && c.ratings.frontal ? '★'.repeat(c.ratings.frontal) + '☆'.repeat(5 - c.ratings.frontal) : null],
@@ -68,5 +68,6 @@
       </table>
     </div>
     <p class="facts-source mt-3">Specs: FuelEconomy.gov · Facts: Wikidata · Years &amp; Safety: NHTSA</p>
+    <%- include('../partials/fuel-estimate-note', { specs: cars.map(c => c.specs) }) %>
   <% } %>
 </div>
