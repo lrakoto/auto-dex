@@ -21,7 +21,11 @@ const upload = multer({
   storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5 MB — without this, uploads are unbounded
-    files: 1
+    files: 1,
+    // Garage/photo forms use flat names. Reject bracket paths before parsing
+    // them into nested objects or potentially enormous sparse arrays.
+    fieldNestingDepth: 0,
+    fieldArrayIndexLimit: 0
   },
   fileFilter: (req, file, cb) => {
     // Cheap pre-check before the bytes are streamed to Cloudinary
