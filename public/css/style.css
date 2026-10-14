@@ -544,6 +544,16 @@ p { color: var(--text-muted); }
   padding: 0.6rem 0.85rem;
 }
 
+/* Override Bootstrap's fixed small-select height so our padding cannot clip
+   the selected text. Keep catalog filters comfortable to tap on phones. */
+select.form-control.form-control-sm:not([size]):not([multiple]) {
+  height: auto;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .form-control:focus {
   background: var(--surface-2);
   border-color: var(--border-hover);
