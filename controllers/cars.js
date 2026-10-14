@@ -155,8 +155,7 @@ router.get('/explore', async (req, res) => {
       baseUrl: `/cars/explore?${qs ? qs + '&' : ''}page=`
     };
     if (req.query.partial === '1') {
-      res.locals.layout = false;
-      return res.render('partials/car-grid', viewData);
+      return res.render('partials/car-grid', { ...viewData, layout: false });
     }
     Object.assign(viewData, {
       decades, countries, makesList: MAKES,
@@ -320,8 +319,7 @@ router.get('/', async (req, res) => {
     const baseUrl = `/cars?selectmake=${encodeURIComponent(make)}${typeParam(type)}${year ? '&year=' + year : ''}&page=`;
     const viewData = { search: make, carImg: pagedCars, page, totalPages, total, baseUrl };
     if (req.query.partial === '1') {
-      res.locals.layout = false;
-      return res.render('partials/car-grid', viewData);
+      return res.render('partials/car-grid', { ...viewData, layout: false });
     }
 
     // Dex progress for logged-in users: distinct models of this make spotted

@@ -1,7 +1,7 @@
 <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
 <div class="pagination-wrap">
 
-  <%/* Prev arrow — data-no-transition: AJAX pagination owns these clicks */%>
+  <%/* Pagination bypasses the page fade so links navigate immediately. */%>
   <% if (page > 1) { %>
     <a href="<%= baseUrl %><%= page - 1 %>" class="pg-btn" data-no-transition>&larr;</a>
   <% } else { %>
