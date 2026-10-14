@@ -32,7 +32,7 @@ async function addMissingModels(make) {
       const key = model.toLowerCase();
       if (existing.has(key)) continue;
       existing.add(key);
-      const vehicleType = type === 'motorcycle' && isAtvName(model) ? 'offroad' : type;
+      const vehicleType = type === 'motorcycle' && isAtvName(model, make) ? 'offroad' : type;
       rows.push({ make, model, image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: vehicleType });
     }
   }
@@ -61,8 +61,8 @@ async function classifyMake(make, options) {
 // Kawasaki MULE…) become off-road. Only vehicle_type changes. Idempotent, so
 // it runs with every classification pass.
 async function reclassifyAtvs() {
-  const bikes = await db.car.findAll({ attributes: ['id', 'model'], where: { vehicle_type: 'motorcycle' } });
-  const ids = bikes.filter(b => isAtvName(b.model)).map(b => b.id);
+  const bikes = await db.car.findAll({ attributes: ['id', 'make', 'model'], where: { vehicle_type: 'motorcycle' } });
+  const ids = bikes.filter(b => isAtvName(b.model, b.make)).map(b => b.id);
   if (ids.length) {
     await db.car.update({ vehicle_type: 'offroad' }, { where: { id: ids } });
     console.log(`Vehicle types: ${ids.length} ATVs and side-by-sides moved from motorcycle to off-road`);
