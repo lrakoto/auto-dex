@@ -1707,6 +1707,14 @@ textarea:focus-visible,
 .facts-source { font-size: 0.7rem; color: var(--text-subtle); margin-top: 0.75rem; }
 .facts-source a { color: var(--text-muted); }
 
+.fuel-estimate-note {
+  max-width: 72ch;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: #a1a1aa;
+}
+.fuel-estimate-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
 .spot-count { font-size: 0.72rem; color: var(--red); margin-left: 0.15rem; }
 
 .gallery-section { margin-top: 4rem; }

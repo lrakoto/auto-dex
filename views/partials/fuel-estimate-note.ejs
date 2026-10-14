@@ -1,0 +1,9 @@
+<% if (specs.some(s => s && ['annualFuelCost', 'fiveYearSavings', 'co2', 'feScore', 'ghgScore'].some(key => s[key] != null))) { %>
+  <p class="facts-source fuel-estimate-note">
+    <a href="https://www.fueleconomy.gov/feg/ws/" target="_blank" rel="noopener">FuelEconomy.gov</a>
+    estimates cover one available configuration; other trims may differ.
+    Costs assume 15,000 miles/year, 55% city driving and source fuel prices.
+    Five-year savings compare with an average new vehicle (gasoline operation for dual-fuel vehicles).
+    CO₂ is tailpipe only. EPA scores run from 1–10; higher is better.
+  </p>
+<% } %>
