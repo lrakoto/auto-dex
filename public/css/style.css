@@ -573,6 +573,15 @@ select.form-control.form-control-sm:not([size]):not([multiple]) {
 
 .form-control::placeholder { color: var(--text-subtle); }
 
+/* Loading/error placeholders must remain readable in the garage's disabled
+   selects; Bootstrap's light disabled background clashes with our text. */
+#addCarForm .form-control:disabled {
+  background: var(--surface);
+  color: #9ca3af;
+  opacity: 1;
+}
+#addCarForm #catalogStatus { color: var(--text); }
+
 select.form-control option {
   background: var(--surface);
   color: var(--text);

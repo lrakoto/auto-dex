@@ -6,7 +6,7 @@
 </section>
 
 <div class="container" style="max-width: 600px; padding-bottom: 60px;">
-  <form method="POST" action="/garage/add?_csrf=<%= csrfToken %>" enctype="multipart/form-data">
+  <form id="addCarForm" method="POST" action="/garage/add?_csrf=<%= csrfToken %>" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
     <div class="form-group">
@@ -19,35 +19,41 @@
     </div>
 
     <div class="form-group">
-      <label for="make">Make</label>
-      <select class="form-control" id="makeSelect" name="make" required>
+      <label for="makeSelect">Make</label>
+      <select class="form-control" id="makeSelect" name="make" required aria-describedby="catalogStatus">
         <option value="">Loading makes...</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label for="model">Model</label>
-      <select class="form-control" id="modelSelect" name="model" required disabled>
+      <label for="modelSelect">Model</label>
+      <select class="form-control" id="modelSelect" name="model" required disabled aria-describedby="catalogStatus">
         <option value="">Select a make first</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label for="year">Year</label>
-      <select class="form-control" id="yearSelect" name="year" required disabled>
+      <label for="yearSelect">Year</label>
+      <select class="form-control" id="yearSelect" name="year" required disabled aria-describedby="catalogStatus">
         <option value="">Select a model first</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label>Image</label>
+      <p id="catalogStatus" class="mb-2" role="status" aria-live="polite" aria-atomic="true">Loading makes…</p>
+      <button type="button" id="catalogRetryBtn" class="btn btn-outline-primary btn-sm" hidden>Retry lookup</button>
+    </div>
+
+    <div class="form-group">
+      <label for="imageUrl">Image URL <small class="text-muted">(optional)</small></label>
       <div class="mb-2">
         <input type="url" class="form-control" id="imageUrl" name="imageUrl" placeholder="Paste an image URL (optional)">
       </div>
       <div class="text-center text-muted my-1">— or —</div>
       <div class="mt-2">
+        <label for="carImage">Upload a photo <small class="text-muted">(optional)</small></label>
         <input type="file" class="form-control-file" id="carImage" name="carImage" accept="image/jpeg,image/png,image/webp">
-        <small class="text-muted">Upload a photo (JPG, PNG, or WebP)</small>
+        <small class="text-muted">JPG, PNG, or WebP, up to 5 MB</small>
       </div>
     </div>
 
@@ -56,7 +62,7 @@
       <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Mods, color, anything you want to note..."></textarea>
     </div>
 
-    <button type="submit" class="btn btn-primary btn-block">Add to Garage</button>
+    <button type="submit" id="addCarSubmit" class="btn btn-primary btn-block" disabled>Add to Garage</button>
     <a href="/garage" class="btn btn-secondary btn-block">Cancel</a>
   </form>
 </div>
