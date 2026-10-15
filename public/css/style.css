@@ -2580,3 +2580,27 @@ textarea:focus-visible,
 .notfound-search { max-width: 480px; margin: 1.75rem auto 0; display: flex; gap: 0.6rem; }
 .notfound-search .search-input-wrap { flex: 1; text-align: left; }
 .notfound-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.5rem; margin-top: 1.5rem; }
+
+/* Photo replacement tools: readable source metadata and narrow-screen forms. */
+.photo-review p,
+.photo-review small { color: #cbd5e1; }
+.photo-review-search { display: flex; align-items: flex-end; gap: 0.75rem; }
+.photo-review-search .form-group { flex: 1; min-width: 0; }
+.photo-review-search .btn,
+.photo-candidate .btn { min-height: 44px; }
+.photo-review-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+.photo-review-result { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem; border: 1px solid var(--border); overflow-wrap: anywhere; }
+.photo-review-result img { width: 64px; height: 44px; object-fit: cover; flex-shrink: 0; }
+.photo-review-result small { display: block; }
+.photo-review-current { display: flex; align-items: center; gap: 1.25rem; overflow-wrap: anywhere; }
+.photo-review-current img { width: 180px; aspect-ratio: 16 / 10; object-fit: cover; }
+.photo-review-links { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
+.photo-candidate { overflow-wrap: anywhere; }
+.photo-candidate .card-img-top { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.photo-candidate .eyebrow { color: #cbd5e1; }
+@media (max-width: 520px) {
+  .photo-review-search,
+  .photo-review-current { flex-direction: column; align-items: stretch; }
+  .photo-review-current img { width: 100%; max-width: 320px; }
+  .photo-review-results { grid-template-columns: 1fr; }
+}

@@ -42,16 +42,14 @@ function loadPhotos(images = [], readyState = 'loading') {
 }
 
 describe('Browser photo handling', function() {
-  it('repairs old Unsplash separators and bounds small cards without losing source parameters', function() {
+  it('retires legacy Unsplash URLs in recently viewed and compare storage', function() {
     const { photos } = loadPhotos();
-    const result = new URL(photos.cardPhoto('https://images.unsplash.com/photo-car?ixid=source&amp;ixlib=rb-4.0&amp;w=7890&amp;q=100'));
-    assert.equal(result.searchParams.get('ixid'), 'source');
-    assert.equal(result.searchParams.get('ixlib'), 'rb-4.0');
-    assert.equal(result.searchParams.get('w'), '500');
-    assert.equal(result.searchParams.get('fit'), 'max');
-    assert.equal(result.searchParams.get('q'), '80');
-    assert.equal(result.searchParams.get('auto'), 'format');
-    assert.ok(!result.search.includes('amp%3B'));
+    for (const value of [
+      'https://images.unsplash.com/photo-car?ixid=source&amp;w=7890',
+      'https://UNSPLASH.COM/photo-car', 'https://source.unsplash.com/car',
+      'https://images.unsplash.com./photo-car', 'https://user@images.unsplash.com/car', '//images.unsplash.com/legacy-car'
+    ]) assert.equal(photos.cardPhoto(value), placeholder, value);
+    assert.equal(photos.cardPhoto('https://images.unsplash.com.example.org/car.jpg'), 'https://images.unsplash.com.example.org/car.jpg');
   });
 
   it('shrinks Commons thumbnails on both hosts without upscaling or changing originals', function() {

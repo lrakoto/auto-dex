@@ -2,6 +2,8 @@
 const {
   Model
 } = require('sequelize');
+const { isRetiredPhoto } = require('../lib/photoPolicy');
+const { PLACEHOLDER_URL } = require('../lib/constants');
 module.exports = (sequelize, DataTypes) => {
   class favorite_car extends Model {
     /**
@@ -19,7 +21,10 @@ module.exports = (sequelize, DataTypes) => {
     make: DataTypes.STRING,
     model: DataTypes.STRING,
     year: DataTypes.INTEGER,
-    image: DataTypes.TEXT,
+    image: { type: DataTypes.TEXT, get() {
+      const value = this.getDataValue('image');
+      return isRetiredPhoto(value) ? PLACEHOLDER_URL : value;
+    } },
     carId: DataTypes.INTEGER,
     userId: DataTypes.INTEGER
   }, {

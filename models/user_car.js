@@ -1,6 +1,7 @@
 'use strict';
 const { Model } = require('sequelize');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const { displayPhoto } = require('../lib/photoPolicy');
 
 module.exports = (sequelize, DataTypes) => {
   class user_car extends Model {
@@ -14,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     make:    { type: DataTypes.STRING,  allowNull: false },
     model:   { type: DataTypes.STRING,  allowNull: false },
     year:    { type: DataTypes.STRING,  allowNull: false },
-    image:   { type: DataTypes.TEXT,    defaultValue: PLACEHOLDER_URL },
+    image:   { type: DataTypes.TEXT, defaultValue: PLACEHOLDER_URL, get() { return displayPhoto(this.getDataValue('image')); } },
     notes:   { type: DataTypes.TEXT },
     vin:     { type: DataTypes.STRING(17) },
     // Recall campaigns already known for this car (jobs/recalls.js)

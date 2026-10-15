@@ -38,10 +38,10 @@
     el.classList.add('bump');
   }
 
-  // Credit line from { name, url, unsplash } — built as DOM, never as HTML
+  // Licensed photo attribution, built as DOM rather than provider HTML.
   function renderCredit(c) {
     credit.textContent = '';
-    if (!c || (!c.name && !c.unsplash)) return;
+    if (!c || (!c.name && !c.license)) return;
     function link(text, href) {
       var a = document.createElement('a');
       a.textContent = text;
@@ -50,17 +50,18 @@
       a.rel = 'noopener';
       return a;
     }
-    var unsplash = 'https://unsplash.com/?utm_source=autodex&utm_medium=referral';
+    credit.appendChild(document.createTextNode('Photo'));
     if (c.name) {
-      credit.appendChild(document.createTextNode('Photo: '));
+      credit.appendChild(document.createTextNode(': '));
       credit.appendChild(c.url ? link(c.name, c.url) : document.createTextNode(c.name));
-      if (c.unsplash) {
-        credit.appendChild(document.createTextNode(' on '));
-        credit.appendChild(link('Unsplash', unsplash));
-      }
-    } else {
-      credit.appendChild(document.createTextNode('Photo from '));
-      credit.appendChild(link('Unsplash', unsplash));
+    }
+    if (c.commons) {
+      credit.appendChild(document.createTextNode(' via '));
+      credit.appendChild(link('Wikimedia Commons', 'https://commons.wikimedia.org/'));
+    }
+    if (c.license) {
+      credit.appendChild(document.createTextNode(' · '));
+      credit.appendChild(c.licenseUrl ? link(c.license, c.licenseUrl) : document.createTextNode(c.license));
     }
   }
 

@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+const { displayPhoto } = require('../lib/photoPolicy');
 
 module.exports = (sequelize, DataTypes) => {
   class image_proposal extends Model {
@@ -11,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
   image_proposal.init({
     carId:    DataTypes.INTEGER,
     userId:   DataTypes.INTEGER,
-    imageUrl: DataTypes.STRING,
+    imageUrl: { type: DataTypes.STRING, get() { return displayPhoto(this.getDataValue('imageUrl')); } },
     status:   { type: DataTypes.ENUM('pending', 'approved', 'rejected'), defaultValue: 'pending' }
   }, {
     sequelize,

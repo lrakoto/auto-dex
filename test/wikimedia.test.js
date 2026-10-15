@@ -96,7 +96,7 @@ describe('Wikipedia photos (R2)', function() {
       if (cardPhoto(small) !== small) throw new Error('500px thumb changed');
       if (wikimedia.sizedPhoto(HERO, 480) !== HERO) throw new Error('non-standard width used');
       const other = 'https://images.unsplash.com/photo-1?w=1080';
-      if (cardPhoto(other) !== other) throw new Error('Unsplash URL changed');
+      if (cardPhoto(other) !== PLACEHOLDER_URL) throw new Error('Unsplash URL still displayed');
     });
 
     it('keeps credits as plain text', function() {
@@ -207,7 +207,7 @@ describe('Wikipedia photos (R2)', function() {
     const lookups = [];
     before(async function() {
       realFind = wikimedia.findLeadPhoto;
-      await db.car.update({ wiki_checked: true }, { where: {} }); // only this suite's cars are pending
+      await db.car.update({ wiki_checked: true, wiki_checked_at: new Date() }, { where: {} }); // only this suite's cars are pending
     });
     after(function() { wikimedia.findLeadPhoto = realFind; });
     beforeEach(function() {
@@ -248,7 +248,7 @@ describe('Wikipedia photos (R2)', function() {
       if (!await db.car_image.findOne({ where: { carId: car.id, url: unsplashUrl } })) throw new Error('Unsplash photo removed');
     });
 
-    it("keeps a hero people chose: an approved proposal, or a photo with votes", async function() {
+    it('keeps an approved proposal but replaces retired stock imagery regardless of votes', async function() {
       const chosen = 'https://example.com/fulvia.jpg';
       const car = await newCar('Wiki Fulvia', { image: chosen, updated_img: true });
       await db.car_image.create({ carId: car.id, url: chosen, source: 'user' });
@@ -261,7 +261,7 @@ describe('Wikipedia photos (R2)', function() {
       await db.car_image.create({ carId: car2.id, url: liked, source: 'unsplash', score: 2 });
       await addWikipediaPhoto(car2, photoFor('Wiki_Thema'));
       await car2.reload();
-      if (car2.image !== liked) throw new Error('upvoted photo replaced');
+      if (car2.image !== photoFor('Wiki_Thema').url) throw new Error('retired upvoted photo retained');
       if (!await db.car_image.findOne({ where: { carId: car2.id, source: 'wikimedia' } })) throw new Error('Wikipedia photo not in gallery');
     });
 
@@ -326,7 +326,7 @@ describe('Wikipedia photos (R2)', function() {
     });
   });
 
-  describe('Unsplash as the fallback', function() {
+  describe('retired Unsplash fallback', function() {
     let realSearch;
     let realKey;
     const searched = [];
@@ -341,13 +341,13 @@ describe('Wikipedia photos (R2)', function() {
       if (realKey === undefined) delete process.env.UKEY; else process.env.UKEY = realKey;
     });
 
-    it('only searches cars Wikipedia has already been asked about', async function() {
+    it('does not search Unsplash even when a key and placeholder cars exist', async function() {
       await db.car.update({ wiki_checked: false }, { where: {} });
       await db.car.create({ make: 'Lancia', model: 'Wiki Kappa', favcount: 0, updated_img: false, image: PLACEHOLDER_URL, wiki_checked: false });
       await db.car.create({ make: 'Lancia', model: 'Wiki Musa', favcount: 0, updated_img: false, image: PLACEHOLDER_URL, wiki_checked: true });
       await unsplashImages();
       if (searched.includes('Wiki Kappa')) throw new Error('searched before the Wikipedia lookup');
-      if (!searched.includes('Wiki Musa')) throw new Error('checked car not searched');
+      if (searched.length) throw new Error('retired source searched');
     });
   });
 });

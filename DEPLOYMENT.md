@@ -51,7 +51,7 @@ generated once by Render and kept stable across deploys. Note the name:
 `SECRET_SESSION`, not `SESSION_SECRET`; the app refuses to boot without it.
 
 The rest are marked `sync: false` and must be filled in the dashboard, never
-committed: `EMAIL_FROM`, `RESEND_API_KEY`, `UKEY` (Unsplash),
+committed: `EMAIL_FROM`, `RESEND_API_KEY`,
 `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
 `EMAIL_FROM` is currently unset in the dashboard; `config/email.js` falls back
 to `AutoDex <noreply@autodx.io>`, so set it there if that address ever changes.
@@ -125,7 +125,7 @@ package that only exists locally will not be there).
 ### App boots, then 500s
 
 Check the service logs. The most common cause is a missing env var: the app
-refuses to boot without `SECRET_SESSION`, and Cloudinary/Resend/Unsplash
+refuses to boot without `SECRET_SESSION`, and Cloudinary/Resend
 features fail at call time if their keys are unset. Confirm the `sync: false`
 keys are all filled in the dashboard.
 
@@ -142,3 +142,8 @@ Dashboard → service → *Settings* → **Custom Domains** shows verification a
 certificate state for `autodx.io`. DNS must point at Render (the apex resolves
 to Render's anycast addresses); if it points anywhere else, visitors are not
 reaching this service at all.
+
+Unsplash was retired on October 15, 2026. A previously configured `UKEY` is
+unused and no longer required. Wikimedia Commons and Openverse photo discovery
+need no new API credentials. Existing secret settings need no change for this
+release.
