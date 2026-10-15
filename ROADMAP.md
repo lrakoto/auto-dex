@@ -91,11 +91,27 @@ R14 on 2026-10-01 so they ship before R4.
   bests, the badge and the leaderboard stay cars-only.
 
 ### R4 — Daily car puzzle
-- [ ] One mystery car per day, the same for everyone: guess by name; each
+- [x] One mystery car per day, the same for everyone: guess by name; each
   guess reveals tiles for make, country, era, body class, drivetrain and fuel
   (green exact, yellow close, arrows for higher/lower era). Shareable result
   grid, streak in `localStorage`, stats for signed-in players. Pattern:
   THROTTLE, Cardle.
+  Shipped the core round at `/puzzle`: make, country and decade tiles (green
+  exact, yellow a decade off, an arrow toward the answer's decade), six
+  guesses, a session-held board that resets at UTC midnight. Body class,
+  drivetrain and fuel tiles, the shareable grid, a `localStorage` streak and
+  signed-in stats move to R16 below — this PR was already a full round of
+  review on its own.
+
+### R16 — Daily car puzzle: extras
+- [ ] Body class, drivetrain and fuel tiles on `/puzzle` (FuelEconomy.gov's
+  `VClass`/`drive`/`fuelType1`, already fetched for the detail page by
+  `lib/carinfo.js#getFuelSpecs`; cache the day's answer lookup the same way
+  `lib/puzzle.js` caches the car itself).
+- [ ] A shareable result grid (copy an emoji summary of the day's guesses, à
+  la Wordle).
+- [ ] A streak across days in `localStorage`, plus stats (games played, win
+  rate, guess distribution) for signed-in players.
 
 ### R5 — Recall alerts for garage cars
 - [x] Weekly job compares each garage car's NHTSA recalls with the last check

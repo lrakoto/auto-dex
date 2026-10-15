@@ -155,6 +155,9 @@ async function getCarData() {
 | GET | /play | play.js | Who's That Car? photo quiz (`?type=motorcycle` for the motorcycle round) |
 | POST | /play/guess | play.js | Answer a round (JSON for fetch, redirect without JS) |
 | POST | /play/skip | play.js | Skip to a new car (ends the streak) |
+| GET | /puzzle | puzzle.js | Daily car puzzle: one mystery car a day, guess in six tries |
+| POST | /puzzle/guess | puzzle.js | Score a guess (make, country, decade) |
+| GET | /puzzle/suggest | puzzle.js | Autocomplete JSON for the guess field |
 | GET | /garage/admin | garage.js | Admin panel (admin only) |
 
 
