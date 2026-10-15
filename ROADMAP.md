@@ -110,7 +110,10 @@ R14 on 2026-10-01 so they ship before R4.
   `fuelCost08`, `youSaveSpend`, `co2TailpipeGpm`, `feScore`, `ghgScore`).
   Shipped on the existing `carinfo.getFuelSpecs` lookup (`lib/carinfo.js`) —
   no new route, migration or env var.
-- [ ] Fuel log for garage cars: fill-ups, real MPG versus EPA, cost per mile.
+- [x] Fuel log for garage cars: fill-ups, real MPG versus EPA, cost per mile.
+  Shipped as `fuel_logs` (date, odometer, gallons, cost, notes) on the garage
+  car page; real MPG is full-to-full across fill-ups, compared against
+  `carinfo.getFuelSpecs`'s `combMpg` for the car's year.
 
 ### R7 — Dex rarity tiers and levels
 - [ ] Rarity per catalog car (common → legendary) from Wikidata production

@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       user_car.belongsTo(models.user, { foreignKey: 'userId' });
       user_car.hasMany(models.maintenance_log, { foreignKey: 'userCarId' });
+      user_car.hasMany(models.fuel_log, { foreignKey: 'userCarId' });
     }
   }
   user_car.init({
