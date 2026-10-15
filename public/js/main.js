@@ -27,22 +27,6 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     IMG ERROR FALLBACKS — replaces inline onerror handlers (CSP-safe).
-     Error events don't bubble, so listen in the capture phase.
-  ═══════════════════════════════════════════════════════════════ */
-
-  document.addEventListener('error', function (e) {
-    var el = e.target;
-    if (!el || el.tagName !== 'IMG') return;
-    if (el.hasAttribute('data-onerror-hide')) {
-      el.style.display = 'none';
-    } else if (el.dataset.onerrorFallback && el.src !== el.dataset.onerrorFallback) {
-      el.src = el.dataset.onerrorFallback;
-    }
-  }, true);
-
-
-  /* ═══════════════════════════════════════════════════════════════
      SCROLL PROGRESS BAR
   ═══════════════════════════════════════════════════════════════ */
 
@@ -517,7 +501,7 @@
             col.className = 'col-md-2 col-4 mb-3 card-col';
             var safeUrl = escapeHtml(c.url);
             col.innerHTML = '<div class="card h-100">' +
-              '<a href="' + safeUrl + '"><img class="card-img-top imgresp" src="' + escapeHtml(c.image) + '" alt="' + escapeHtml(c.model) + '" style="height:90px;"></a>' +
+              '<a href="' + safeUrl + '"><img class="card-img-top imgresp" src="' + escapeHtml(window.AutoDexPhotos.cardPhoto(c.image)) + '" alt="' + escapeHtml(c.model) + '" style="height:90px;"></a>' +
               '<div class="card-body" style="padding:0.5rem;">' +
               '<p class="card-text mb-0" style="font-size:0.72rem;"><a href="' + safeUrl + '" class="text-dark">' + escapeHtml(c.model) + '</a></p>' +
               '</div></div>';
@@ -938,7 +922,7 @@
 
   function setHeroImage(url) {
     var hero = document.querySelector('.car-hero');
-    if (hero && url) hero.style.backgroundImage = 'url(' + JSON.stringify(url) + ')';
+    if (hero && url) hero.style.backgroundImage = 'url(' + JSON.stringify(url) + '), url("/assets/no-photo.svg")';
   }
 
   document.addEventListener('click', function (e) {
@@ -1025,7 +1009,7 @@
     }
     tray.innerHTML = list.map(function (c, i) {
       return '<span class="compare-chip">' +
-        '<img src="' + escapeHtml(c.image) + '" alt="">' +
+        '<img src="' + escapeHtml(window.AutoDexPhotos.cardPhoto(c.image)) + '" alt="">' +
         '<span>' + escapeHtml(c.model) + '</span>' +
         '<button type="button" class="compare-chip-x" data-index="' + i + '" aria-label="Remove ' + escapeHtml(c.make + ' ' + c.model) + '">&times;</button>' +
         '</span>';

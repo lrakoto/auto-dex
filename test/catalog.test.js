@@ -1,5 +1,6 @@
 const request = require('supertest');
 const axios = require('axios');
+const { escapeXML } = require('ejs');
 const app = require('../server');
 const db = require('../models');
 const carquery = require('../config/carquery');
@@ -120,7 +121,7 @@ describe('Catalog', function() {
     });
 
     describe('?image=', function() {
-      const hero = url => new RegExp(`class="car-hero" style="background-image: url\\('${url.replace(/[.?]/g, '\\$&')}'\\)`);
+      const hasHero = (html, url) => html.includes(`class="car-hero" style="background-image: url(${escapeXML(JSON.stringify(url))}), url(&#34;/assets/no-photo.svg&#34;);"`);
       const page = '/cars/car?make=Mazda&model=MX-5%20Miata&image=';
       let galleryUrl;
 
@@ -131,13 +132,13 @@ describe('Catalog', function() {
       it('ignores an arbitrary image, in the page and its share preview', async function() {
         const res = await request(app).get(page + encodeURIComponent('https://example.com/evil.jpg')).expect(200);
         if (res.text.includes('evil.jpg')) throw new Error('arbitrary image rendered');
-        if (!hero(miata.image).test(res.text)) throw new Error('catalog image not used');
+        if (!hasHero(res.text, miata.image)) throw new Error('catalog image not used');
         if (!res.text.includes(`property="og:image" content="${miata.image}"`)) throw new Error('og:image not the catalog photo');
       });
 
       it("shows a gallery photo or the viewer's own favorite photo", async function() {
         let res = await request(app).get(page + encodeURIComponent(galleryUrl)).expect(200);
-        if (!hero(galleryUrl).test(res.text)) throw new Error('gallery photo not shown');
+        if (!hasHero(res.text, galleryUrl)) throw new Error('gallery photo not shown');
         if (!res.text.includes(`property="og:image" content="${miata.image}"`)) throw new Error('og:image followed the query');
 
         const agent = request.agent(app);
@@ -148,9 +149,24 @@ describe('Catalog', function() {
           .send({ favecar_make: 'Mazda', favecar_model: 'MX-5 Miata', favecar_image: mine, _csrf: token })
           .expect(200);
         res = await agent.get(page + encodeURIComponent(mine)).expect(200);
-        if (!hero(mine).test(res.text)) throw new Error('own favorite photo not shown');
+        if (!hasHero(res.text, mine)) throw new Error('own favorite photo not shown');
         res = await request(app).get(page + encodeURIComponent(mine)).expect(200);
-        if (hero(mine).test(res.text)) throw new Error("someone else's favorite photo shown");
+        if (hasHero(res.text, mine)) throw new Error("someone else's favorite photo shown");
+      });
+
+      it('quotes photo filenames safely and keeps a local fallback behind the hero', async function() {
+        const quoted = "https://example.com/owner's-car.jpg?width=1280&label=\"roadster\"";
+        const original = miata.image;
+        // Automated catalog URLs do not pass through the user-input validator.
+        await miata.update({ image: quoted });
+        try {
+          const res = await request(app).get(page).expect(200);
+          if (!hasHero(res.text, quoted)) throw new Error('quoted photo URL or fallback lost');
+          await miata.reload();
+          if (miata.image !== quoted) throw new Error('rendering changed the stored photo');
+        } finally {
+          await miata.update({ image: original });
+        }
       });
     });
 

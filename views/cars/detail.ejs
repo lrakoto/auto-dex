@@ -6,7 +6,7 @@
      data-image="<%= image %>"></div>
 
 <!-- Hero Image -->
-<div class="car-hero" style="background-image: url('<%= image %>');">
+<div class="car-hero" style="background-image: <%= photoBackground(image) %>;">
   <div class="car-hero-overlay">
     <div class="car-hero-text">
       <h1><%= make %> <span><%= model %></span></h1>
