@@ -60,5 +60,10 @@ describe('Page rendering (no inline scripts — CSP-safe)', function() {
     const inline = res.text.match(/<script(?![^>]*\bsrc=)[^>]*>/g) || [];
     if (inline.length > 0) throw new Error(`found ${inline.length} inline script block(s)`);
     if (!/\/js\/add-car\.js/.test(res.text)) throw new Error('external add-car script not referenced');
+    for (const id of ['vinInput', 'makeSelect', 'modelSelect', 'yearSelect', 'imageUrl', 'carImage', 'notes']) {
+      if (!res.text.includes(`for="${id}"`)) throw new Error(`field label missing for ${id}`);
+    }
+    if (!/id="catalogStatus"[^>]*role="status"/.test(res.text)) throw new Error('lookup status not announced');
+    if (!/id="catalogRetryBtn"[^>]*hidden/.test(res.text)) throw new Error('lookup retry control missing');
   });
 });
