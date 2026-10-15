@@ -69,6 +69,8 @@ Check an item off in the same PR that finishes it. Research behind this list
   general matching. GR86 additionally requires its name in the lead photo's
   filename because the Toyota 86 article covers both generations. Missing
   covers for these names receive a one-time catch-up check, then normal retries.
+  Descriptions and Wikidata facts use these same verified articles, avoiding
+  unrelated bare-model results such as the MG3 machine gun.
 
 ### R3 — Safety and owner-reported problems on car pages
 - [x] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
