@@ -1,6 +1,6 @@
 <section class="jumbotron text-center">
   <div class="container">
-    <h1 class="jumbotron-heading">Compare</h1>
+    <h1 class="jumbotron-heading" id="compare-heading">Compare</h1>
     <p class="lead text-muted">Up to three cars, side by side. Add cars with <strong>+ Compare</strong> on any car page.</p>
   </div>
 </section>
@@ -38,11 +38,16 @@
       ];
       factLabels.forEach(label => specRows.push([label, c => c.facts[label]]));
     %>
-    <div class="compare-wrap">
-      <table class="compare-table">
+    <% if (cars.length > 1) { %>
+      <p class="compare-scroll-hint"><span aria-hidden="true">↔</span> Swipe or scroll sideways to see every vehicle.</p>
+    <% } %>
+    <p class="sr-only" id="compare-keyboard-help">Use the Left and Right arrow keys to scroll the comparison when it is focused.</p>
+    <div class="compare-wrap" tabindex="0" role="region" aria-labelledby="compare-heading" aria-describedby="compare-keyboard-help">
+      <table class="compare-table<%= cars.length === 1 ? ' compare-table--single' : '' %>">
+        <caption class="sr-only">Specifications for <%= cars.map(c => c.make + ' ' + c.model).join(', ') %></caption>
         <thead>
           <tr>
-            <th scope="col"><span class="sr-only">Spec</span></th>
+            <th scope="col" class="compare-spec-heading">Spec</th>
             <% cars.forEach(c => { %>
               <th scope="col">
                 <a href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>" class="compare-car">
@@ -50,7 +55,7 @@
                   <span class="compare-make"><%= c.make %></span>
                   <span class="compare-model"><%= c.model %></span>
                 </a>
-                <button type="button" class="compare-remove-btn" data-make="<%= c.make %>" data-model="<%= c.model %>">Remove</button>
+                <button type="button" class="compare-remove-btn" data-make="<%= c.make %>" data-model="<%= c.model %>" aria-label="Remove <%= c.make %> <%= c.model %> from comparison">Remove</button>
               </th>
             <% }) %>
           </tr>
