@@ -124,6 +124,116 @@ describe('Wikipedia photos (R2)', function() {
       if (photo.creditUrl !== 'https://commons.wikimedia.org/wiki/File:2025_Honda_Pilot.jpg') throw new Error(photo.creditUrl);
     });
 
+    const aliasCases = [
+      { make: 'Toyota', model: 'GR86', title: 'Toyota 86', file: '2022_Toyota_GR86_Premium.jpg' },
+      { make: 'MG', model: 'MG3', title: 'MG3 (automobile)', file: 'MG_3_2024.jpg' },
+      { make: 'MG', model: 'MG4', title: 'MG4 EV', file: 'MG4_Electric.jpg' }
+    ];
+    const aliasSummary = ({ title, file }) => ({
+      type: 'standard', title, description: 'Motor vehicle', extract: 'A production car.',
+      originalimage: { source: `https://upload.wikimedia.org/wikipedia/commons/a/ab/${file}` }
+    });
+
+    it('keeps the shared exact-alias descriptors immutable', function() {
+      if (!Object.isFrozen(wikimedia.PHOTO_ALIASES) || !wikimedia.PHOTO_ALIASES.every(Object.isFrozen)) {
+        throw new Error('photo recheck keys can be changed at runtime');
+      }
+    });
+
+    it('accepts the verified canonical title when an exact catalog alias redirects', async function() {
+      for (const entry of aliasCases) {
+        cache.cachedGet = fakeWikipedia({
+          summaries: { [`${entry.make} ${entry.model}`]: aliasSummary(entry) },
+          files: { [entry.file]: commonsInfo() }
+        });
+        const photo = await wikimedia.findLeadPhoto(entry.make, entry.model);
+        if (!photo || photo.article !== entry.title || !photo.url.includes(entry.file)) throw new Error(JSON.stringify({ entry, photo }));
+        if (photo.creditName !== 'Sig & Co' || photo.license !== 'CC BY-SA 4.0' || !photo.licenseUrl) throw new Error('alias lost attribution');
+      }
+    });
+
+    it('looks up the fixed canonical article after an alias title is missing', async function() {
+      for (const entry of aliasCases) {
+        cache.cachedGet = fakeWikipedia({
+          summaries: { [entry.title]: aliasSummary(entry) },
+          files: { [entry.file]: commonsInfo() }
+        });
+        const photo = await wikimedia.findLeadPhoto(entry.make, entry.model);
+        if (!photo || photo.article !== entry.title) throw new Error(JSON.stringify({ entry, photo }));
+      }
+    });
+
+    it('rejects changed alias redirects and non-vehicle canonical pages', async function() {
+      for (const entry of aliasCases) {
+        for (const hit of [
+          { ...aliasSummary(entry), title: entry.title + ' race car' },
+          { ...aliasSummary(entry), description: 'Rock band', extract: 'A four-piece band from Leeds.' }
+        ]) {
+          cache.cachedGet = fakeWikipedia({
+            summaries: { [`${entry.make} ${entry.model}`]: hit, [entry.title]: hit },
+            files: { [entry.file]: commonsInfo() }
+          });
+          if (await wikimedia.findLeadPhoto(entry.make, entry.model)) throw new Error('unverified alias article accepted');
+        }
+      }
+    });
+
+    it('does not extend aliases to another make or trim suffix', async function() {
+      for (const [make, model, entry] of [
+        ['Subaru', 'GR86', aliasCases[0]], ['Toyota', 'GR86 Cup', aliasCases[0]],
+        ['Toyota', 'MG3', aliasCases[1]], ['MG', 'MG3 Cup', aliasCases[1]],
+        ['MG', 'MG4 XPower', aliasCases[2]]
+      ]) {
+        cache.cachedGet = fakeWikipedia({
+          summaries: { [`${make} ${model}`]: aliasSummary(entry), [entry.title]: aliasSummary(entry) },
+          files: { [entry.file]: commonsInfo() }
+        });
+        if (await wikimedia.findLeadPhoto(make, model)) throw new Error(`${make} ${model} borrowed an alias`);
+      }
+    });
+
+    it('requires a whole GR86 token in the chosen photo filename', async function() {
+      for (const file of ['2017_Toyota_86.jpg', 'Toyota_GR860.jpg', 'Toyota_GR86Cup.jpg']) {
+        const entry = { ...aliasCases[0], file };
+        cache.cachedGet = fakeWikipedia({
+          summaries: { 'Toyota GR86': aliasSummary(entry) }, files: { [file]: commonsInfo() }
+        });
+        if (await wikimedia.findLeadPhoto('Toyota', 'GR86')) throw new Error('wrong-generation photo accepted: ' + file);
+      }
+    });
+
+    it('keeps Commons, landscape, JPEG and size requirements for aliases', async function() {
+      const entry = aliasCases[1];
+      for (const info of [commonsInfo({ width: 750, height: 1000 }), commonsInfo({ mime: 'image/png' }), commonsInfo({ width: 600, height: 400 }), null]) {
+        cache.cachedGet = fakeWikipedia({
+          summaries: { 'MG MG3': aliasSummary(entry) }, files: info ? { [entry.file]: info } : {}
+        });
+        if (await wikimedia.findLeadPhoto('MG', 'MG3')) throw new Error('unsuitable alias photo accepted');
+      }
+      cache.cachedGet = fakeWikipedia({
+        summaries: { 'MG MG3': { ...aliasSummary(entry), originalimage: { source: 'https://upload.wikimedia.org/wikipedia/en/a/ab/MG3.jpg' } } }
+      });
+      if (await wikimedia.findLeadPhoto('MG', 'MG3')) throw new Error('local non-free Wikipedia file accepted');
+    });
+
+    it('still rejects an unlisted cross-make redirect', async function() {
+      cache.cachedGet = fakeWikipedia({
+        summaries: { 'Mercury Lynx': { ...pilot, title: 'Ford Escort (North America)' } },
+        files: { '2025_Honda_Pilot.jpg': commonsInfo() }
+      });
+      if (await wikimedia.findLeadPhoto('Mercury', 'Lynx')) throw new Error('Ford twin accepted for Mercury');
+    });
+
+    it('throws for an alias canonical lookup outage so the job can retry', async function() {
+      cache.cachedGet = async url => {
+        if (url.endsWith('MG_MG3')) throw Object.assign(new Error('Not found'), { response: { status: 404 } });
+        throw Object.assign(new Error('Service Unavailable'), { response: { status: 503 } });
+      };
+      let threw = false;
+      try { await wikimedia.findLeadPhoto('MG', 'MG3'); } catch (err) { threw = err.response && err.response.status === 503; }
+      if (!threw) throw new Error('alias outage treated as no matching photo');
+    });
+
     it('finds an article through search when the direct title misses', async function() {
       const gpz = { ...pilot, title: 'Kawasaki GPZ305', description: 'Motorcycle', extract: 'The Kawasaki GPZ305 is a motorcycle.' };
       cache.cachedGet = fakeWikipedia({

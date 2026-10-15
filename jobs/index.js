@@ -17,7 +17,7 @@ function startBackgroundJobs() {
     if (photosRunning) return;
     photosRunning = true;
     try {
-      await updatePhotos(); // Wikipedia lead photos, then Unsplash
+      await updatePhotos(); // Model-matched Wikipedia / Commons photos
     } finally {
       photosRunning = false;
     }
