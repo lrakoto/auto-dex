@@ -32,14 +32,15 @@ describe('Garage', function() {
     await agent.get('/garage').expect(200);
   });
 
-  it('shows admins the real Unsplash queue and batch size', async function() {
+  it('shows admins the Wikimedia queue and review tools', async function() {
     const admin = request.agent(app);
     const user = await createVerifiedUser(admin, db, { email: 'queue-admin@example.com' });
     await db.user.update({ isAdmin: true }, { where: { id: user.id } });
-    const { BATCH_SIZE } = require('../jobs/images');
+    const { WIKI_BATCH } = require('../jobs/images');
     const res = await admin.get('/garage/admin').expect(200);
-    if (!res.text.includes(`hourly runs at ${BATCH_SIZE}/run`)) throw new Error('batch size missing from the queue card');
-    if (!/still on the placeholder/.test(res.text)) throw new Error('placeholder count missing');
+    if (!res.text.includes(`${WIKI_BATCH}/run`)) throw new Error('Wikimedia batch size missing from the queue card');
+    if (!/\/garage\/admin\/photos/.test(res.text)) throw new Error('photo review link missing');
+    if (!/\/garage\/admin\/retry-photos/.test(res.text)) throw new Error('Wikimedia retry control missing');
   });
 
   it('adds and removes a garage car, scoped to the owner', async function() {

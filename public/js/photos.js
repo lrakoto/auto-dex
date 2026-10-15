@@ -4,6 +4,11 @@
   var PLACEHOLDER = '/assets/no-photo.svg';
   var attempted = new WeakSet();
 
+  function isRetiredPhoto(url) {
+    var hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+    return hostname === 'unsplash.com' || hostname.slice(-13) === '.unsplash.com';
+  }
+
   function imageUrl(value) {
     if (typeof value !== 'string' || !value.trim() || /[\u0000-\u001f\u007f]/.test(value)) return null;
     var raw = value.trim();
@@ -11,9 +16,10 @@
     try {
       var url = new URL(raw, window.location.href);
       if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+      if (isRetiredPhoto(url)) return null;
       // Before the CSP-safe data attributes, recently viewed URLs were written
       // into inline JavaScript with HTML-escaped query separators.
-      if (url.hostname === 'images.unsplash.com' || url.hostname === 'upload.wikimedia.org' || url.hostname === 'thumb.wikimedia.org') {
+      if (url.hostname === 'upload.wikimedia.org' || url.hostname === 'thumb.wikimedia.org') {
         url = new URL(raw.replace(/&amp;/g, '&'), window.location.href);
       }
       return { url: url, relative: raw.charAt(0) === '/' };
@@ -30,12 +36,7 @@
     var parsed = imageUrl(value);
     if (!parsed) return PLACEHOLDER;
     var url = parsed.url;
-    if (url.hostname === 'images.unsplash.com') {
-      url.searchParams.set('w', '500');
-      url.searchParams.set('fit', 'max');
-      url.searchParams.set('q', '80');
-      url.searchParams.set('auto', 'format');
-    } else if (url.hostname === 'upload.wikimedia.org' || url.hostname === 'thumb.wikimedia.org') {
+    if (url.hostname === 'upload.wikimedia.org' || url.hostname === 'thumb.wikimedia.org') {
       var thumb = url.pathname.match(/^(\/wikipedia\/commons\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+))\/(\d+)px-\2$/);
       if (thumb && Number(thumb[3]) > 500) url.pathname = thumb[1] + '/500px-' + thumb[2];
     }

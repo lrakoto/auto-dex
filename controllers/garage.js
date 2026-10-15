@@ -11,7 +11,9 @@ const { addImage, refreshHero } = require('../lib/gallery');
 const { getDexStats, getBadges } = require('../lib/dex');
 const { validateUsername } = require('../lib/usernames');
 const { favoritePhoto } = require('../lib/photos');
-const { BATCH_SIZE: UNSPLASH_BATCH, WIKI_BATCH } = require('../jobs/images');
+const photoCandidates = require('../lib/photoCandidates');
+const { WIKI_BATCH } = require('../jobs/images');
+const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const { ALL_MAKES } = require('../config/carquery');
 
 // Mutating garage/admin routes were previously unlimited.
@@ -375,11 +377,7 @@ router.get('/admin', isAdmin, async (req, res) => {
   try {
     const { Op } = require('sequelize');
     const cars = await db.car.findAll({
-      where: {
-        image: {
-          [Op.or]: [null, PLACEHOLDER_URL]
-        }
-      },
+      where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }, { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } }] },
       order: [['make', 'ASC'], ['model', 'ASC']],
       limit: 100
     });
@@ -396,13 +394,12 @@ router.get('/admin', isAdmin, async (req, res) => {
 
     // Attach activity counts
     const userIds = allUsers.map(u => u.id);
-    const [totalCars, wikiQueued, unsplashQueued, placeholderCount, favCounts, garageCounts, proposalCounts] = await Promise.all([
+    const [totalCars, wikiQueued, retiredPhotoCount, placeholderCount, favCounts, garageCounts, proposalCounts] = await Promise.all([
       db.car.count(),
-      // Not yet looked up on Wikipedia (Unsplash waits for that lookup)
+      // Wikipedia / Commons remains the automatic source.
       db.car.count({ where: { wiki_checked: false, make: ALL_MAKES } }),
-      // Not yet searched on Unsplash (a search that finds nothing sets updated_img too)
-      db.car.count({ where: { updated_img: false } }),
-      db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }),
+      db.car.count({ where: { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } } }),
+      db.car.count({ where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }, { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } }] } }),
       db.favorite_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.user_car.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] }),
       db.image_proposal.findAll({ where: { userId: userIds }, attributes: ['userId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']], group: ['userId'] })
@@ -434,14 +431,121 @@ router.get('/admin', isAdmin, async (req, res) => {
       totalCars,
       wikiQueued,
       wikiBatch: WIKI_BATCH,
-      unsplashQueued,
-      placeholderCount,
-      unsplashBatch: UNSPLASH_BATCH
+      retiredPhotoCount,
+      placeholderCount
     });
   } catch (err) {
     console.log('ADMIN ERROR:', err);
     res.status(500).send('Error loading admin page.');
   }
+});
+
+// Search all vehicle types without exposing an unbounded catalog dump. Source
+// results are candidates for a person to review, never automatic replacements.
+const PHOTO_REVIEW_PAGE_SIZE = 24;
+function catalogCarId(raw) {
+  if (typeof raw !== 'string' || !/^[1-9]\d{0,9}$/.test(raw)) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id <= 2147483647 ? id : null;
+}
+
+router.get('/admin/photos', isAdmin, async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
+  const selectedId = req.query.carId === undefined ? null : catalogCarId(req.query.carId);
+  if (req.query.carId !== undefined && !selectedId) return res.status(400).send('Invalid catalog car.');
+  const rawPage = typeof req.query.page === 'string' && /^\d{1,6}$/.test(req.query.page) ? Number(req.query.page) : 1;
+  let page = Math.max(1, rawPage);
+  try {
+    const selectedCar = selectedId ? await db.car.findByPk(selectedId) : null;
+    if (selectedId && !selectedCar) return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
+    let cars = [], totalCars = 0, totalPages = 0;
+    if (q) {
+      const { Op } = db.Sequelize;
+      // Escaping LIKE's wildcards makes a model containing % or _ searchable
+      // literally; the ORM still binds/quotes the value rather than SQL text.
+      const search = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+      const where = db.sequelize.where(db.sequelize.fn('concat', db.sequelize.col('make'), ' ', db.sequelize.col('model')), { [Op.iLike]: search });
+      totalCars = await db.car.count({ where });
+      totalPages = Math.ceil(totalCars / PHOTO_REVIEW_PAGE_SIZE);
+      page = Math.min(page, Math.max(1, totalPages));
+      cars = await db.car.findAll({
+        where, order: [['make', 'ASC'], ['model', 'ASC'], ['id', 'ASC']],
+        limit: PHOTO_REVIEW_PAGE_SIZE, offset: (page - 1) * PHOTO_REVIEW_PAGE_SIZE
+      });
+    }
+    let candidates = [], errors = [];
+    if (selectedCar) {
+      try {
+        const results = await photoCandidates.searchCandidates(selectedCar.make, selectedCar.model);
+        candidates = results.candidates;
+        errors = results.errors;
+      } catch (err) {
+        console.log('PHOTO CANDIDATES ERROR:', err.message);
+        errors = [{ provider: 'sources', message: 'Photo sources are unavailable right now. Please try again.' }];
+      }
+    }
+    res.render('garage/photos', {
+      selectedCar: selectedCar ? selectedCar.toJSON() : null,
+      cars: cars.map(car => car.toJSON()), q, candidates, errors,
+      page, totalPages, totalCars,
+      pageTitle: 'Review Catalog Photos — AutoDex', canonicalPath: '/garage/admin/photos', noindex: true
+    });
+  } catch (err) {
+    console.log('PHOTO REVIEW ERROR:', err);
+    res.status(500).send('Could not load photo review.');
+  }
+});
+
+// Only the provider identifier and its candidate identifier cross the form.
+// Re-fetching trusted source metadata prevents a forged URL/credit submission.
+router.post('/admin/photos/:id', isAdmin, adminWriteLimiter, async (req, res) => {
+  const id = catalogCarId(req.params.id);
+  if (!id) return res.status(400).send('Invalid catalog car.');
+  const redirect = `/garage/admin/photos?carId=${id}`;
+  const { provider, candidateId } = req.body;
+  if (!['wikimedia', 'openverse'].includes(provider) || typeof candidateId !== 'string' || !candidateId.trim() || candidateId.length > 512) {
+    req.flash('error', 'Choose a photo from the review results.');
+    return res.redirect(redirect);
+  }
+  try {
+    const car = await db.car.findByPk(id);
+    if (!car) return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
+    const candidate = await photoCandidates.getCandidate(provider, candidateId, car.make, car.model);
+    if (!candidate || isRetiredPhoto(candidate.url)) {
+      req.flash('error', 'That photo is no longer available for approval. Search again and choose another photo.');
+      return res.redirect(redirect);
+    }
+    await db.sequelize.transaction(async transaction => {
+      const currentCar = await db.car.findByPk(car.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!currentCar) throw new Error('Catalog car is no longer available.');
+      const previousUrl = currentCar.getDataValue('image');
+      if (previousUrl && previousUrl !== PLACEHOLDER_URL && previousUrl !== candidate.url
+          && (isValidImageUrl(previousUrl) || isRetiredPhoto(previousUrl))) {
+        // Preserve legacy history using the raw value. Retired sources remain
+        // hidden by gallery policy and can never become the hero again.
+        await db.car_image.findOrCreate({
+          where: { carId: car.id, url: previousUrl },
+          defaults: { source: 'catalog', score: 0 }, transaction
+        });
+      }
+      const metadata = {
+        source: provider, credit_name: candidate.creditName, credit_url: candidate.sourceUrl,
+        credit_checked: !!candidate.creditName, license: candidate.license, license_url: candidate.licenseUrl
+      };
+      const [approvedImage] = await db.car_image.findOrCreate({
+        where: { carId: car.id, url: candidate.url },
+        defaults: { ...metadata, userId: req.user.id, score: 0 }, transaction
+      });
+      // Existing gallery copies need the newly verified attribution too.
+      await approvedImage.update(metadata, { transaction });
+      await db.car.update({ image: candidate.url, updated_img: true }, { where: { id: car.id }, transaction });
+    });
+    req.flash('success', `Approved a new cover for ${car.make} ${car.model}. The previous photo remains in the gallery.`);
+  } catch (err) {
+    console.log('PHOTO APPROVAL ERROR:', err.message);
+    req.flash('error', 'Could not approve that photo. Your current cover has been kept. Please try again.');
+  }
+  res.redirect(redirect);
 });
 
 // POST /garage/admin/verify-user/:id — manually verify a user's email
@@ -464,8 +568,14 @@ router.post('/admin/proposal/:id/approve', isAdmin, adminWriteLimiter, async (re
   try {
     const proposal = await db.image_proposal.findByPk(req.params.id);
     if (!proposal) return res.redirect('/garage/admin');
+    const imageUrl = proposal.getDataValue('imageUrl');
+    if (isRetiredPhoto(imageUrl) || !isValidImageUrl(imageUrl)) {
+      await proposal.update({ status: 'rejected' });
+      req.flash('error', 'This proposal uses an unavailable photo source and has been rejected.');
+      return res.redirect('/garage/admin');
+    }
     // Joins the gallery; becomes the hero right away only if the car had none
-    await addImage(proposal.carId, proposal.imageUrl, { userId: proposal.userId, source: 'user' });
+    await addImage(proposal.carId, imageUrl, { userId: proposal.userId, source: 'user' });
     await proposal.update({ status: 'approved' });
     req.flash('success', 'Photo approved and added to the gallery.');
   } catch (err) {
@@ -487,15 +597,15 @@ router.post('/admin/proposal/:id/reject', isAdmin, adminWriteLimiter, async (req
   res.redirect('/garage/admin');
 });
 
-// POST /garage/admin/reset-unsplash-queue — reset updated_img for placeholder cars so Unsplash retries them
-router.post('/admin/reset-unsplash-queue', isAdmin, adminWriteLimiter, async (req, res) => {
+// POST /garage/admin/retry-photos — re-check missing and retired covers on Commons.
+router.post('/admin/retry-photos', isAdmin, adminWriteLimiter, async (req, res) => {
   try {
     const { Op } = require('sequelize');
     const [count] = await db.car.update(
-      { updated_img: false },
-      { where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }] } }
+      { wiki_checked: false, wiki_checked_at: null },
+      { where: { [Op.or]: [{ image: null }, { image: PLACEHOLDER_URL }, { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } }] } }
     );
-    req.flash('success', `Queue reset — ${count} cars will be retried on the next Unsplash run.`);
+    req.flash('success', `Photo lookup queued — ${count} vehicles will be retried on the next Wikimedia run.`);
   } catch (err) {
     console.log('RESET QUEUE ERROR:', err);
     req.flash('error', 'Failed to reset queue.');

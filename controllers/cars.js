@@ -6,6 +6,7 @@ const isLoggedIn = require('../middleware/isLoggedIn');
 const { upload } = require('../config/cloudinary');
 const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const { RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carinfo = require('../lib/carinfo');
 const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via the module so tests can stub them
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
@@ -124,7 +125,9 @@ router.get('/explore', async (req, res) => {
     for (let y = decade; y < decade + 10; y++) span.push(y);
     where.model_years = { [Op.overlap]: span };
   }
-  if (photos) where.image = { [Op.ne]: PLACEHOLDER_URL };
+  if (photos) where.image = {
+    [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: PLACEHOLDER_URL }, { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN }]
+  };
 
   try {
     const { rows, count } = makes.length === 0 ? { rows: [], count: 0 } : await db.car.findAndCountAll({

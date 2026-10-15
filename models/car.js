@@ -2,6 +2,7 @@
 const {
   Model
 } = require('sequelize');
+const { displayPhoto } = require('../lib/photoPolicy');
 module.exports = (sequelize, DataTypes) => {
   class car extends Model {
     /**
@@ -21,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     make: DataTypes.STRING,
     model: DataTypes.STRING,
     year: DataTypes.INTEGER,
-    image: DataTypes.TEXT,
+    image: { type: DataTypes.TEXT, get() { return displayPhoto(this.getDataValue('image')); } },
     favcount: DataTypes.INTEGER,
     updated_img: DataTypes.BOOLEAN,
     year_min: DataTypes.INTEGER,

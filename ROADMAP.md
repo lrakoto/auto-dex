@@ -58,8 +58,10 @@ Check an item off in the same PR that finishes it. Research behind this list
 - Measured on 60 random catalog cars: 40 had a lead image and 39 of those
   named the right car. Most misses were heavy trucks or naming mismatches
   ("EQB-Class" vs "Mercedes-Benz EQB"); better title matching raises coverage.
-- Unsplash stays as the fallback. New photos join the gallery, so votes still
-  pick the hero.
+- Unsplash was retired at the owner's request on October 15, 2026. Retired
+  covers are hidden and queued for model-matched Commons replacement. Admin
+  discovery also offers attributed Commons/Openverse candidates; approved
+  alternatives join the gallery, where eligible photos can be voted on.
 - Shipped matching is strict (make and whole model in the title; search
   results must name the model exactly). On the dev catalog it found photos
   for 19 of 30 random cars and 5 of 10 motorcycles.
@@ -118,7 +120,7 @@ R14 on 2026-10-01 so they ship before R4.
   XP per spot scaled by rarity; levels on the garage and public pages.
 
 ### R8 — Photo verification with Claude vision *(needs `ANTHROPIC_API_KEY`)*
-- [ ] Before an Unsplash result or a user proposal becomes a hero, ask a
+- [ ] Before an automatically suggested photo or a user proposal becomes a hero, ask a
   vision model whether it shows the named make and model. Send 500 px
   images; at Claude Haiku 4.5 prices that is roughly $0.40 per thousand
   photos (half through the Batch API). Admin sees the verdicts; nothing is

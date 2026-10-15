@@ -26,42 +26,22 @@ and, for anyone whose own policy already permits it, where the terms live.
 
 ## Introduction
 
-AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information. Photos come from Wikipedia first — the lead image of each car's article, credited to its author and license on Wikimedia Commons — with the Unsplash API as the fallback, 45 searches per hourly run to stay under the free tier's 50 per hour.
+AutoDex is a simple vehicle search application that allows you to save favorite cars to your account. It uses the NHTSA API to pull vehicle information. Vehicle photos come from model-matched Wikimedia Commons images and approved, attributed alternatives.
 
-## Unsplash API pull
+## Vehicle photos
 
-``` Javascript
-async function unsplashImages() {
-  db.car.findAll({
-    where: {
-      updated_img: false
-    }
-  })
-  .then(async carimg => {
-    console.log(carimg[0].dataValues);
-    for (let i = 0; i < 50; i++) {
-      let index = carimg[i].dataValues;
-      let getCarImage = await axios.get(`${uSplashBaseURL}search/photos?orientation=landscape&page=1&per_page=1&query=${index.make.replaceAll(' ', '+')}+${index.model.replaceAll(' ', '+')}&${uSplashEnd}`)
-      .catch(err => {console.log(err)})
-      let imgURL = getCarImage.data.results[0].urls.full;
-      let addImagesToDatabase = db.car.update({
-        updated_img: true,
-        image: `${imgURL}`
-      },
-      {
-        where: {
-          make: index.make,
-          model: index.model
-        }
-      })
-    }
-    console.log('IMAGES ADDED:', addImagesToDatabase)
-  })
-  .catch(err => {console.log(err)})
-  .finally(() => {console.log('ADDING IMAGES COMPLETED')});
-}
+Unsplash has been retired because its search results did not reliably identify
+specific vehicles. Stored URLs remain as history, while public displays use a
+neutral placeholder until a suitable replacement is available.
 
-```
+The hourly photo job uses model-matched Wikipedia/Wikimedia Commons photos and
+prioritizes former Unsplash covers for replacement. Admins can find licensed
+Commons and Openverse candidates for any catalog vehicle at
+`/garage/admin/photos`, inspect the original source and choose a cover with its
+creator and license preserved. New candidates never publish merely because
+they ranked first in a search. Google Images links support manual discovery.
+
+No photo-source API key is required. The old `UKEY` setting is unused.
 
 ## NHTSA API pull
 
@@ -208,7 +188,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://autodx.io/
 ```
 
 `NODE_ENV`, `DATABASE_URL`, `SECRET_SESSION` and `BASE_URL` come from
-`render.yaml`. The secrets marked `sync: false` there (Resend, Unsplash,
+`render.yaml`. The secrets marked `sync: false` there (Resend,
 Cloudinary, `EMAIL_FROM`) are set in the dashboard and never committed — see
 `.env.example` for the full list.
 

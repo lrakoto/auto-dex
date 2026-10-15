@@ -29,22 +29,19 @@ describe('Improvements', function() {
     before(function() { realSearch = unsplash.searchCarPhoto; });
     after(function() { unsplash.searchCarPhoto = realSearch; });
 
-    it('credits old Unsplash images when the search still returns that photo', async function() {
+    it('leaves retired image history intact without making new Unsplash requests', async function() {
       const matchCar = await db.car.create({ make: 'Saab', model: '900', favcount: 0, updated_img: true, image: PLACEHOLDER_URL });
       const missCar = await db.car.create({ make: 'Saab', model: '9000', favcount: 0, updated_img: true, image: PLACEHOLDER_URL });
       const matched = await db.car_image.create({ carId: matchCar.id, url: 'https://images.unsplash.com/photo-900?w=1080', source: 'catalog' });
       const missed = await db.car_image.create({ carId: missCar.id, url: 'https://images.unsplash.com/photo-9000?w=1080', source: 'unsplash' });
 
-      unsplash.searchCarPhoto = async (make, model) => ({
-        urls: { full: model === '900' ? 'https://images.unsplash.com/photo-900?q=85' : 'https://images.unsplash.com/photo-other' },
-        user: { name: 'Saab Fan', links: { html: 'https://unsplash.com/@saabfan' } }
-      });
+      unsplash.searchCarPhoto = async () => { throw new Error('retired API must not be called'); };
       await backfillCredits(10);
 
       await matched.reload();
       await missed.reload();
-      if (matched.credit_name !== 'Saab Fan' || !matched.credit_checked) throw new Error('matching photo not credited');
-      if (missed.credit_name !== null || !missed.credit_checked) throw new Error('non-matching photo should be checked, uncredited');
+      if (matched.credit_name !== null || matched.credit_checked) throw new Error('retired history changed');
+      if (missed.credit_name !== null || missed.credit_checked) throw new Error('retired history changed');
     });
   });
 
@@ -78,15 +75,14 @@ describe('Improvements', function() {
   });
 
   describe('photo credits on the detail page', function() {
-    it('credits Unsplash photos even before a photographer is known', async function() {
+    it('shows a local placeholder instead of an Unsplash photo or credit', async function() {
       await db.car.create({
         make: 'Subaru', model: 'SVX', favcount: 0, updated_img: true,
         image: 'https://images.unsplash.com/photo-svx?w=1080'
       });
       const res = await request(app).get('/cars/car?make=Subaru&model=SVX').expect(200);
-      if (!/Photo from <a href="https:\/\/unsplash.com\/\?utm_source=autodex&amp;utm_medium=referral"/.test(res.text)) {
-        throw new Error('generic Unsplash credit missing');
-      }
+      if (res.text.includes('images.unsplash.com/photo-svx') || /Photo from.*Unsplash/.test(res.text)) throw new Error('retired photo or credit rendered');
+      if (!res.text.includes(PLACEHOLDER_URL)) throw new Error('local placeholder missing');
     });
   });
 });

@@ -1,44 +1,21 @@
-// Catalog photo updater, hourly. First the lead photo of each car's Wikipedia
-// article (lib/wikimedia.js), which becomes the hero unless people picked
-// another one. Then Unsplash, as the fallback for cars Wikipedia had nothing
-// for: fills in placeholder images, priority makes first, and spends any
-// leftover request budget crediting photographers on older Unsplash images
-// that predate credits. Started from server.js (web process) — set
-// ENABLE_BACKGROUND_JOBS=false when this moves to a separate cron.
+// Hourly Commons-only catalog photo updater. Unsplash URLs remain stored as
+// history, but are hidden immediately and queued for model-matched replacement.
+// ENABLE_BACKGROUND_JOBS=false disables the scheduler when using separate cron.
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { addImage } = require('../lib/gallery');
+const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carquery = require('../config/carquery');
-const unsplash = require('../lib/unsplash');
 const wikimedia = require('../lib/wikimedia'); // via the module so tests can stub it
 
-const PRIORITY_MAKES = [
-  'Tesla', 'Subaru', 'Mitsubishi', 'Chrysler', 'Nissan', 'Audi', 'Toyota', 'Mercedes-Benz',
-  'BMW', 'Volkswagen', 'Porsche', 'Ferrari', 'Lamborghini', 'McLaren', 'Bugatti',
-  'Rolls-Royce', 'Bentley', 'Maserati', 'Pagani', 'Aston Martin',
-  'Renault', 'Peugeot', 'Citroën', 'Volvo', 'Saab', 'Lotus',
-  'Jaguar', 'Land Rover', 'Alfa Romeo', 'Fiat', 'Lancia',
-  'Mazda', 'Honda', 'Hyundai', 'Kia', 'Genesis', 'Suzuki', 'Isuzu', 'Daihatsu',
-];
-
-// Search requests per hourly run. The Unsplash demo tier allows 50/hour.
-const BATCH_SIZE = 45;
-
-// Cars looked up on Wikipedia per hourly run: a few cached requests each,
-// spaced out, so the whole catalog takes about a day on the first pass.
 const WIKI_BATCH = 150;
 const WIKI_DELAY_MS = 500;
-
-// Cars Wikipedia had no photo for are asked again after this long: articles
-// gain photos, and model years (which unlock series photos) fill in later
 const WIKI_RECHECK_DAYS = 30;
+// One fixed rollout boundary makes every existing Unsplash hero eligible once,
+// even if Wikipedia was checked recently. A miss is then stamped normally and
+// waits 30 days, so unmatchable models cannot monopolize every hourly batch.
+const UNSPLASH_RETIREMENT_AT = new Date('2026-10-15T22:55:00Z');
 
-// Photos the jobs chose, as opposed to people (proposals, admin uploads)
-const AUTOMATED_SOURCES = ['unsplash', 'catalog'];
-
-// Add the Wikipedia photo to the gallery. It becomes the hero when the
-// current one was picked automatically (placeholder, Unsplash) and no photo
-// has votes; otherwise it waits in the gallery for votes.
 async function addWikipediaPhoto(car, photo) {
   const { Op } = db.Sequelize;
   const image = await addImage(car.id, photo.url, {
@@ -48,37 +25,59 @@ async function addWikipediaPhoto(car, photo) {
     license: photo.license,
     licenseUrl: photo.licenseUrl
   });
+  if (!image) return;
   const current = await db.car.findByPk(car.id, { attributes: ['id', 'image', 'updated_img'] });
   if (!current || current.image === photo.url || image.score < 0) return;
-  const heroRow = current.image ? await db.car_image.findOne({ where: { carId: car.id, url: current.image } }) : null;
-  const automatedHero = !current.updated_img || !current.image || current.image === PLACEHOLDER_URL
-    || (heroRow ? AUTOMATED_SOURCES.includes(heroRow.source) : unsplash.isUnsplashUrl(current.image));
-  const outvoted = await db.car_image.count({ where: { carId: car.id, score: { [Op.gt]: image.score } } });
+  const rawHero = current.getDataValue('image');
+  // Retired stock imagery is replaced regardless of its historical votes.
+  if (isRetiredPhoto(rawHero)) {
+    await db.car.update({ image: photo.url, updated_img: true }, { where: { id: car.id } });
+    return;
+  }
+  const heroRow = rawHero ? await db.car_image.findOne({ where: { carId: car.id, url: rawHero } }) : null;
+  const automatedHero = !current.updated_img || !rawHero || rawHero === PLACEHOLDER_URL
+    || (heroRow && ['catalog', 'unsplash'].includes(heroRow.source));
+  const outvoted = await db.car_image.count({ where: {
+    carId: car.id,
+    source: { [Op.ne]: 'unsplash' },
+    url: { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN },
+    score: { [Op.gt]: image.score }
+  } });
   if (automatedHero && !outvoted) {
     await db.car.update({ image: photo.url, updated_img: true }, { where: { id: car.id } });
   }
 }
 
-// Look up the next batch of catalog cars on Wikipedia: cars never asked
-// about first, then re-checks of cars it had no photo for a month ago; within
-// each, placeholders first, then the most favourited. A failed lookup
-// (Wikipedia down, throttled) is retried next run; three in a row end this run.
 async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } = {}) {
   const { Op } = db.Sequelize;
   const recheckBefore = new Date(Date.now() - WIKI_RECHECK_DAYS * 24 * 60 * 60 * 1000);
+  const retirementPending = {
+    image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
+    [Op.or]: [{ wiki_checked_at: null }, { wiki_checked_at: { [Op.lt]: UNSPLASH_RETIREMENT_AT } }]
+  };
   const cars = await db.car.findAll({
     attributes: ['id', 'make', 'model', 'year_max'],
     where: {
-      make: carquery.ALL_MAKES,
       [Op.or]: [
-        { wiki_checked: false },
+        retirementPending,
         {
-          wiki_checked_at: { [Op.lt]: recheckBefore },
-          [Op.and]: db.sequelize.literal('NOT EXISTS (SELECT 1 FROM car_images ci WHERE ci."carId" = "car"."id" AND ci.source = \'wikimedia\')')
+          image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
+          wiki_checked_at: { [Op.lt]: recheckBefore }
+        },
+        {
+          make: carquery.ALL_MAKES,
+          [Op.or]: [
+            { wiki_checked: false },
+            {
+              wiki_checked_at: { [Op.lt]: recheckBefore },
+              [Op.and]: db.sequelize.literal('NOT EXISTS (SELECT 1 FROM car_images ci WHERE ci."carId" = "car"."id" AND ci.source = \'wikimedia\')')
+            }
+          ]
         }
       ]
     },
-    order: [['wiki_checked', 'ASC'], ['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
+    order: [[db.sequelize.literal(`CASE WHEN "car"."image" ~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)} AND ("car"."wiki_checked_at" IS NULL OR "car"."wiki_checked_at" < ${db.sequelize.escape(UNSPLASH_RETIREMENT_AT)}) THEN 0 ELSE 1 END`), 'ASC'],
+      ['wiki_checked', 'ASC'], ['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
     limit: budget
   });
   let found = 0;
@@ -102,105 +101,21 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   return cars.length;
 }
 
-// Unsplash only searches for cars Wikipedia has already been asked about
-async function fillPlaceholders(budget) {
-  // First pass: cars of the priority makes (Honda and BMW motorcycles wait).
-  // Second pass: everything else.
-  const { Op } = db.Sequelize;
-  let cars = await db.car.findAll({
-    where: {
-      updated_img: false,
-      wiki_checked: true,
-      make: PRIORITY_MAKES,
-      [Op.or]: [{ vehicle_type: 'car' }, { vehicle_type: null }]
-    },
-    limit: budget
-  });
-  if (cars.length === 0) {
-    cars = await db.car.findAll({ where: { updated_img: false, wiki_checked: true }, limit: budget });
-  }
+// Compatibility exports for older scripts. They deliberately perform no API
+// requests and cannot reintroduce Unsplash images or mutate their history.
+async function unsplashImages() { return 0; }
+async function backfillCredits() { return 0; }
+const BATCH_SIZE = 0;
 
-  for (const car of cars) {
-    try {
-      const photo = await unsplash.searchCarPhoto(car.make, car.model);
-      if (!photo) {
-        await db.car.update({ updated_img: true, image: PLACEHOLDER_URL }, { where: { id: car.id } });
-        continue;
-      }
-      // Goes into the gallery too, so users can vote it down if it's the wrong car
-      await addImage(car.id, unsplash.sizedUrl(photo.urls.full), {
-        source: 'unsplash',
-        makeHero: true,
-        ...unsplash.creditFor(photo)
-      });
-      await unsplash.trackDownload(photo);
-      console.log(`Image updated: ${car.make} ${car.model}`);
-    } catch (err) {
-      console.log(`UNSPLASH ERROR for ${car.make} ${car.model}:`, err.message);
-      if (err.response && err.response.status === 403) break; // rate limited — stop for this hour
-      await db.car.update({ updated_img: true, image: PLACEHOLDER_URL }, { where: { id: car.id } });
-    }
-  }
-  return cars.length;
-}
-
-// Older Unsplash images were stored without the photo record, so there's no
-// photographer to credit. Re-run the same search the image came from and, if
-// the top result is still that photo, record the credit.
-async function backfillCredits(budget) {
-  if (budget <= 0) return 0;
-  const images = await db.car_image.findAll({
-    where: {
-      credit_checked: false,
-      source: ['catalog', 'unsplash'],
-      url: { [db.Sequelize.Op.like]: 'https://images.unsplash.com/%' }
-    },
-    include: [{ model: db.car, attributes: ['make', 'model'] }],
-    limit: budget
-  });
-  let credited = 0;
-  for (const image of images) {
-    try {
-      const photo = await unsplash.searchCarPhoto(image.car.make, image.car.model);
-      const match = photo && unsplash.samePhoto(photo.urls.full, image.url);
-      const credit = match ? unsplash.creditFor(photo) : {};
-      await image.update({
-        credit_name: credit.creditName || null,
-        credit_url: credit.creditUrl || null,
-        credit_checked: true
-      });
-      if (match) credited++;
-    } catch (err) {
-      if (err.response && err.response.status === 403) break;
-      console.log(`Credit backfill error for image ${image.id}:`, err.message);
-    }
-  }
-  console.log(`Credits: ${credited}/${images.length} older Unsplash images credited`);
-  return images.length;
-}
-
-async function unsplashImages() {
-  if (!process.env.UKEY) {
-    console.log('Unsplash: UKEY not set, skipping.');
-    return;
-  }
-  try {
-    const used = await fillPlaceholders(BATCH_SIZE);
-    if (used === 0) console.log('All images up to date.');
-    await backfillCredits(BATCH_SIZE - used);
-  } catch (err) {
-    console.log('ERROR in unsplashImages:', err);
-  }
-}
-
-// The hourly run: Wikipedia first, then Unsplash for what it couldn't cover
 async function updatePhotos() {
   try {
     await wikipediaPhotos();
   } catch (err) {
     console.log('ERROR in wikipediaPhotos:', err);
   }
-  await unsplashImages();
 }
 
-module.exports = { updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits, BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS };
+module.exports = {
+  updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits,
+  BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT
+};

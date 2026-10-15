@@ -1,22 +1,23 @@
 <section class="jumbotron text-center">
   <div class="container">
-    <h1 class="jumbotron-heading">Admin: Default Car Images</h1>
-    <p class="lead text-muted">Cars still using placeholder images — update them below</p>
+    <h1 class="jumbotron-heading">Admin: Vehicle Photos</h1>
+    <p class="lead text-muted">Unsplash photos are being replaced with accurate alternatives.</p>
+    <a href="/garage/admin/photos" class="btn btn-primary">Find photos for any vehicle</a>
     <div class="d-inline-block mt-3 px-4 py-3 rounded" style="background:#1f1f1f;border:1px solid #333;">
-      <div class="text-muted mb-1" style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;">Unsplash Queue</div>
+      <div class="text-muted mb-1" style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;">Wikipedia / Commons Queue</div>
       <div style="font-size:1.6rem;font-weight:700;color:#f8fafc;">
-        <%= unsplashQueued.toLocaleString() %>
+        <%= wikiQueued.toLocaleString() %>
         <span style="font-size:1rem;font-weight:400;color:#71717a;">/ <%= totalCars.toLocaleString() %></span>
       </div>
       <div class="text-muted mt-1" style="font-size:0.78rem;">
-        cars queued &middot; ~<%= Math.ceil(unsplashQueued / unsplashBatch) %> hourly runs at <%= unsplashBatch %>/run
+        lookups pending &middot; <%= wikiBatch %>/run
         <br><%= placeholderCount.toLocaleString() %> still on the placeholder
-        <% if (wikiQueued > 0) { %><br><%= wikiQueued.toLocaleString() %> still to look up on Wikipedia first &middot; <%= wikiBatch %>/run<% } %>
+        <br><%= retiredPhotoCount.toLocaleString() %> legacy Unsplash covers awaiting replacement
       </div>
-      <% if (placeholderCount > unsplashQueued) { %>
-        <form method="POST" action="/garage/admin/reset-unsplash-queue" class="mt-3">
+      <% if (placeholderCount > 0) { %>
+        <form method="POST" action="/garage/admin/retry-photos" class="mt-3">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <button type="submit" class="btn btn-sm btn-outline-warning">Reset Queue &amp; Retry</button>
+          <button type="submit" class="btn btn-sm btn-outline-warning">Retry missing photos</button>
         </form>
       <% } %>
     </div>
@@ -129,6 +130,7 @@
             <img class="card-img-top imgresp" src="<%= car.image %>" alt="<%= car.make %> <%= car.model %>">
             <div class="card-body text-left">
               <h6 class="card-title"><%= car.make %> <%= car.model %></h6>
+              <a class="btn btn-sm btn-primary btn-block mb-2" href="/garage/admin/photos?carId=<%= car.id %>">Find replacement photos</a>
               <button class="btn btn-sm btn-outline-primary btn-block" data-toggle="modal" data-target="#adminModal<%= car.id %>">
                 Update Image
               </button>
