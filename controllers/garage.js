@@ -540,7 +540,7 @@ router.post('/admin/photos/:id', isAdmin, adminWriteLimiter, async (req, res) =>
       await approvedImage.update(metadata, { transaction });
       await db.car.update({ image: candidate.url, updated_img: true }, { where: { id: car.id }, transaction });
     });
-    req.flash('success', `Approved a new cover for ${car.make} ${car.model}. The previous photo remains in the gallery.`);
+    req.flash('success', `Approved a new cover for ${car.make} ${car.model}.`);
   } catch (err) {
     console.log('PHOTO APPROVAL ERROR:', err.message);
     req.flash('error', 'Could not approve that photo. Your current cover has been kept. Please try again.');
