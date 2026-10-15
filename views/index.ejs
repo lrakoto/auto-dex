@@ -3,7 +3,7 @@
     background: url(https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80) center center / cover no-repeat fixed;
   }
   .home-overlay {
-    background: linear-gradient(to right, rgba(3,6,14,0.24) 40%, rgba(3,6,14,0.10) 100%);
+    background: linear-gradient(to right, rgba(3,6,14,0.68) 40%, rgba(3,6,14,0.12) 100%);
     min-height: calc(100vh - 56px);
     display: flex;
     flex-direction: column;
@@ -17,6 +17,31 @@
     margin: 0 auto;
     padding: 0 2rem;
   }
+  .home-inner .custom-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 600px;
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  .home-inner .home-copy { color: #e2e8f0; }
+  .home-search {
+    /* Keep suggestions above the featured card's animation stacking context. */
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .home-search .search-input-wrap { flex: 1 1 220px; min-width: 0; }
+  .home-search label { color: #cbd5e1; }
+  .home-search .form-control { min-height: 48px; font-size: 1rem; background: rgba(10,16,28,0.94); }
+  .home-search .form-control::placeholder { color: #9ca3af; opacity: 1; }
+  .home-search button { min-height: 48px; padding: 0.65rem 1.75rem; white-space: nowrap; }
+  .home-inner .cotd { margin-bottom: 0; }
+  .home-inner .cotd-credit { min-width: 0; overflow-wrap: anywhere; }
   #recently-viewed {
     padding: 1.25rem 2rem 1.75rem;
     max-width: 1200px;
@@ -25,6 +50,16 @@
     align-self: stretch;
     border-top: 1px solid rgba(255,255,255,0.06);
   }
+  @media (max-width: 768px) {
+    .home-inner { padding: 0 1.25rem; }
+    .home-inner .custom-wrap { padding: 3rem 0; }
+    #recently-viewed { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .home-inner .cotd-play { margin-left: 0; }
+  }
+  @media (max-width: 520px) {
+    .home-search .search-input-wrap { flex-basis: 100%; }
+    .home-search button { width: 100%; }
+  }
 </style>
 
 <div class="home-overlay">
@@ -32,9 +67,19 @@
     <div class="custom-wrap">
       <p class="eyebrow hero-sub" style="margin-bottom:1.25rem;">Vehicle Explorer</p>
       <h1 class="cover-heading">The Car<br>Database.</h1>
+      <p class="lead mb-4 hero-sub home-copy" style="animation-delay:0.5s;">Search makes and models, compare specs, and build your garage.</p>
+
+      <form action="/search" method="GET" class="hero-form home-search">
+        <div class="search-input-wrap">
+          <label for="q">Make or Model</label>
+          <input type="text" class="form-control form-control-lg" name="q" id="q" placeholder="Toyota, Civic, Porsche…" autocomplete="off" enterkeyhint="search">
+          <div class="suggest-dropdown"></div>
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Search &rarr;</button>
+      </form>
       <% if (cotd) { %>
-        <%# Under the heading, not beside it: the hero photo's car stays in view %>
-        <aside class="cotd hero-sub" style="animation-delay:0.5s;" aria-label="Car of the Day">
+        <%# Keep discovery below the primary search, clear of the hero photo %>
+        <aside class="cotd hero-sub" style="animation-delay:0.75s;" aria-label="Car of the Day">
           <a class="cotd-card" href="/cars/car?make=<%= encodeURIComponent(cotd.make) %>&model=<%= encodeURIComponent(cotd.model) %>">
             <span class="cotd-photo"><img src="<%= cardPhoto(cotd.image) %>" alt="<%= cotd.make %> <%= cotd.model %>"></span>
             <span class="cotd-body">
@@ -52,16 +97,6 @@
           </p>
         </aside>
       <% } %>
-      <p class="lead mb-4 hero-sub" style="animation-delay:0.65s;">Browse thousands of makes and models. Search by manufacturer, discover specs, and build your personal garage.</p>
-
-      <form action="/search" method="GET" class="d-flex align-items-end hero-form" style="gap:0.75rem;flex-wrap:wrap;">
-        <div class="search-input-wrap" style="flex:1;min-width:220px;">
-          <label for="q">Make or Model</label>
-          <input type="text" class="form-control form-control-lg" name="q" id="q" placeholder="e.g. Toyota, Camry, Ferrari…" autocomplete="off">
-          <div class="suggest-dropdown"></div>
-        </div>
-        <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.75rem;white-space:nowrap;">Search &rarr;</button>
-      </form>
     </div>
   </div>
 

@@ -3,14 +3,21 @@ const app = require('../server');
 const db = require('../models');
 const { getCsrfToken, createVerifiedUser } = require('./helpers');
 const { isValidImageUrl } = require('../lib/validators');
+const carquery = require('../config/carquery');
 
 describe('Cars', function() {
   const agent = request.agent(app);
-  let user;
+  let user, realGetModels;
 
   before(async function() {
+    // These tests exercise favorite writes, not NHTSA availability. Keep the
+    // catalog validation path, with the same known models on every run.
+    realGetModels = carquery.getModels;
+    carquery.getModels = async make => ({ Honda: ['Civic'], Kia: ['Soul'] }[make] || [])
+      .map(model => ({ make, model }));
     user = await createVerifiedUser(agent, db, { email: 'driver@example.com' });
   });
+  after(function() { carquery.getModels = realGetModels; });
 
   describe('GET /cars/search', function() {
     it('returns 200 for a query', async function() {
