@@ -15,6 +15,9 @@ const WIKI_RECHECK_DAYS = 30;
 // even if Wikipedia was checked recently. A miss is then stamped normally and
 // waits 30 days, so unmatchable models cannot monopolize every hourly batch.
 const UNSPLASH_RETIREMENT_AT = new Date('2026-10-15T22:55:00Z');
+// Retry only the newly supported exact names once, without making recent
+// misses wait a month or replacing a cover somebody already chose.
+const PHOTO_ALIAS_RECHECK_AT = new Date('2026-10-15T23:28:00Z');
 
 async function addWikipediaPhoto(car, photo) {
   const { Op } = db.Sequelize;
@@ -55,10 +58,21 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
     image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
     [Op.or]: [{ wiki_checked_at: null }, { wiki_checked_at: { [Op.lt]: UNSPLASH_RETIREMENT_AT } }]
   };
+  const aliasNames = wikimedia.PHOTO_ALIASES.map(({ make, model }) => ({ make, model }));
+  const aliasPending = {
+    [Op.and]: [
+      { [Op.or]: aliasNames },
+      { [Op.or]: [{ image: null }, { image: '' }, { image: PLACEHOLDER_URL }, { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } }] },
+      { [Op.or]: [{ wiki_checked_at: null }, { wiki_checked_at: { [Op.lt]: PHOTO_ALIAS_RECHECK_AT } }] }
+    ]
+  };
+  const aliasNamesSql = aliasNames.map(({ make, model }) => `("car"."make" = ${db.sequelize.escape(make)} AND "car"."model" = ${db.sequelize.escape(model)})`).join(' OR ');
+  const aliasPendingSql = `(${aliasNamesSql}) AND ("car"."image" IS NULL OR "car"."image" IN ('', ${db.sequelize.escape(PLACEHOLDER_URL)}) OR "car"."image" ~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)}) AND ("car"."wiki_checked_at" IS NULL OR "car"."wiki_checked_at" < ${db.sequelize.escape(PHOTO_ALIAS_RECHECK_AT)})`;
   const cars = await db.car.findAll({
     attributes: ['id', 'make', 'model', 'year_max'],
     where: {
       [Op.or]: [
+        aliasPending,
         retirementPending,
         {
           image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
@@ -76,7 +90,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
         }
       ]
     },
-    order: [[db.sequelize.literal(`CASE WHEN "car"."image" ~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)} AND ("car"."wiki_checked_at" IS NULL OR "car"."wiki_checked_at" < ${db.sequelize.escape(UNSPLASH_RETIREMENT_AT)}) THEN 0 ELSE 1 END`), 'ASC'],
+    order: [[db.sequelize.literal(`CASE WHEN ${aliasPendingSql} THEN 0 WHEN "car"."image" ~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)} AND ("car"."wiki_checked_at" IS NULL OR "car"."wiki_checked_at" < ${db.sequelize.escape(UNSPLASH_RETIREMENT_AT)}) THEN 1 ELSE 2 END`), 'ASC'],
       ['wiki_checked', 'ASC'], ['updated_img', 'ASC'], ['favcount', 'DESC'], ['id', 'ASC']],
     limit: budget
   });
@@ -117,5 +131,5 @@ async function updatePhotos() {
 
 module.exports = {
   updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits,
-  BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT
+  BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT, PHOTO_ALIAS_RECHECK_AT
 };

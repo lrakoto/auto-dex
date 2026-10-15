@@ -65,6 +65,10 @@ Check an item off in the same PR that finishes it. Research behind this list
 - Shipped matching is strict (make and whole model in the title; search
   results must name the model exactly). On the dev catalog it found photos
   for 19 of 30 random cars and 5 of 10 motorcycles.
+- Exact article aliases cover Toyota GR86, MG3 and MG4 without loosening
+  general matching. GR86 additionally requires its name in the lead photo's
+  filename because the Toyota 86 article covers both generations. Missing
+  covers for these names receive a one-time catch-up check, then normal retries.
 
 ### R3 — Safety and owner-reported problems on car pages
 - [x] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
