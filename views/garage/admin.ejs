@@ -4,13 +4,14 @@
     <p class="lead text-muted">Unsplash photos are being replaced with accurate alternatives.</p>
     <a href="/garage/admin/photos" class="btn btn-primary">Find photos for any vehicle</a>
     <div class="d-inline-block mt-3 px-4 py-3 rounded" style="background:#1f1f1f;border:1px solid #333;">
-      <div class="text-muted mb-1" style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;">Wikipedia / Commons Queue</div>
+      <div class="text-muted mb-1" style="font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;">New Wikipedia / Commons lookups</div>
       <div style="font-size:1.6rem;font-weight:700;color:#f8fafc;">
         <%= wikiQueued.toLocaleString() %>
         <span style="font-size:1rem;font-weight:400;color:#71717a;">/ <%= totalCars.toLocaleString() %></span>
       </div>
       <div class="text-muted mt-1" style="font-size:0.78rem;">
-        lookups pending &middot; <%= wikiBatch %>/run
+        initial lookups pending
+        <br>Up to <%= wikiCatchupBatch %>/run during replacement catch-up; <%= wikiBatch %>/run normally
         <br><%= placeholderCount.toLocaleString() %> still on the placeholder
         <br><%= retiredPhotoCount.toLocaleString() %> legacy Unsplash covers awaiting replacement
       </div>

@@ -9,6 +9,9 @@ const carquery = require('../config/carquery');
 const wikimedia = require('../lib/wikimedia'); // via the module so tests can stub it
 
 const WIKI_BATCH = 150;
+// Work through the one-time retirement backlog sooner without increasing
+// request concurrency or changing the normal maintenance cadence.
+const WIKI_RETIREMENT_BATCH = 500;
 const WIKI_DELAY_MS = 500;
 const WIKI_RECHECK_DAYS = 30;
 // One fixed rollout boundary makes every existing Unsplash hero eligible once,
@@ -18,6 +21,14 @@ const UNSPLASH_RETIREMENT_AT = new Date('2026-10-15T22:55:00Z');
 // Retry only the newly supported exact names once, without making recent
 // misses wait a month or replacing a cover somebody already chose.
 const PHOTO_ALIAS_RECHECK_AT = new Date('2026-10-15T23:28:00Z');
+
+function retirementPendingWhere() {
+  const { Op } = db.Sequelize;
+  return {
+    image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
+    [Op.or]: [{ wiki_checked_at: null }, { wiki_checked_at: { [Op.lt]: UNSPLASH_RETIREMENT_AT } }]
+  };
+}
 
 async function addWikipediaPhoto(car, photo) {
   const { Op } = db.Sequelize;
@@ -54,10 +65,7 @@ async function addWikipediaPhoto(car, photo) {
 async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } = {}) {
   const { Op } = db.Sequelize;
   const recheckBefore = new Date(Date.now() - WIKI_RECHECK_DAYS * 24 * 60 * 60 * 1000);
-  const retirementPending = {
-    image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN },
-    [Op.or]: [{ wiki_checked_at: null }, { wiki_checked_at: { [Op.lt]: UNSPLASH_RETIREMENT_AT } }]
-  };
+  const retirementPending = retirementPendingWhere();
   const aliasNames = wikimedia.PHOTO_ALIASES.map(({ make, model }) => ({ make, model }));
   const aliasPending = {
     [Op.and]: [
@@ -96,7 +104,9 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   });
   let found = 0;
   let failures = 0;
+  let attempted = 0;
   for (const car of cars) {
+    attempted++;
     try {
       const photo = await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max });
       failures = 0;
@@ -111,7 +121,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
     }
     if (delayMs) await new Promise(r => setTimeout(r, delayMs));
   }
-  if (cars.length) console.log(`Wikipedia photos: ${found} found for ${cars.length} cars`);
+  if (cars.length) console.log(`Wikipedia photos: ${found} found for ${attempted} cars attempted (${cars.length} selected)`);
   return cars.length;
 }
 
@@ -121,9 +131,10 @@ async function unsplashImages() { return 0; }
 async function backfillCredits() { return 0; }
 const BATCH_SIZE = 0;
 
-async function updatePhotos() {
+async function updatePhotos({ delayMs = WIKI_DELAY_MS } = {}) {
   try {
-    await wikipediaPhotos();
+    const pendingRetirement = await db.car.findOne({ attributes: ['id'], where: retirementPendingWhere() });
+    await wikipediaPhotos(pendingRetirement ? WIKI_RETIREMENT_BATCH : WIKI_BATCH, { delayMs });
   } catch (err) {
     console.log('ERROR in wikipediaPhotos:', err);
   }
@@ -131,5 +142,5 @@ async function updatePhotos() {
 
 module.exports = {
   updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits,
-  BATCH_SIZE, WIKI_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT, PHOTO_ALIAS_RECHECK_AT
+  BATCH_SIZE, WIKI_BATCH, WIKI_RETIREMENT_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT, PHOTO_ALIAS_RECHECK_AT
 };

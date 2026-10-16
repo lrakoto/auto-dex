@@ -62,6 +62,10 @@ Check an item off in the same PR that finishes it. Research behind this list
   covers are hidden and queued for model-matched Commons replacement. Admin
   discovery also offers attributed Commons/Openverse candidates; approved
   alternatives join the gallery, where eligible photos can be voted on.
+- While the initial retirement queue remains, the hourly job checks up to
+  500 vehicles per run, then returns to its normal 150. Requests stay
+  sequential with the same spacing and failure stop; logs distinguish actual
+  attempts from the selected batch when an outage stops a run early.
 - Shipped matching is strict (make and whole model in the title; search
   results must name the model exactly). On the dev catalog it found photos
   for 19 of 30 random cars and 5 of 10 motorcycles.
