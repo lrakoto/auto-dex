@@ -12,7 +12,7 @@ const { getDexStats, getBadges } = require('../lib/dex');
 const { validateUsername } = require('../lib/usernames');
 const { favoritePhoto } = require('../lib/photos');
 const photoCandidates = require('../lib/photoCandidates');
-const { WIKI_BATCH } = require('../jobs/images');
+const { WIKI_BATCH, WIKI_RETIREMENT_BATCH } = require('../jobs/images');
 const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const { ALL_MAKES } = require('../config/carquery');
 
@@ -431,6 +431,7 @@ router.get('/admin', isAdmin, async (req, res) => {
       totalCars,
       wikiQueued,
       wikiBatch: WIKI_BATCH,
+      wikiCatchupBatch: WIKI_RETIREMENT_BATCH,
       retiredPhotoCount,
       placeholderCount
     });
