@@ -62,6 +62,8 @@ Check an item off in the same PR that finishes it. Research behind this list
   covers are hidden and queued for model-matched Commons replacement. Admin
   discovery also offers attributed Commons/Openverse candidates; approved
   alternatives join the gallery, where eligible photos can be voted on.
+- The owner subsequently approved one exception: retain the original
+  decorative Unsplash homepage hero, independently of Car of the Day.
 - While the initial retirement queue remains, the hourly job checks up to
   500 vehicles per run, then returns to its normal 150. Requests stay
   sequential with the same spacing and failure stop; logs distinguish actual

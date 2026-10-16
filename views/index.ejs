@@ -1,5 +1,7 @@
 <style>
   .home-page {
+    /* Owner-approved exception: retain the original decorative homepage hero. */
+    background-image: url(https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1920&q=80);
     background-position: center;
     background-size: cover;
     background-repeat: no-repeat;
@@ -65,7 +67,7 @@
   }
 </style>
 
-<div class="home-page" style="background-image: <%= cotd && cotd.image ? photoBackground(cotd.image) : 'none' %>;">
+<div class="home-page">
 <div class="home-overlay">
   <div class="home-inner">
     <div class="custom-wrap">
