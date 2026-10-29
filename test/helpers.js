@@ -18,12 +18,29 @@ async function getCsrfToken(agent, path = '/auth/login') {
 // Reset the TEST database by running the real migrations. Using the migrations
 // (not sequelize.sync) means indexes, unique constraints and FK cascades are
 // actually exercised — sync({ force: true }) silently skipped them all.
-function runMigrations() {
-  execFileSync(
-    path.join(__dirname, '..', 'node_modules', '.bin', 'sequelize-cli'),
-    ['db:migrate:undo:all', '--env', 'test'],
-    { cwd: path.join(__dirname, '..'), stdio: 'pipe', env: { ...process.env, NODE_ENV: 'test' } }
-  );
+//
+// The schema is emptied by recreating it rather than by db:migrate:undo:all,
+// which needs every applied migration's file: a test database last migrated
+// on another branch failed the whole run with "Unable to find migration".
+// Guarded so it can only ever empty a *_test database under NODE_ENV=test.
+async function runMigrations(sequelize) {
+  const name = sequelize.config.database;
+  if (process.env.NODE_ENV !== 'test' || !/_test$/.test(name || '')) {
+    throw new Error(`Refusing to reset database "${name}": tests only run against a *_test database with NODE_ENV=test`);
+  }
+  try {
+    await sequelize.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  } catch (err) {
+    // Only the schema's owner may drop it. A test role that doesn't own
+    // public (some hosted or CI Postgres setups) falls back to undoing the
+    // migrations, which works whenever the branch hasn't changed.
+    if (!err.original || err.original.code !== '42501') throw err;
+    execFileSync(
+      path.join(__dirname, '..', 'node_modules', '.bin', 'sequelize-cli'),
+      ['db:migrate:undo:all', '--env', 'test'],
+      { cwd: path.join(__dirname, '..'), stdio: 'pipe', env: { ...process.env, NODE_ENV: 'test' } }
+    );
+  }
   execFileSync(
     path.join(__dirname, '..', 'node_modules', '.bin', 'sequelize-cli'),
     ['db:migrate', '--env', 'test'],

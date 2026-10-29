@@ -5,8 +5,8 @@ const db = require('../models');
 const { runMigrations } = require('./helpers');
 
 exports.mochaHooks = {
-  beforeAll() {
-    runMigrations();
+  async beforeAll() {
+    await runMigrations(db.sequelize);
   },
   async afterAll() {
     await db.sequelize.close();
