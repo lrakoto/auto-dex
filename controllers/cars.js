@@ -377,6 +377,11 @@ router.get('/', async (req, res) => {
       const favcount = car ? car.favcount : 0;
       const { Op } = require('sequelize');
 
+      // FuelEconomy.gov and NHTSA's crash ratings cover passenger vehicles only:
+      // asking them about a motorcycle, ATV or truck chassis only costs requests
+      // (and risks a same-named car's figures). Complaints cover every type.
+      const passenger = type === 'car';
+
       // External lookups and the viewer's state are independent — run them together
       const [related, wiki, carSpecs, safetyRatings, favorite, mySpotCount, gallery, complaints] = await Promise.all([
         // Other models of the same make and type, the ones with photos first
@@ -386,8 +391,8 @@ router.get('/', async (req, res) => {
           limit: 6
         }),
         carinfo.getWikiSummary(make, model),
-        carinfo.getFuelSpecs(make, model, car && car.year_max),
-        nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null),
+        passenger ? carinfo.getFuelSpecs(make, model, car && car.year_max) : null,
+        passenger ? nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null) : null,
         req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
         req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
         car ? getGallery(car.id, req.user && req.user.id, car.image) : [],
@@ -465,11 +470,12 @@ router.get('/', async (req, res) => {
       for (const hit of await Promise.all(pairs.map(p => lookupCatalogCar(p.make, p.model)))) {
         if (hit && !hits.some(h => h.make === hit.make && h.model === hit.model)) hits.push(hit);
       }
-      const cars = await Promise.all(hits.map(async ({ make, model, car }) => {
+      const cars = await Promise.all(hits.map(async ({ make, model, car, type }) => {
+        const passenger = type === 'car'; // see the detail page
         const [wiki, carSpecs, safetyRatings] = await Promise.all([
           carinfo.getWikiSummary(make, model),
-          carinfo.getFuelSpecs(make, model, car && car.year_max),
-          nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null)
+          passenger ? carinfo.getFuelSpecs(make, model, car && car.year_max) : null,
+          passenger ? nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null) : null
         ]);
         const facts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
         const factMap = {};
