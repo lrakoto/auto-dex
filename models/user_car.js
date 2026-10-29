@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       user_car.belongsTo(models.user, { foreignKey: 'userId' });
       user_car.hasMany(models.maintenance_log, { foreignKey: 'userCarId' });
       user_car.hasMany(models.fuel_log, { foreignKey: 'userCarId' });
+      user_car.hasMany(models.build_entry, { foreignKey: 'userCarId' });
     }
   }
   user_car.init({

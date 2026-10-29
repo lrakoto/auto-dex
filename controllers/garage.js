@@ -253,7 +253,7 @@ router.get('/car/:id', async (req, res) => {
   try {
     const car = await findOwnCar(req);
     if (!car) return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
-    const [logs, fuelLogs, epaSpecs] = await Promise.all([
+    const [logs, fuelLogs, epaSpecs, buildEntries] = await Promise.all([
       db.maintenance_log.findAll({
         where: { userCarId: car.id },
         order: [['date', 'DESC'], ['id', 'DESC']]
@@ -262,7 +262,11 @@ router.get('/car/:id', async (req, res) => {
         where: { userCarId: car.id },
         order: [['odometer', 'DESC'], ['id', 'DESC']]
       }),
-      getFuelSpecs(car.make, car.model, parseInt(car.year, 10) || undefined)
+      getFuelSpecs(car.make, car.model, parseInt(car.year, 10) || undefined),
+      db.build_entry.findAll({
+        where: { userCarId: car.id },
+        order: [['date', 'DESC'], ['id', 'DESC']]
+      })
     ]);
     let recalls = null; // null = couldn't check; [] = none
     try {
@@ -279,6 +283,8 @@ router.get('/car/:id', async (req, res) => {
       fuelLogs: fuelLogs.map(l => l.toJSON()),
       fuelStats: fuelStats(fuelLogs),
       epaCombMpg: epaSpecs ? epaSpecs.combMpg : null,
+      buildEntries: buildEntries.map(b => b.toJSON()),
+      buildTotal: buildEntries.reduce((sum, b) => sum + (b.cost != null ? Number(b.cost) : 0), 0),
       today: new Date().toISOString().slice(0, 10),
       pageTitle: `${car.year} ${car.make} ${car.model} — My Garage — AutoDex`,
       canonicalPath: `/garage/car/${car.id}`,
@@ -406,6 +412,63 @@ router.delete('/car/:id/fuel/:logId', writeLimiter, async (req, res) => {
     console.log('DELETE FUEL LOG ERROR:', err);
   }
   res.redirect(`/garage/car/${encodeURIComponent(req.params.id)}#fuel`);
+});
+
+// POST /garage/car/:id/build — add a modification to the build log (R13).
+// Multipart (optional photo upload), so the form carries _csrf in its URL.
+router.post('/car/:id/build', writeLimiter, upload.single('buildImage'), async (req, res) => {
+  const back = `/garage/car/${encodeURIComponent(req.params.id)}#build`;
+  try {
+    const car = await findOwnCar(req);
+    if (!car) return res.redirect('/garage');
+    const { date, part, vendor, cost, notes, imageUrl } = req.body;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !part || !part.trim()) {
+      req.flash('error', 'A date and the part are required.');
+      return res.redirect(back);
+    }
+    const dollars = cost === undefined || cost === null || String(cost).trim() === '' ? null : Number(String(cost).replace(/[,$\s]/g, ''));
+    if (dollars !== null && (!Number.isFinite(dollars) || dollars < 0)) {
+      req.flash('error', 'Cost must be a positive number.');
+      return res.redirect(back);
+    }
+    let photo = null;
+    if (req.file) {
+      photo = req.file.path; // Cloudinary URL
+    } else if (imageUrl && imageUrl.trim()) {
+      if (!isValidImageUrl(imageUrl)) {
+        req.flash('error', 'Photo URL must start with http(s)://');
+        return res.redirect(back);
+      }
+      photo = imageUrl.trim();
+    }
+    const clip = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
+    await db.build_entry.create({
+      userCarId: car.id,
+      date,
+      part: clip(part, 160),
+      vendor: clip(vendor, 120),
+      cost: dollars,
+      notes: clip(notes, 2000),
+      imageUrl: photo
+    });
+    req.flash('success', 'Added to the build log.');
+  } catch (err) {
+    console.log('BUILD LOG ERROR:', err);
+    req.flash('error', 'Could not save that entry.');
+  }
+  res.redirect(back);
+});
+
+// DELETE /garage/car/:id/build/:entryId
+router.delete('/car/:id/build/:entryId', writeLimiter, async (req, res) => {
+  try {
+    const car = await findOwnCar(req);
+    const entryId = parseInt(req.params.entryId, 10);
+    if (car && Number.isInteger(entryId)) await db.build_entry.destroy({ where: { id: entryId, userCarId: car.id } });
+  } catch (err) {
+    console.log('DELETE BUILD ENTRY ERROR:', err);
+  }
+  res.redirect(`/garage/car/${encodeURIComponent(req.params.id)}#build`);
 });
 
 // PUT /garage/car/:id — update a user car's image and/or notes

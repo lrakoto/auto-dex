@@ -46,6 +46,27 @@
     </div>
   <% } %>
 
+  <% if (builds.length) { %>
+    <h2 class="text-left mb-3 mt-5">Build Logs</h2>
+    <% builds.forEach(b => { %>
+      <section class="build-public mb-4">
+        <h3 class="build-public-car"><%= b.label %></h3>
+        <ol class="build-timeline">
+          <% b.entries.forEach(e => { %>
+            <li class="build-entry">
+              <% if (e.imageUrl) { %><span class="build-photo"><img src="<%= e.imageUrl %>" alt="<%= e.part %>" loading="lazy"></span><% } %>
+              <div class="build-body">
+                <time class="build-date" datetime="<%= e.date %>"><%= e.date %></time>
+                <p class="build-part"><%= e.part %></p>
+                <% if (e.vendor) { %><p class="build-meta"><%= e.vendor %></p><% } %>
+              </div>
+            </li>
+          <% }) %>
+        </ol>
+      </section>
+    <% }) %>
+  <% } %>
+
   <% if (dex.spottedCars > 0) { %>
     <h2 class="text-left mb-3 mt-5">Dex</h2>
     <div class="dex-makes mb-4">

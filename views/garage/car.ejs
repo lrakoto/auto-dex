@@ -187,4 +187,73 @@
       <button type="submit" class="btn btn-primary btn-sm">Add Fill-Up</button>
     </form>
   </section>
+
+  <!-- Build Log (R13) -->
+  <section id="build" class="garage-section">
+    <div class="accent-line"></div>
+    <h2 class="garage-h2">Build Log</h2>
+    <% if (buildEntries.length > 0) { %>
+      <p class="text-muted"><%= buildEntries.length %> mod<%= buildEntries.length === 1 ? '' : 's' %><% if (buildTotal > 0) { %> · $<%= buildTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> spent<% } %></p>
+      <ol class="build-timeline">
+        <% buildEntries.forEach(b => { %>
+          <li class="build-entry">
+            <% if (b.imageUrl) { %>
+              <a href="<%= b.imageUrl %>" target="_blank" rel="noopener" class="build-photo"><img src="<%= b.imageUrl %>" alt="<%= b.part %>" loading="lazy"></a>
+            <% } %>
+            <div class="build-body">
+              <time class="build-date" datetime="<%= b.date %>"><%= b.date %></time>
+              <p class="build-part"><%= b.part %></p>
+              <p class="build-meta">
+                <%= b.vendor || '' %><% if (b.vendor && b.cost != null) { %> · <% } %><%= b.cost != null ? '$' + Number(b.cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' %>
+              </p>
+              <% if (b.notes) { %><p class="maint-notes"><%= b.notes %></p><% } %>
+            </div>
+            <form method="POST" action="/garage/car/<%= car.id %>/build/<%= b.id %>?_method=DELETE" class="build-delete">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="vote-btn" aria-label="Delete <%= b.part %>" title="Delete entry">✕</button>
+            </form>
+          </li>
+        <% }) %>
+      </ol>
+    <% } else { %>
+      <p class="text-muted">No mods yet. Wheels, exhaust, a tune: log what you change and it builds a timeline<% if (currentUser.garagePublic) { %> on your public garage too<% } %>.</p>
+    <% } %>
+
+    <form method="POST" action="/garage/car/<%= car.id %>/build?_csrf=<%= csrfToken %>" class="maint-form" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-row">
+        <div class="form-group col-md-3">
+          <label class="field-label" for="bDate">Date</label>
+          <input type="date" class="form-control" id="bDate" name="date" value="<%= today %>" required>
+        </div>
+        <div class="form-group col-md-5">
+          <label class="field-label" for="bPart">Part / mod</label>
+          <input type="text" class="form-control" id="bPart" name="part" maxlength="160" placeholder="e.g. Coilovers" required>
+        </div>
+        <div class="form-group col-md-2">
+          <label class="field-label" for="bVendor">Vendor</label>
+          <input type="text" class="form-control" id="bVendor" name="vendor" maxlength="120" placeholder="Optional">
+        </div>
+        <div class="form-group col-md-2">
+          <label class="field-label" for="bCost">Cost ($)</label>
+          <input type="number" class="form-control" id="bCost" name="cost" min="0" step="0.01" placeholder="1200">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label class="field-label" for="bNotes">Notes</label>
+          <input type="text" class="form-control" id="bNotes" name="notes" maxlength="2000" placeholder="Optional, private">
+        </div>
+        <div class="form-group col-md-3">
+          <label class="field-label" for="bImage">Photo</label>
+          <input type="file" class="form-control-file" id="bImage" name="buildImage" accept="image/*">
+        </div>
+        <div class="form-group col-md-3">
+          <label class="field-label" for="bImageUrl">…or photo URL</label>
+          <input type="url" class="form-control" id="bImageUrl" name="imageUrl" placeholder="https://…" autocomplete="off">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Add to Build Log</button>
+    </form>
+  </section>
 </div>
