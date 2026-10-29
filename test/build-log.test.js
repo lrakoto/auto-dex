@@ -70,6 +70,7 @@ describe('Build log (R13)', function() {
     assert.ok(res.text.includes('2 mods · $2,000.00 spent'));
     assert.ok(res.text.indexOf('Hardtop') < res.text.indexOf('Coilovers'), 'newest first');
     assert.ok(res.text.includes('Ride height -1in'), 'the owner sees their notes');
+    assert.ok(res.text.includes('Flyin Miata · $1,250.00'), 'entry cost formatted like the total');
     assert.ok(res.text.includes(`action="/garage/car/${myCar.id}/build?_csrf=`), 'multipart form carries _csrf in its URL');
   });
 

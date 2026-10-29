@@ -204,7 +204,7 @@
               <time class="build-date" datetime="<%= b.date %>"><%= b.date %></time>
               <p class="build-part"><%= b.part %></p>
               <p class="build-meta">
-                <%= b.vendor || '' %><% if (b.vendor && b.cost != null) { %> · <% } %><%= b.cost != null ? '$' + Number(b.cost).toFixed(2) : '' %>
+                <%= b.vendor || '' %><% if (b.vendor && b.cost != null) { %> · <% } %><%= b.cost != null ? '$' + Number(b.cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' %>
               </p>
               <% if (b.notes) { %><p class="maint-notes"><%= b.notes %></p><% } %>
             </div>

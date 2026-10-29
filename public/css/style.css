@@ -2058,7 +2058,7 @@ textarea:focus-visible,
 .build-photo img { width: 96px; height: 64px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); }
 .build-body { flex: 1; min-width: 0; }
 .build-date { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.04em; }
-.build-part { font-weight: 600; margin: 0.1rem 0 0; }
+.build-part { font-weight: 600; color: var(--text); margin: 0.1rem 0 0; }
 .build-meta { font-size: 0.82rem; color: var(--text-muted); margin: 0.1rem 0 0; }
 .build-delete { margin: 0; }
 .build-public-car { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
