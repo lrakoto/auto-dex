@@ -8,7 +8,6 @@ const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carinfo = require('../lib/carinfo');
-const { saleLinks } = require('../lib/forSale');
 const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via the module so tests can stub them
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
@@ -16,6 +15,7 @@ const { photoCredit } = require('../lib/photos');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
+const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress } = require('../lib/dex');
 
 require('dotenv').config();
