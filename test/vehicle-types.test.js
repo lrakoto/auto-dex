@@ -4,7 +4,7 @@ const db = require('../models');
 const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
 const { classifyModel, isCommercialName } = require('../lib/vehicleTypes');
-const { classifyVehicleTypes, classifyMake, reclassifyAtvs } = require('../jobs/vehicleTypes');
+const { classifyVehicleTypes, classifyMake, reclassifyAtvs, reclassifyCommercial } = require('../jobs/vehicleTypes');
 const { photoPoolWhere } = require('../lib/catalog');
 const { createVerifiedUser } = require('./helpers');
 const { PLACEHOLDER_URL } = require('../lib/constants');
@@ -51,6 +51,26 @@ describe('Vehicle types', function() {
       if (classifyModel('Volvo', 'B12B', lists({ bus: ['B12B'] })) !== 'commercial') throw new Error('bus');
       if (!isCommercialName('Chevrolet', 'Express Cutaway') || isCommercialName('Ford', 'Transit')) throw new Error('names');
       if (classifyModel('GMC', 'Typhoon', lists({ 'incomplete vehicle': ['Typhoon'] })) !== 'car') throw new Error('override');
+    });
+
+    it('spots incomplete vehicles, medium-duty series, GM cab-overs and Ford E-450 chassis', function() {
+      const commercial = [
+        ['Buick', 'Incomplete'], ['Chevrolet', 'Bolt Incomplete'], ['Isuzu', '4000 Series Medium Duty'],
+        ['Chevrolet', '3500/4500'], ['GMC', 'W3500/W4500'], ['Chevrolet', 'W5500/W5500 HD'], ['Chevrolet', 'FTR / 6500XD'],
+        ['Chevrolet', 'T-Series'], ['GMC', 'T Series'], ['Ford', 'E-450'], ['Ford', 'E-550']
+      ];
+      for (const [make, model] of commercial) {
+        if (!isCommercialName(make, model)) throw new Error(`should be commercial: ${make} ${model}`);
+      }
+      // Pickups and passenger vans stay cars
+      const cars = [
+        ['Chevrolet', '3500'], ['Chevrolet', '3500HD'], ['Chevrolet', 'Silverado 2500HD'], ['GMC', 'Sierra 3500HD'],
+        ['Ram', '3500'], ['Ram', 'ProMaster 3500'], ['Ford', 'E-350'], ['Ford', 'E-150'], ['Ford', 'Escape'],
+        ['Chevrolet', 'Tahoe'], ['GMC', 'Terrain'], ['Chevrolet', 'Trax']
+      ];
+      for (const [make, model] of cars) {
+        if (isCommercialName(make, model)) throw new Error(`should stay a car: ${make} ${model}`);
+      }
     });
 
     it('files truck builders the old seeder added as commercial, their SUVs as cars', function() {
@@ -173,6 +193,20 @@ describe('Vehicle types', function() {
       } finally {
         db.car.findAll = previous;
       }
+    });
+
+    it('moves chassis already typed as cars to commercial, deleting nothing', async function() {
+      const rows = await db.car.bulkCreate([
+        { make: 'Ford', model: 'E-450', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'car' },
+        { make: 'GMC', model: 'W3500/W4500', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'car' },
+        { make: 'Ford', model: 'E-350', image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'car' }
+      ], { returning: true });
+      const before = await db.car.count();
+      await reclassifyCommercial();
+      const types = await Promise.all(rows.map(r => r.reload().then(x => x.vehicle_type)));
+      if (types.join() !== 'commercial,commercial,car') throw new Error(types.join());
+      if (await db.car.count() !== before) throw new Error('rows deleted');
+      if (await reclassifyCommercial() !== 0) throw new Error('second pass changed rows');
     });
 
     it('leaves a make untyped when one of its NHTSA lists fails', async function() {
