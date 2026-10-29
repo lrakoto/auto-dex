@@ -165,7 +165,11 @@ R14 on 2026-10-01 so they ship before R4.
   the maintenance log, with a timeline on the car page and the public garage.
 
 ### R14 — Smaller ideas
-- [ ] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).
+- [x] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).
+  Shipped with Autotrader (cars) and Bring a Trailer (cars and motorcycles),
+  `lib/forSale.js`. Cars.com and eBay Motors sit behind bot walls that a
+  scripted check can't pass; add them once someone confirms their search URL
+  in a browser.
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no

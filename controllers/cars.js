@@ -16,6 +16,7 @@ const { photoCredit } = require('../lib/photos');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
+const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress } = require('../lib/dex');
 
 require('dotenv').config();
@@ -433,6 +434,7 @@ router.get('/', async (req, res) => {
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
+        saleLinks: saleLinks(make, model, type),
         gallery, mySpotCount, heroCredit, complaints,
         complaintsYear: (complaints && complaints.year) || (car && car.year_max),
         years: carinfo.formatYears(car),
