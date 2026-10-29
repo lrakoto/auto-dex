@@ -129,6 +129,26 @@ describe('Cool Wall (R10)', function() {
       assert.ok(!cool.includes('Elan Cool Test'));
     });
 
+    it('caps each tier and places halves like the car page does', async function() {
+      // Four more cars, each with one Sub-Zero vote and one Cool vote: mean 2.5
+      const voters = await Promise.all([1, 2].map(i => db.user.create({ name: `Wall ${i}`, email: `cool-wall-cap-${i}@example.com`, password: 'password123', emailVerified: true })));
+      for (const n of [1, 2, 3, 4]) {
+        const [extra] = await db.car.findOrCreate({
+          where: { make: 'Lotus', model: `Cap Test ${n}` },
+          defaults: { image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'car' }
+        });
+        await coolWall.castVote(extra.id, voters[0].id, 3);
+        await coolWall.castVote(extra.id, voters[1].id, 2);
+        const tally = await coolWall.getCarCool(extra.id, null);
+        assert.equal(tally.placement, 3, 'car page rounds 2.5 to Sub-Zero');
+      }
+      const wall = await coolWall.getWall(3);
+      assert.equal(wall[3].cars.length, 3, 'capped at three per tier');
+      assert.ok(wall[3].cars.every(c => c.total === 2), 'two-vote cars, all placed in Sub-Zero');
+      assert.equal(wall[2].cars.filter(c => c.model.startsWith('Cap Test')).length, 0, 'none placed in Cool');
+      for (const v of voters) await v.destroy();
+    });
+
     it('drops a user\'s votes with the user', async function() {
       const temp = await db.user.create({ name: 'Temp', email: 'cool-temp@example.com', password: 'password123', emailVerified: true });
       await coolWall.castVote(car.id, temp.id, 0);
