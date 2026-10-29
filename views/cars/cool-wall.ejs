@@ -1,0 +1,41 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <p class="eyebrow">Community</p>
+    <h1 class="jumbotron-heading">The Cool Wall</h1>
+    <p class="lead text-muted">Seriously Uncool to Sub-Zero. Members place cars from each car's page; every car sits where its votes average out.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <% if (!voted) { %>
+    <div class="empty-state">
+      <div class="empty-icon">❄</div>
+      <h3>The wall is empty</h3>
+      <p>Open any car and pick a tier under <strong>Cool Wall</strong> to put the first one up.</p>
+      <a href="/makes" class="btn btn-outline-secondary mt-3">Browse Manufacturers</a>
+    </div>
+  <% } else { %>
+    <div class="cool-wall">
+      <% wall.forEach(tier => { %>
+        <section class="cool-column" aria-labelledby="cool-col-<%= tier.key %>">
+          <h2 class="cool-column-title cool-tier-<%= tier.index %>" id="cool-col-<%= tier.key %>"><%= tier.label %></h2>
+          <% if (!tier.cars.length) { %>
+            <p class="cool-column-empty">Nothing here yet.</p>
+          <% } else { %>
+            <ul class="cool-column-list">
+              <% tier.cars.forEach(c => { %>
+                <li>
+                  <a class="cool-card" href="/cars/car?make=<%= encodeURIComponent(c.make) %>&model=<%= encodeURIComponent(c.model) %>">
+                    <img src="<%= cardPhoto(c.image) %>" alt="" loading="lazy">
+                    <span class="cool-card-name"><%= c.make %> <%= c.model %></span>
+                    <span class="cool-card-votes"><%= c.total %> vote<%= c.total === 1 ? '' : 's' %></span>
+                  </a>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </section>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

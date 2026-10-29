@@ -149,6 +149,10 @@ R14 on 2026-10-01 so they ship before R4.
 - [ ] Rarity per catalog car (common → legendary) from Wikidata production
   numbers (P1092, already fetched), model age and how often it is spotted.
   XP per spot scaled by rarity; levels on the garage and public pages.
+  Data check (2026-10-29): Wikidata's P1092 (units built) is on 1 of 40
+  random catalog cars, so it can't drive rarity yet; spot counts are the
+  better signal once there are enough spots. Consider spot frequency plus
+  model age first, P1092 only as an override where it exists.
 
 ### R8 — Photo verification with Claude vision *(needs `ANTHROPIC_API_KEY`)*
 - [ ] Before an automatically suggested photo or a user proposal becomes a hero, ask a
@@ -162,9 +166,12 @@ R14 on 2026-10-01 so they ship before R4.
   photo, matched against the catalog. The user confirms.
 
 ### R10 — Cool Wall
-- [ ] Community tiers per car: Seriously Uncool, Uncool, Cool, Sub-Zero. One
+- [x] Community tiers per car: Seriously Uncool, Uncool, Cool, Sub-Zero. One
   vote per user per car; aggregate placement shown on car pages and a wall
   page.
+  Shipped as `cool_votes` (one tier per user per car) with a panel on car
+  pages and `/cars/cool-wall`; a car's placement is the rounded mean of its
+  votes (`lib/coolWall.js`).
 
 ### R11 — Size comparison
 - [x] On the compare page, draw the cars' length, width and height to scale

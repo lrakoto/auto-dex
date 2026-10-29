@@ -119,6 +119,8 @@ async function getCarData() {
 | POST | /cars/propose-image | cars.js | Propose a photo for any car's gallery |
 | POST | /cars/spot | cars.js | "Spotted it" check-in (Dex) |
 | POST | /cars/images/:id/vote | cars.js | Vote on a gallery photo (AJAX) |
+| POST | /cars/cool | cars.js | Place a car on the Cool Wall (same tier again takes the vote back) |
+| GET | /cars/cool-wall | cars.js | The Cool Wall: every voted car under its community tier |
 | GET | /garage | garage.js | My Cars + Favorites |
 | POST | /garage/add | garage.js | Add a car to the garage |
 | PUT | /garage/car/:id | garage.js | Update a garage car |
