@@ -14,6 +14,11 @@ describe('Test database reset', function() {
     }
   });
 
+  it('rethrows anything but a missing-privilege error from the schema reset', async function() {
+    const failing = { config: { database: 'autodex_test' }, query: async () => { throw Object.assign(new Error('boom'), { original: { code: '57P01' } }); } };
+    await assert.rejects(runMigrations(failing), /boom/);
+  });
+
   it('refuses outside NODE_ENV=test, even for a *_test database', async function() {
     const env = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';

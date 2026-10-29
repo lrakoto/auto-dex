@@ -28,7 +28,19 @@ async function runMigrations(sequelize) {
   if (process.env.NODE_ENV !== 'test' || !/_test$/.test(name || '')) {
     throw new Error(`Refusing to reset database "${name}": tests only run against a *_test database with NODE_ENV=test`);
   }
-  await sequelize.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  try {
+    await sequelize.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  } catch (err) {
+    // Only the schema's owner may drop it. A test role that doesn't own
+    // public (some hosted or CI Postgres setups) falls back to undoing the
+    // migrations, which works whenever the branch hasn't changed.
+    if (!err.original || err.original.code !== '42501') throw err;
+    execFileSync(
+      path.join(__dirname, '..', 'node_modules', '.bin', 'sequelize-cli'),
+      ['db:migrate:undo:all', '--env', 'test'],
+      { cwd: path.join(__dirname, '..'), stdio: 'pipe', env: { ...process.env, NODE_ENV: 'test' } }
+    );
+  }
   execFileSync(
     path.join(__dirname, '..', 'node_modules', '.bin', 'sequelize-cli'),
     ['db:migrate', '--env', 'test'],
