@@ -84,6 +84,13 @@ describe('Fuel log', function() {
       await form(alice, 'post', `/garage/car/${myCar.id}/fuel`, { date: 'yesterday', odometer: '43000', gallons: '10' }, token).expect(302);
       if (await db.fuel_log.count({ where: { userCarId: myCar.id } }) !== 1) throw new Error('invalid date accepted');
 
+      for (const impossible of ['2026-02-30', '2026-13-01']) {
+        await form(alice, 'post', `/garage/car/${myCar.id}/fuel`, { date: impossible, odometer: '43000', gallons: '10' }, token).expect(302);
+        const page = await alice.get(`/garage/car/${myCar.id}`).expect(200);
+        if (!page.text.includes('That date doesn&#39;t exist.') && !page.text.includes("That date doesn't exist.")) throw new Error(`no message for ${impossible}`);
+      }
+      if (await db.fuel_log.count({ where: { userCarId: myCar.id } }) !== 1) throw new Error('impossible date accepted');
+
       await form(alice, 'post', `/garage/car/${myCar.id}/fuel`, { date: '2026-09-03', odometer: '43000', gallons: '0' }, token).expect(302);
       if (await db.fuel_log.count({ where: { userCarId: myCar.id } }) !== 1) throw new Error('zero gallons accepted');
 
@@ -99,6 +106,13 @@ describe('Fuel log', function() {
       const res = await alice.get(`/garage/car/${myCar.id}`).expect(200);
       if (!res.text.includes('Fuel Log')) throw new Error('fuel log section missing');
       if (!res.text.includes('30.0 mpg avg')) throw new Error('avg mpg not shown: expected 300mi/10gal = 30.0');
+      if (!res.text.includes('$69.00 total')) throw new Error('total for fully priced fill-ups missing');
+
+      // An unpriced fill-up: the sum says what it covers
+      await form(alice, 'post', `/garage/car/${myCar.id}/fuel`, { date: '2026-09-20', odometer: '10600', gallons: '10' }, await getCsrfToken(alice, '/garage')).expect(302);
+      const partial = await alice.get(`/garage/car/${myCar.id}`).expect(200);
+      if (!partial.text.includes('$69.00 across 2 priced fill-ups')) throw new Error('partial total not labelled');
+      if (partial.text.includes('$69.00 total')) throw new Error('partial sum still called the total');
 
       await db.fuel_log.destroy({ where: { userCarId: myCar.id } });
     });

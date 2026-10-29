@@ -356,6 +356,13 @@ router.post('/car/:id/fuel', writeLimiter, async (req, res) => {
       req.flash('error', 'A date is required.');
       return res.redirect(back);
     }
+    // Well-formed but impossible (2026-02-30, 2026-13-01) would only fail at
+    // the database, as a generic "could not save"
+    const day = new Date(`${date}T00:00:00Z`);
+    if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) {
+      req.flash('error', "That date doesn't exist.");
+      return res.redirect(back);
+    }
     const num = v => (v === undefined || v === null || String(v).trim() === '' ? null : Number(String(v).replace(/[,$\s]/g, '')));
     const miles = num(odometer);
     const gals = num(gallons);
