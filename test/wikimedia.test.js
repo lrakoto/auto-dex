@@ -17,8 +17,14 @@ const HERO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/2003_Duc
 function fakeWikipedia({ summaries = {}, files = {}, search = {}, links = {} }) {
   return async (url, { params } = {}) => {
     if (params && params.action === 'query' && params.prop === 'links') {
-      const titles = links[params.titles];
-      return { query: { pages: { 1: titles ? { title: params.titles, links: titles.map(title => ({ ns: 0, title })) } : { title: params.titles, missing: '' } } } };
+      // links[title] is a list of titles, or a list of pages (to test continuation)
+      const entry = links[params.titles];
+      if (!entry) return { query: { pages: { 1: { title: params.titles, missing: '' } } } };
+      const pages = Array.isArray(entry[0]) ? entry : [entry];
+      const n = params.plcontinue ? Number(params.plcontinue) : 0;
+      const out = { query: { pages: { 1: { title: params.titles, links: pages[n].map(title => ({ ns: 0, title })) } } } };
+      if (n + 1 < pages.length) out.continue = { plcontinue: String(n + 1), continue: '||' };
+      return out;
     }
     if (url.includes('/page/summary/')) {
       const title = decodeURIComponent(url.split('/page/summary/')[1]).replace(/_/g, ' ');
@@ -314,6 +320,14 @@ describe('Wikipedia photos (R2)', function() {
       if (gens.map(g => `${g.title}@${g.start}`).join() !== 'BMW 5 Series (E34)@1987,BMW 5 Series (E39)@1995,BMW 5 Series (E60)@2003,BMW 5 Series (G30)@2016') {
         throw new Error('generations: ' + gens.map(g => g.title).join());
       }
+      // Generation links past the API's first page of links still count
+      cache.cachedGet = fakeWikipedia({
+        summaries: { 'BMW 5 Series (E34)': gen('E34', 1987), 'BMW 5 Series (E39)': gen('E39', 1995) },
+        links: { 'BMW 5 Series': [['BMW 5 Series (E34)', 'BMW M5'], ['BMW 5 Series (E39)', 'Turbocharger']] }
+      });
+      const paged = await wikimedia.seriesGenerations('BMW', '5 Series');
+      if (paged.map(g => g.title).join() !== 'BMW 5 Series (E34),BMW 5 Series (E39)') throw new Error('continuation not followed: ' + paged.map(g => g.title).join());
+
       // No generation articles linked: nothing, rather than the current generation
       cache.cachedGet = fakeWikipedia({ summaries: { 'BMW 528i': series, 'BMW 5 Series': series }, links: {} });
       if (await wikimedia.findLeadPhoto('BMW', '528i', { yearMax: 2000, modelYears: range(1997, 2000) })) throw new Error('fell back to the series photo');
