@@ -6,7 +6,7 @@
 const db = require('../models');
 const carquery = require('../config/carquery'); // via the module so tests can stub it
 const { PLACEHOLDER_URL } = require('../lib/constants');
-const { classifyModel, isAtvName } = require('../lib/vehicleTypes');
+const { classifyModel, isAtvName, isCommercialName } = require('../lib/vehicleTypes');
 
 const NHTSA_TYPES = [...new Set(Object.values(carquery.VEHICLE_TYPES).flatMap(t => t.nhtsa))];
 
@@ -70,9 +70,24 @@ async function reclassifyAtvs() {
   return ids.length;
 }
 
+// Rows typed as cars before a heavy-truck or chassis name rule existed (Ford
+// E-450, Chevrolet W3500/W4500…) become commercial. classifyModel checks
+// these names before NHTSA's lists, so a car-typed row only matches once a
+// rule is added. Only vehicle_type changes; idempotent, like reclassifyAtvs.
+async function reclassifyCommercial() {
+  const cars = await db.car.findAll({ attributes: ['id', 'make', 'model'], where: { vehicle_type: 'car' } });
+  const ids = cars.filter(c => isCommercialName(c.make, c.model)).map(c => c.id);
+  if (ids.length) {
+    await db.car.update({ vehicle_type: 'commercial' }, { where: { id: ids } });
+    console.log(`Vehicle types: ${ids.length} chassis and heavy trucks moved from car to commercial`);
+  }
+  return ids.length;
+}
+
 async function classifyVehicleTypes({ maxMakes = Infinity, delayMs = 100 } = {}) {
   try {
     await reclassifyAtvs();
+    await reclassifyCommercial();
     const pending = await db.car.findAll({
       attributes: ['make'],
       where: { vehicle_type: null },
@@ -96,4 +111,4 @@ async function classifyVehicleTypes({ maxMakes = Infinity, delayMs = 100 } = {})
   }
 }
 
-module.exports = { classifyVehicleTypes, classifyMake, reclassifyAtvs };
+module.exports = { classifyVehicleTypes, classifyMake, reclassifyAtvs, reclassifyCommercial };

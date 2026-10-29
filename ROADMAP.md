@@ -174,6 +174,11 @@ R14 on 2026-10-01 so they ship before R4.
   `classifyModel` and update existing rows' `vehicle_type` (no deletes).
 - [ ] More heavy-truck name patterns in `lib/vehicleTypes.js` as they turn
   up (Ford, GM, Ram, Isuzu and Mercedes-Benz are covered).
+  2026-10-29: added "incomplete" and "medium duty", GM paired series
+  (3500/4500, W3500/W4500, FTR / 6500XD), GM W-series and T-Series, and Ford
+  E-450/E-550; `reclassifyCommercial` moves rows already typed as cars.
+  Swept against all 5,201 dev-catalog rows: 16 new matches, all chassis or
+  medium-duty trucks.
 
 ## Sources
 
