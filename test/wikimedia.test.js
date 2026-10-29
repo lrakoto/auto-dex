@@ -14,8 +14,12 @@ const MONSTER_THUMB = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/
 const HERO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/2003_Ducati_Monster_S4R.jpg/1280px-2003_Ducati_Monster_S4R.jpg';
 
 // Stand-in for lib/cache.js: answers by URL (and File: title for Commons)
-function fakeWikipedia({ summaries = {}, files = {}, search = {} }) {
+function fakeWikipedia({ summaries = {}, files = {}, search = {}, links = {} }) {
   return async (url, { params } = {}) => {
+    if (params && params.action === 'query' && params.prop === 'links') {
+      const titles = links[params.titles];
+      return { query: { pages: { 1: titles ? { title: params.titles, links: titles.map(title => ({ ns: 0, title })) } : { title: params.titles, missing: '' } } } };
+    }
     if (url.includes('/page/summary/')) {
       const title = decodeURIComponent(url.split('/page/summary/')[1]).replace(/_/g, ' ');
       if (!summaries[title]) throw Object.assign(new Error('Not found'), { response: { status: 404 } });
@@ -286,6 +290,52 @@ describe('Wikipedia photos (R2)', function() {
       if (!current || current.article !== 'BMW 5 Series') throw new Error(JSON.stringify(current));
       if (await wikimedia.findLeadPhoto('BMW', '530i', { yearMax: thisYear - 5 })) throw new Error('old trim got the current generation');
       if (await wikimedia.findLeadPhoto('BMW', '530i')) throw new Error('unknown years got a series photo');
+    });
+
+    it('gives an older trim the article of the generation its model years fall in', async function() {
+      const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+      const gen = (code, start, extra = '') => ({
+        ...pilot, title: `BMW 5 Series (${code})`, description: `Generation of BMW 5 Series`,
+        extract: `The BMW ${code} is a generation of the BMW 5 Series executive cars, produced from ${start}${extra}.`
+      });
+      const series = { ...pilot, title: 'BMW 5 Series', description: 'Executive car', extract: 'The BMW 5 Series is an executive car.' };
+      cache.cachedGet = fakeWikipedia({
+        summaries: {
+          'BMW 528i': series, 'BMW 5 Series': series,
+          'BMW 5 Series (E34)': gen('E34', 1987, ' to 1996'), 'BMW 5 Series (E39)': gen('E39', 1995, ' to 2004'),
+          'BMW 5 Series (E60)': gen('E60', 2003, ' to 2010'), 'BMW 5 Series (G30)': gen('G30', 2016)
+        },
+        links: { 'BMW 5 Series': ['BMW 5 Series (E39)', 'BMW 5 Series (G30)', 'BMW M5', 'BMW 5 Series (E34)', 'BMW 5 Series (E60)', 'BMW 5 Series Gran Turismo'] },
+        files: { '2025_Honda_Pilot.jpg': commonsInfo() }
+      });
+      const photo = await wikimedia.findLeadPhoto('BMW', '528i', { yearMax: 2000, modelYears: range(1997, 2000) });
+      if (!photo || photo.article !== 'BMW 5 Series (E39)') throw new Error(JSON.stringify(photo && photo.article));
+      const gens = await wikimedia.seriesGenerations('BMW', '5 Series');
+      if (gens.map(g => `${g.title}@${g.start}`).join() !== 'BMW 5 Series (E34)@1987,BMW 5 Series (E39)@1995,BMW 5 Series (E60)@2003,BMW 5 Series (G30)@2016') {
+        throw new Error('generations: ' + gens.map(g => g.title).join());
+      }
+      // No generation articles linked: nothing, rather than the current generation
+      cache.cachedGet = fakeWikipedia({ summaries: { 'BMW 528i': series, 'BMW 5 Series': series }, links: {} });
+      if (await wikimedia.findLeadPhoto('BMW', '528i', { yearMax: 2000, modelYears: range(1997, 2000) })) throw new Error('fell back to the series photo');
+    });
+
+    it('picks the generation holding most of a trim\'s model years, a year behind production', function() {
+      const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+      const gens = [{ title: 'E34', start: 1987 }, { title: 'E39', start: 1995 }, { title: 'E60', start: 2003 }];
+      const pick = years => (wikimedia.generationFor(gens, years) || {}).title || null;
+      if (pick(range(1997, 2000)) !== 'E39') throw new Error('1997-2000');
+      if (pick(range(1989, 1995)) !== 'E34') throw new Error('MY1995 is still E34 production (1994)');
+      if (pick([1996]) !== 'E39') throw new Error('MY1996 = first E39 production year');
+      if (pick([...range(1989, 1991), ...range(2004, 2006)]) !== 'E60') throw new Error('a tie goes to the newer generation');
+      if (pick([1980, 1981]) !== null) throw new Error('years before any generation');
+      if (wikimedia.generationFor(gens, []) !== null || wikimedia.generationFor([], [2000]) !== null) throw new Error('empty input');
+    });
+
+    it('accepts articles that call the car a coupé or a grand tourer', function() {
+      const e31 = { title: 'BMW 8 Series (E31)', description: 'BMW luxury grand tourer', extract: 'The BMW E31 is a grand tourer built as a 2-door coupé.' };
+      if (!wikimedia.articleMatches(e31, 'BMW', '8 Series')) throw new Error('coupé / grand tourer rejected');
+      const coupe = { title: 'Fiat Dino', description: 'Sports coupé', extract: 'The Fiat Dino was a coupé.' };
+      if (!wikimedia.articleMatches(coupe, 'Fiat', 'Dino')) throw new Error('coupé at the end of a phrase rejected');
     });
   });
 

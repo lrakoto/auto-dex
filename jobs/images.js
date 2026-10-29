@@ -77,7 +77,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   const aliasNamesSql = aliasNames.map(({ make, model }) => `("car"."make" = ${db.sequelize.escape(make)} AND "car"."model" = ${db.sequelize.escape(model)})`).join(' OR ');
   const aliasPendingSql = `(${aliasNamesSql}) AND ("car"."image" IS NULL OR "car"."image" IN ('', ${db.sequelize.escape(PLACEHOLDER_URL)}) OR "car"."image" ~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)}) AND ("car"."wiki_checked_at" IS NULL OR "car"."wiki_checked_at" < ${db.sequelize.escape(PHOTO_ALIAS_RECHECK_AT)})`;
   const cars = await db.car.findAll({
-    attributes: ['id', 'make', 'model', 'year_max'],
+    attributes: ['id', 'make', 'model', 'year_max', 'model_years'],
     where: {
       [Op.or]: [
         aliasPending,
@@ -108,7 +108,7 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   for (const car of cars) {
     attempted++;
     try {
-      const photo = await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max });
+      const photo = await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max, modelYears: car.model_years });
       failures = 0;
       if (photo) {
         await addWikipediaPhoto(car, photo);
