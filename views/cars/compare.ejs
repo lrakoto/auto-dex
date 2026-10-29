@@ -74,5 +74,6 @@
     </div>
     <p class="facts-source mt-3">Specs: FuelEconomy.gov · Facts: Wikidata · Years &amp; Safety: NHTSA</p>
     <%- include('../partials/fuel-estimate-note', { specs: cars.map(c => c.specs) }) %>
+    <% if (size) { %><%- include('../partials/size-compare', { size, formatDims }) %><% } %>
   <% } %>
 </div>

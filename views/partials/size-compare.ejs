@@ -1,0 +1,47 @@
+<%#
+  Size comparison (R11): lib/sizes.js#sizeComparison laid out as two SVGs in
+  millimetres, side (length × height) and front (width × height). Both share
+  one viewBox height and sit in a row sized by their widths, so they are drawn
+  to the same scale. Outlines are bounding boxes, not body shapes.
+%>
+<%
+  var outline = c => {
+    var r = Math.round(Math.min(c.h * 0.18, c.w * 0.08));
+    return '<rect class="size-car size-car-' + c.index + '" x="' + Math.round(c.x) + '" y="' + Math.round(c.y) +
+      '" width="' + Math.round(c.w) + '" height="' + Math.round(c.h) + '" rx="' + r + '" ry="' + r + '" vector-effect="non-scaling-stroke"/>';
+  };
+  var describe = view => view.cars.map(c => {
+    var e = size.legend[c.index];
+    return e.label + ' ' + (view === size.side ? e.length.toLocaleString('en-US') + ' mm long' : e.width.toLocaleString('en-US') + ' mm wide') +
+      ', ' + e.height.toLocaleString('en-US') + ' mm tall';
+  }).join('; ');
+%>
+<section class="size-compare" aria-labelledby="size-heading">
+  <h2 class="size-heading" id="size-heading">Size</h2>
+  <div class="size-views">
+    <% [['Side', size.side], ['Front', size.front]].forEach(([name, view]) => { if (!view) return; %>
+      <figure class="size-view" style="flex: <%= Math.round(view.width) %> 1 0;">
+        <svg viewBox="0 0 <%= Math.round(view.width) %> <%= Math.round(view.height) %>" preserveAspectRatio="xMidYMax meet"
+             role="img" aria-label="<%= name %> view to scale: <%= describe(view) %>">
+          <line class="size-ground" x1="0" y1="<%= Math.round(view.ground) %>" x2="<%= Math.round(view.width) %>" y2="<%= Math.round(view.ground) %>" vector-effect="non-scaling-stroke"/>
+          <%- view.cars.map(outline).join('') %>
+        </svg>
+        <figcaption class="size-caption"><%= name %></figcaption>
+      </figure>
+    <% }) %>
+  </div>
+  <ul class="size-legend">
+    <% size.legend.forEach(e => { %>
+      <li>
+        <span class="size-swatch size-swatch-<%= e.index %>" aria-hidden="true"></span>
+        <span class="size-legend-name"><%= e.label %></span>
+        <% if (e.drawn) { %>
+          <span class="size-legend-dims"><%= formatDims(e) %> <span class="sr-only">(length × width × height)</span></span>
+        <% } else { %>
+          <span class="size-legend-dims size-legend-missing">No size data on Wikidata</span>
+        <% } %>
+      </li>
+    <% }) %>
+  </ul>
+  <p class="facts-source">Overall length × width × height from Wikidata, drawn to scale as outlines (not body shapes). Figures vary by generation and trim.</p>
+</section>
