@@ -73,7 +73,9 @@ router.post('/guess', guessLimiter, async (req, res) => {
     const text = (req.body.guess || '').trim();
     const guessCar = await puzzle.findGuessCar(text);
     if (!guessCar) {
-      s.error = text ? `"${text}" isn't a car AutoDex can score yet.` : 'Type a car to guess.';
+      // Echoed back on the page (escaped there); keep what the session holds short
+      const shown = text.length > 80 ? `${text.slice(0, 79)}…` : text;
+      s.error = text ? `"${shown}" isn't a car AutoDex can score yet.` : 'Type a car to guess.';
       return res.redirect('/puzzle');
     }
 

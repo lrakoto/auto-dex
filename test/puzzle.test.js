@@ -112,6 +112,15 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('6 guesses left')) throw new Error('spent a guess on a bad name');
     });
 
+    it('shortens a long unknown guess before echoing it back', async function() {
+      const agent = request.agent(app);
+      const token = await getCsrfToken(agent, '/puzzle');
+      await agent.post('/puzzle/guess').type('form').send({ guess: 'x'.repeat(500), _csrf: token }).expect(302);
+      const res = await agent.get('/puzzle').expect(200);
+      if (!res.text.includes(`&#34;${'x'.repeat(79)}…&#34;`)) throw new Error('long guess not shortened');
+      if (res.text.includes('x'.repeat(80))) throw new Error('long guess echoed in full');
+    });
+
     it('wins on the exact car and reveals the answer', async function() {
       const agent = request.agent(app);
       const token = await getCsrfToken(agent, '/puzzle');
