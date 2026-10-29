@@ -9,6 +9,8 @@ const { PLACEHOLDER_URL } = require('../lib/constants');
 const { decodeVin, getRecalls, normalizeVin } = require('../lib/nhtsa');
 const { addImage, refreshHero } = require('../lib/gallery');
 const { getDexStats, getBadges } = require('../lib/dex');
+const { fuelStats } = require('../lib/fuel');
+const { getFuelSpecs } = require('../lib/carinfo');
 const { validateUsername } = require('../lib/usernames');
 const { favoritePhoto } = require('../lib/photos');
 const photoCandidates = require('../lib/photoCandidates');
@@ -251,10 +253,17 @@ router.get('/car/:id', async (req, res) => {
   try {
     const car = await findOwnCar(req);
     if (!car) return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
-    const logs = await db.maintenance_log.findAll({
-      where: { userCarId: car.id },
-      order: [['date', 'DESC'], ['id', 'DESC']]
-    });
+    const [logs, fuelLogs, epaSpecs] = await Promise.all([
+      db.maintenance_log.findAll({
+        where: { userCarId: car.id },
+        order: [['date', 'DESC'], ['id', 'DESC']]
+      }),
+      db.fuel_log.findAll({
+        where: { userCarId: car.id },
+        order: [['odometer', 'DESC'], ['id', 'DESC']]
+      }),
+      getFuelSpecs(car.make, car.model, parseInt(car.year, 10) || undefined)
+    ]);
     let recalls = null; // null = couldn't check; [] = none
     try {
       recalls = await getRecalls(car.make, car.model, car.year);
@@ -267,6 +276,9 @@ router.get('/car/:id', async (req, res) => {
       logs: logs.map(l => l.toJSON()),
       recalls,
       totalCost,
+      fuelLogs: fuelLogs.map(l => l.toJSON()),
+      fuelStats: fuelStats(fuelLogs),
+      epaCombMpg: epaSpecs ? epaSpecs.combMpg : null,
       today: new Date().toISOString().slice(0, 10),
       pageTitle: `${car.year} ${car.make} ${car.model} — My Garage — AutoDex`,
       canonicalPath: `/garage/car/${car.id}`,
@@ -333,6 +345,67 @@ router.delete('/car/:id/maintenance/:logId', writeLimiter, async (req, res) => {
     console.log('DELETE MAINTENANCE ERROR:', err);
   }
   res.redirect(`/garage/car/${encodeURIComponent(req.params.id)}#maintenance`);
+});
+
+// POST /garage/car/:id/fuel — add a fill-up
+router.post('/car/:id/fuel', writeLimiter, async (req, res) => {
+  const back = `/garage/car/${encodeURIComponent(req.params.id)}#fuel`;
+  try {
+    const car = await findOwnCar(req);
+    if (!car) return res.redirect('/garage');
+    const { date, odometer, gallons, cost, notes } = req.body;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
+      req.flash('error', 'A date is required.');
+      return res.redirect(back);
+    }
+    // Well-formed but impossible (2026-02-30, 2026-13-01) would only fail at
+    // the database, as a generic "could not save"
+    const day = new Date(`${date}T00:00:00Z`);
+    if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) {
+      req.flash('error', "That date doesn't exist.");
+      return res.redirect(back);
+    }
+    const num = v => (v === undefined || v === null || String(v).trim() === '' ? null : Number(String(v).replace(/[,$\s]/g, '')));
+    const miles = num(odometer);
+    const gals = num(gallons);
+    const dollars = num(cost);
+    if (miles === null || !Number.isInteger(miles) || miles < 0) {
+      req.flash('error', 'Odometer must be a positive whole number.');
+      return res.redirect(back);
+    }
+    if (gals === null || !Number.isFinite(gals) || gals <= 0) {
+      req.flash('error', 'Gallons must be a positive number.');
+      return res.redirect(back);
+    }
+    if (dollars !== null && (!Number.isFinite(dollars) || dollars < 0)) {
+      req.flash('error', 'Cost must be a positive number.');
+      return res.redirect(back);
+    }
+    await db.fuel_log.create({
+      userCarId: car.id,
+      date,
+      odometer: miles,
+      gallons: gals,
+      cost: dollars,
+      notes: notes && notes.trim() ? notes.trim().slice(0, 2000) : null
+    });
+    req.flash('success', 'Fill-up logged.');
+  } catch (err) {
+    console.log('FUEL LOG ERROR:', err);
+    req.flash('error', 'Could not save that entry.');
+  }
+  res.redirect(back);
+});
+
+// DELETE /garage/car/:id/fuel/:logId
+router.delete('/car/:id/fuel/:logId', writeLimiter, async (req, res) => {
+  try {
+    const car = await findOwnCar(req);
+    if (car) await db.fuel_log.destroy({ where: { id: req.params.logId, userCarId: car.id } });
+  } catch (err) {
+    console.log('DELETE FUEL LOG ERROR:', err);
+  }
+  res.redirect(`/garage/car/${encodeURIComponent(req.params.id)}#fuel`);
 });
 
 // PUT /garage/car/:id — update a user car's image and/or notes

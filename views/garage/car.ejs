@@ -117,4 +117,74 @@
       <button type="submit" class="btn btn-primary btn-sm">Add Entry</button>
     </form>
   </section>
+
+  <!-- Fuel Log -->
+  <section id="fuel" class="garage-section">
+    <div class="accent-line"></div>
+    <h2 class="garage-h2">Fuel Log</h2>
+    <% if (fuelLogs.length > 0) { %>
+      <p class="text-muted">
+        <%= fuelLogs.length %> fill-up<%= fuelLogs.length === 1 ? '' : 's' %>
+        <% if (fuelStats.avgMpg != null) { %> · <%= fuelStats.avgMpg.toFixed(1) %> mpg avg<% if (epaCombMpg) { %> (EPA rates it at <%= epaCombMpg %>)<% } %><% } %>
+        <% if (fuelStats.costPerMile != null) { %> · <%= (fuelStats.costPerMile * 100).toFixed(1) %>&cent;/mi<% } %>
+        <% if (fuelStats.totalCost != null) { %> · $<%= fuelStats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> <% if (fuelStats.pricedFillUps === fuelStats.fillUps) { %>total<% } else { %>across <%= fuelStats.pricedFillUps %> priced fill-up<%= fuelStats.pricedFillUps === 1 ? '' : 's' %><% } %><% } %>
+      </p>
+      <div class="maint-wrap">
+        <table class="maint-table">
+          <thead>
+            <tr><th scope="col">Date</th><th scope="col">Odometer</th><th scope="col">Gallons</th><th scope="col">Cost</th><th scope="col">$/gal</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+          </thead>
+          <tbody>
+            <% fuelLogs.forEach(l => { %>
+              <tr>
+                <td class="nowrap"><%= l.date %></td>
+                <td class="nowrap">
+                  <%= Number(l.odometer).toLocaleString('en-US') %> mi
+                  <% if (l.notes) { %><div class="maint-notes"><%= l.notes %></div><% } %>
+                </td>
+                <td class="nowrap"><%= Number(l.gallons).toFixed(3) %></td>
+                <td class="nowrap"><%= l.cost != null ? '$' + Number(l.cost).toFixed(2) : '—' %></td>
+                <td class="nowrap"><%= l.cost != null ? '$' + (Number(l.cost) / Number(l.gallons)).toFixed(2) : '—' %></td>
+                <td>
+                  <form method="POST" action="/garage/car/<%= car.id %>/fuel/<%= l.id %>?_method=DELETE" style="margin:0;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="vote-btn" aria-label="Delete entry" title="Delete entry">✕</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-muted">No fill-ups yet. Log them full-to-full for an accurate real-world MPG.</p>
+    <% } %>
+
+    <form method="POST" action="/garage/car/<%= car.id %>/fuel" class="maint-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-row">
+        <div class="form-group col-md-3">
+          <label class="field-label" for="fDate">Date</label>
+          <input type="date" class="form-control" id="fDate" name="date" value="<%= today %>" required>
+        </div>
+        <div class="form-group col-md-3">
+          <label class="field-label" for="fOdometer">Odometer</label>
+          <input type="number" class="form-control" id="fOdometer" name="odometer" min="0" step="1" placeholder="42000" required>
+        </div>
+        <div class="form-group col-md-3">
+          <label class="field-label" for="fGallons">Gallons</label>
+          <input type="number" class="form-control" id="fGallons" name="gallons" min="0.001" step="0.001" placeholder="12.5" required>
+        </div>
+        <div class="form-group col-md-3">
+          <label class="field-label" for="fCost">Cost ($)</label>
+          <input type="number" class="form-control" id="fCost" name="cost" min="0" step="0.01" placeholder="42.50">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="fNotes">Notes</label>
+        <input type="text" class="form-control" id="fNotes" name="notes" maxlength="2000" placeholder="Optional">
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Add Fill-Up</button>
+    </form>
+  </section>
 </div>
