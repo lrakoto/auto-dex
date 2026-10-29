@@ -164,6 +164,42 @@
           <% } %>
         </div>
       <% } %>
+
+      <!-- Cool Wall (R10): community tier + the viewer's vote -->
+      <div class="facts-panel" id="cool-wall">
+        <div class="accent-line"></div>
+        <h5 class="section-label">Cool Wall</h5>
+        <p class="cool-verdict">
+          <% if (cool.placement !== null) { %>
+            Members say <strong class="cool-tier-name cool-tier-<%= cool.placement %>"><%= coolTiers[cool.placement].label %></strong>
+            <span class="cool-count">· <%= cool.total %> vote<%= cool.total === 1 ? '' : 's' %></span>
+          <% } else { %>
+            Nobody has put the <%= model %> on the wall yet.
+          <% } %>
+        </p>
+        <% if (cool.total) { %>
+          <div class="cool-bar" aria-hidden="true">
+            <% cool.counts.forEach((n, i) => { if (!n) return; %>
+              <span class="cool-bar-seg cool-tier-bg-<%= i %>" style="width: <%= (n / cool.total * 100).toFixed(1) %>%;" title="<%= coolTiers[i].label %>: <%= n %>"></span>
+            <% }) %>
+          </div>
+          <p class="sr-only"><%= coolTiers.map((t, i) => t.label + ': ' + cool.counts[i]).join(', ') %></p>
+        <% } %>
+        <% if (currentUser) { %>
+          <form method="POST" action="/cars/cool" class="cool-vote">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="make" value="<%= make %>">
+            <input type="hidden" name="model" value="<%= model %>">
+            <% coolTiers.forEach((t, i) => { %>
+              <button type="submit" name="tier" value="<%= t.key %>" class="cool-vote-btn cool-tier-<%= i %><%= cool.mine === i ? ' is-mine' : '' %>" aria-pressed="<%= cool.mine === i %>"><%= t.label %></button>
+            <% }) %>
+          </form>
+          <p class="cool-hint"><% if (cool.mine !== null) { %>Your vote: <%= coolTiers[cool.mine].label %>. Tap it again to take it back.<% } else { %>Where does it belong?<% } %></p>
+        <% } else { %>
+          <p class="cool-hint"><a href="/auth/login">Log in</a> to put it on the wall.</p>
+        <% } %>
+        <a href="/cars/cool-wall" class="cool-wall-link">See the whole Cool Wall &rarr;</a>
+      </div>
     </div>
 
     <!-- Media Links -->

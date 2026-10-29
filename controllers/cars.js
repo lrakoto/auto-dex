@@ -12,6 +12,7 @@ const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via t
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
+const coolWall = require('../lib/coolWall');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
@@ -424,6 +425,7 @@ router.get('/', async (req, res) => {
       gallery.forEach(img => { img.credit = photoCredit(img.url, img); });
       const heroImage = gallery.find(g => g.url === image);
       const heroCredit = photoCredit(image, heroImage);
+      const cool = await coolWall.getCarCool(car && car.id, req.user && req.user.id);
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
@@ -434,6 +436,8 @@ router.get('/', async (req, res) => {
         typeParam: typeParam(type),
         carDbId: car ? car.id : null,
         carUpdatedImg: car ? !!car.updated_img : false,
+        cool,
+        coolTiers: coolWall.TIERS,
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
         pageDescription: wikiSummary ? wikiSummary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
         canonicalPath: carPath(make, model),
@@ -535,6 +539,51 @@ router.get('/', async (req, res) => {
       req.flash('error', 'Could not save that spot.');
     }
     res.redirect(back);
+  });
+
+  // POST /cars/cool — place a car on the Cool Wall (R10). Voting for your
+  // current tier again takes the vote back.
+  router.post('/cool', isLoggedIn, writeLimiter, async (req, res) => {
+    const { make, model } = req.body;
+    let back = `/cars/car?make=${encodeURIComponent(make || '')}&model=${encodeURIComponent(model || '')}#cool-wall`;
+    const tier = coolWall.tierIndex(req.body.tier);
+    if (tier < 0) {
+      req.flash('error', 'Pick a tier.');
+      return res.redirect(back);
+    }
+    try {
+      const car = await findOrCreateCatalogCar(make, model);
+      if (!car) {
+        req.flash('error', "We couldn't find that car in the catalog.");
+        return res.redirect('/');
+      }
+      back = `${carPath(car.make, car.model)}#cool-wall`;
+      const now = await coolWall.castVote(car.id, req.user.id, tier);
+      req.flash('success', now === null
+        ? 'Your Cool Wall vote is removed.'
+        : `You put the ${car.make} ${car.model} in ${coolWall.TIERS[now].label}.`);
+    } catch (err) {
+      console.log('COOL WALL ERROR:', err);
+      req.flash('error', 'Could not record your vote.');
+    }
+    res.redirect(back);
+  });
+
+  // GET /cars/cool-wall — every voted car under its community placement
+  router.get('/cool-wall', async (req, res) => {
+    try {
+      const wall = await coolWall.getWall();
+      res.render('cars/cool-wall', {
+        wall,
+        voted: wall.reduce((n, t) => n + t.cars.length, 0),
+        pageTitle: 'The Cool Wall — AutoDex',
+        pageDescription: 'Seriously Uncool to Sub-Zero: where AutoDex members place every car.',
+        canonicalPath: '/cars/cool-wall'
+      });
+    } catch (err) {
+      console.log('COOL WALL PAGE ERROR:', err);
+      res.status(500).send('Error loading the Cool Wall.');
+    }
   });
 
   // POST /cars/images/:id/vote — value=1 | -1 | 0 (clear). AJAX returns JSON.
