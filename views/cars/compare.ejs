@@ -34,7 +34,8 @@
         ['NHTSA Overall', c => c.ratings && c.ratings.overall ? '★'.repeat(c.ratings.overall) + '☆'.repeat(5 - c.ratings.overall) : null],
         ['NHTSA Frontal', c => c.ratings && c.ratings.frontal ? '★'.repeat(c.ratings.frontal) + '☆'.repeat(5 - c.ratings.frontal) : null],
         ['NHTSA Side', c => c.ratings && c.ratings.side ? '★'.repeat(c.ratings.side) + '☆'.repeat(5 - c.ratings.side) : null],
-        ['NHTSA Rollover', c => c.ratings && c.ratings.rollover ? '★'.repeat(c.ratings.rollover) + '☆'.repeat(5 - c.ratings.rollover) : null]
+        ['NHTSA Rollover', c => c.ratings && c.ratings.rollover ? '★'.repeat(c.ratings.rollover) + '☆'.repeat(5 - c.ratings.rollover) : null],
+        ['Safety rating year', c => c.ratings && c.ratings.year]
       ];
       factLabels.forEach(label => specRows.push([label, c => c.facts[label]]));
     %>

@@ -49,6 +49,30 @@ describe('NHTSA safety ratings', function() {
       if (!asked[1].endsWith('/SafetyRatings/VehicleId/12345')) throw new Error('vehicle id not used: ' + asked[1]);
     });
 
+    it('walks back to the newest rated model year, at most two years', async function() {
+      const asked = [];
+      const ratedYears = new Set([2025]);
+      axios.get = async url => {
+        asked.push(url);
+        const m = url.match(/\/modelyear\/(\d{4})\//);
+        if (m) return { data: { Results: ratedYears.has(Number(m[1])) ? [{ VehicleId: Number(m[1]) }] : [] } };
+        return { data: { Results: [{ OverallRating: '4', OverallFrontCrashRating: '4', OverallSideCrashRating: '5', RolloverRating: '4' }] } };
+      };
+      const ratings = await nhtsa.getSafetyRatings('Toyota', 'Camry', 2027);
+      if (!ratings || ratings.year !== 2025 || ratings.overall !== 4) throw new Error('ratings: ' + JSON.stringify(ratings));
+      const years = asked.filter(u => u.includes('/modelyear/')).map(u => u.match(/modelyear\/(\d{4})/)[1]);
+      if (years.join() !== '2027,2026,2025') throw new Error('years asked: ' + years.join());
+
+      // A string year works the same, and the newest rated year wins (other
+      // model names: answers are cached durably, not just in memory)
+      ratedYears.add(2026);
+      if ((await nhtsa.getSafetyRatings('Toyota', 'Corolla', '2027')).year !== 2026) throw new Error('newest rated year not preferred');
+
+      // Ratings older than two years back are not borrowed
+      ratedYears.clear(); ratedYears.add(2023);
+      if (await nhtsa.getSafetyRatings('Toyota', 'Prius', 2026) !== null) throw new Error('went back more than two years');
+    });
+
     it('returns null when NHTSA has no vehicle id for that model year', async function() {
       axios.get = async () => ({ data: { Results: [] } });
       const ratings = await nhtsa.getSafetyRatings('Zzz', 'Qqq', 2024);
@@ -77,7 +101,7 @@ describe('NHTSA safety ratings', function() {
         getWikidataFacts: carinfo.getWikidataFacts
       };
       nhtsa.getSafetyRatings = async (make, model) => {
-        if (make === 'Isuzu' && model === 'VehiCross') return { overall: 5, frontal: 4, side: null, rollover: 3 };
+        if (make === 'Isuzu' && model === 'VehiCross') return { overall: 5, frontal: 4, side: null, rollover: 3, year: 2023 };
         return null;
       };
       carquery.getModels = async () => [];
@@ -108,6 +132,7 @@ describe('NHTSA safety ratings', function() {
       if (!res.text.includes('★★★★☆')) throw new Error('frontal stars missing');
       if (!res.text.includes('★★★☆☆')) throw new Error('rollover stars missing');
       if (res.text.includes('Side Crash')) throw new Error('an unrated category should not render');
+      if (!res.text.includes('NHTSA Safety Ratings · 2023 model year')) throw new Error('the rated model year is not named');
     });
 
     it('omits the ratings box for a car NHTSA has no rating for', async function() {
@@ -123,6 +148,7 @@ describe('NHTSA safety ratings', function() {
       if (!res.text.includes('★★★★★')) throw new Error('VehiCross stars missing from compare');
       // Neither car has a side rating, so that row should be skipped entirely
       if (res.text.includes('NHTSA Side')) throw new Error('a row with no values from either car should not render');
+      if (!/Safety rating year<\/th>\s*<td>2023<\/td>/.test(res.text)) throw new Error('rating year row missing');
     });
   });
 });
