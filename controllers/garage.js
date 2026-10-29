@@ -242,6 +242,14 @@ router.post('/add', writeLimiter, upload.single('carImage'), async (req, res) =>
 });
 
 // Load a garage car owned by the current user, or null
+// YYYY-MM-DD that exists on the calendar. 2026-02-30 and 2026-13-01 are well
+// formed but would only fail at the database, as a generic "could not save".
+function isRealDate(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return false;
+  const day = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === s;
+}
+
 function findOwnCar(req) {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id)) return Promise.resolve(null);
@@ -319,6 +327,10 @@ router.post('/car/:id/maintenance', writeLimiter, async (req, res) => {
       req.flash('error', 'A date and a description are required.');
       return res.redirect(back);
     }
+    if (!isRealDate(date)) {
+      req.flash('error', "That date doesn't exist.");
+      return res.redirect(back);
+    }
     const num = v => (v === undefined || v === null || String(v).trim() === '' ? null : Number(String(v).replace(/[,$\s]/g, '')));
     const miles = num(mileage);
     const dollars = num(cost);
@@ -364,10 +376,7 @@ router.post('/car/:id/fuel', writeLimiter, async (req, res) => {
       req.flash('error', 'A date is required.');
       return res.redirect(back);
     }
-    // Well-formed but impossible (2026-02-30, 2026-13-01) would only fail at
-    // the database, as a generic "could not save"
-    const day = new Date(`${date}T00:00:00Z`);
-    if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) {
+    if (!isRealDate(date)) {
       req.flash('error', "That date doesn't exist.");
       return res.redirect(back);
     }
@@ -424,6 +433,10 @@ router.post('/car/:id/build', writeLimiter, upload.single('buildImage'), async (
     const { date, part, vendor, cost, notes, imageUrl } = req.body;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !part || !part.trim()) {
       req.flash('error', 'A date and the part are required.');
+      return res.redirect(back);
+    }
+    if (!isRealDate(date)) {
+      req.flash('error', "That date doesn't exist.");
       return res.redirect(back);
     }
     const dollars = cost === undefined || cost === null || String(cost).trim() === '' ? null : Number(String(cost).replace(/[,$\s]/g, ''));
