@@ -37,6 +37,40 @@ describe('FuelEconomy.gov running-cost specs', function() {
       if (specs.ghgScore !== 7) throw new Error('ghgScore wrong: ' + specs.ghgScore);
     });
 
+    it('picks a drivetrain/trim variant only when it starts with every word of the model', function() {
+      const names = ['Ascent', 'Outback Wilderness AWD', 'Outback AWD', 'CX-50 4WD', 'CX-5 4WD', 'F150 Pickup 2WD', 'F150 Pickup 4WD', 'Civic', 'Civic Type R'];
+      assert.equal(carinfo.fuelVariant(names, 'Outback'), 'Outback AWD', 'fewest extra words');
+      assert.equal(carinfo.fuelVariant(names, 'CX-5'), 'CX-5 4WD', 'not the CX-50');
+      assert.equal(carinfo.fuelVariant(names, 'F-150'), 'F150 Pickup 2WD', 'hyphens ignored; ties alphabetical');
+      assert.equal(carinfo.fuelVariant(names, 'Civic Type R'), null, 'an exact name is not a variant');
+      assert.equal(carinfo.fuelVariant(names, 'MX-5 Miata'), null, 'never a shorter name');
+      assert.equal(carinfo.fuelVariant([], 'Outback'), null);
+    });
+
+    it('falls back to a variant when FuelEconomy.gov answers the exact name with null', async function() {
+      const asked = [];
+      axios.get = async (url, { params } = {}) => {
+        asked.push(params && params.model);
+        if (url.includes('/menu/options')) {
+          // The service answers names it doesn't know with a JSON null
+          return { data: params.model === 'Telluride AWD' && params.year === 2025 ? { menuItem: { value: 'telluride-awd' } } : null };
+        }
+        if (url.includes('/menu/model')) {
+          return { data: params.year === 2025 ? { menuItem: [{ value: 'Sorento' }, { value: 'Telluride FWD' }, { value: 'Telluride AWD' }] } : null };
+        }
+        return { data: { year: 2025, drive: 'All-Wheel Drive', fuelCost08: 3200 } };
+      };
+      const specs = await carinfo.getFuelSpecs('Kia', 'Telluride', 2025);
+      assert.ok(specs, 'expected specs from the variant');
+      assert.equal(specs.annualFuelCost, 3200);
+      assert.ok(asked.includes('Telluride AWD'), 'asked for the variant');
+    });
+
+    it('returns null, without throwing, when neither the name nor a variant exists', async function() {
+      axios.get = async url => ({ data: url.includes('/menu/model') ? { menuItem: { value: 'Something Else' } } : null });
+      assert.equal(await carinfo.getFuelSpecs('Dacia', 'Duster', 2025), null);
+    });
+
     it('reports overspend as a negative fiveYearSavings, left for callers to format', async function() {
       axios.get = async url => {
         if (url.includes('/menu/options')) return { data: { menuItem: { value: '1' } } };
