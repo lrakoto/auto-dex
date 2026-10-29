@@ -144,7 +144,9 @@ async function getModelsByType(makeDisplay, type) {
   const ascii = String(makeDisplay).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const data = await cachedGet(
     `${VPIC}GetModelsForMakeYear/make/${encodeURIComponent(ascii)}/vehicletype/${encodeURIComponent(type)}?format=json`,
-    { ttl: CACHE_TTL, timeout: 8000 }
+    // Model lists change about once a year: a quiz round or a browse page
+    // shouldn't wait on NHTSA to refresh one that is past its 6h TTL
+    { ttl: CACHE_TTL, timeout: 8000, staleWhileRevalidate: true }
   );
   // NHTSA matches the make as a substring, so asking for "MG" also returns
   // models from CHEMGUARD, MGM Trailers, TMG Trailer and friends. Keep only

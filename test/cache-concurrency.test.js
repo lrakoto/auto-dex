@@ -237,4 +237,82 @@ describe('coalesced external API cache', function() {
     assert.equal(await cachedGet(PREFIX + 'db-outage'), 'available');
     assert.equal(calls, 1);
   });
+
+  describe('staleWhileRevalidate', function() {
+    const SWR = { ttl: 1000, staleWhileRevalidate: true };
+    // Let the background refresh (axios, then the durable write) settle
+    const tick = () => new Promise(r => setTimeout(r, 0));
+    async function untilRefreshed(key) {
+      for (let i = 0; i < 100; i++) {
+        const cached = await row(key);
+        if (cached && cached.data && cached.data.version === 'new') return;
+        await new Promise(r => setTimeout(r, 10));
+      }
+      throw new Error('background refresh never landed');
+    }
+
+    it('answers with the stale copy at once and refreshes both levels in the background', async function() {
+      const key = PREFIX + 'swr';
+      await seed(key, { version: 'old' }, 2000);
+      const started = deferred(), response = deferred();
+      let calls = 0;
+      axios.get = () => { calls++; started.resolve(); return response.promise; };
+      // Resolves while the upstream request is still pending
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'old' });
+      await started.promise;
+      assert.equal(calls, 1);
+      response.resolve({ data: { version: 'new' } });
+      await untilRefreshed(key);
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'new' });
+      assert.deepEqual((await row(key)).data, { version: 'new' });
+      assert.equal(new Date((await row(key)).fetchedAt).getTime(), now);
+      assert.equal(calls, 1);
+    });
+
+    it('keeps one background refresh for readers that come and go while it runs', async function() {
+      const key = PREFIX + 'swr-shared';
+      await seed(key, { version: 'old' }, 2000);
+      const response = deferred();
+      let calls = 0;
+      axios.get = () => { calls++; return response.promise; };
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'old' });
+      // Every earlier reader has returned; the refresh is still running
+      assert.deepEqual(await Promise.all([cachedGet(key, SWR), cachedGet(key, SWR)]), [{ version: 'old' }, { version: 'old' }]);
+      assert.equal(calls, 1);
+      response.resolve({ data: { version: 'new' } });
+      await untilRefreshed(key);
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'new' });
+      assert.equal(calls, 1);
+    });
+
+    it('still waits when there is nothing stale to answer with', async function() {
+      const response = deferred();
+      axios.get = () => response.promise;
+      let done = false;
+      const request = cachedGet(PREFIX + 'swr-cold', SWR).then(v => { done = true; return v; });
+      await tick();
+      assert.equal(done, false);
+      response.resolve({ data: 'first' });
+      assert.equal(await request, 'first');
+    });
+
+    it('survives a failed background refresh: stale copy kept, cooldown applied, nothing thrown', async function() {
+      const key = PREFIX + 'swr-outage';
+      await seed(key, { version: 'old' }, 2000);
+      let calls = 0;
+      axios.get = async () => { calls++; throw httpError(503); };
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'old' });
+      await tick();
+      assert.deepEqual(await cachedGet(key, SWR), { version: 'old' });
+      assert.equal(calls, 1, 'the 30s cooldown holds off a second request');
+      assert.equal(new Date((await row(key)).fetchedAt).getTime(), now - 2000, 'stale age kept');
+    });
+
+    it('leaves callers that did not opt in waiting for the refresh, as before', async function() {
+      const key = PREFIX + 'swr-off';
+      await seed(key, { version: 'old' }, 2000);
+      axios.get = async () => ({ data: { version: 'new' } });
+      assert.deepEqual(await cachedGet(key, { ttl: 1000 }), { version: 'new' });
+    });
+  });
 });
