@@ -50,6 +50,42 @@ describe('NHTSA owner complaints', function() {
       axios.get = async () => ({ data: { results: [] } });
       const complaints = await nhtsa.getComplaints('Zzz', 'Qqq', 2024);
       if (complaints.count !== 0 || complaints.topComponents.length !== 0) throw new Error('expected empty result');
+      if (complaints.year !== 2024) throw new Error('an empty result keeps the latest year');
+    });
+
+    // Fixture names throughout: answers are cached durably across tests
+    const complaint = (odiNumber, components) => ({ odiNumber, components });
+
+    it('shows the newest of the last three model years that has complaints', async function() {
+      axios.get = async (url, { params } = {}) => {
+        if (url.includes('/products/')) return { data: { results: [] } };
+        return { data: { results: params.modelYear === 2025 ? [complaint(1, 'ENGINE'), complaint(2, 'ENGINE')] : [] } };
+      };
+      const complaints = await nhtsa.getComplaints('Fixturekia', 'Wagon', 2027);
+      if (complaints.year !== 2025 || complaints.count !== 2) throw new Error(JSON.stringify(complaints));
+      if (complaints.countedAs !== null) throw new Error('the plain name answered');
+    });
+
+    it('counts the listed names when the plain name is ambiguous, once per complaint', async function() {
+      const asked = [];
+      axios.get = async (url, { params } = {}) => {
+        if (url.includes('/products/')) {
+          return { data: { results: [{ model: 'HATCH SEDAN' }, { model: 'HATCH HATCHBACK' }, { model: 'HATCHX' }, { model: 'COUPE' }] } };
+        }
+        asked.push(params.model);
+        if (params.model === 'Hatch') throw Object.assign(new Error('Bad Request'), { response: { status: 400 } });
+        if (params.model === 'HATCH SEDAN') return { data: { results: [complaint(10, 'STEERING'), complaint(11, 'ENGINE')] } };
+        if (params.model === 'HATCH HATCHBACK') return { data: { results: [complaint(11, 'ENGINE'), complaint(12, 'STEERING')] } };
+        return { data: { results: [] } };
+      };
+      const complaints = await nhtsa.getComplaints('Fixturehonda', 'Hatch', 2026);
+      if (complaints.count !== 3) throw new Error('complaint 11 counted twice or missing: ' + complaints.count);
+      if (complaints.countedAs.join() !== 'HATCH SEDAN,HATCH HATCHBACK') throw new Error('countedAs: ' + complaints.countedAs);
+      if (asked.includes('HATCHX')) throw new Error('HATCHX is a different model');
+      // The ambiguous plain name is remembered, not re-asked on the next view
+      const plainBefore = asked.filter(m => m === 'Hatch').length;
+      await nhtsa.getComplaints('Fixturehonda', 'Hatch', 2026);
+      if (asked.filter(m => m === 'Hatch').length !== plainBefore) throw new Error('the 400 was asked again');
     });
   });
 
@@ -66,7 +102,7 @@ describe('NHTSA owner complaints', function() {
       };
       nhtsa.getComplaints = async (make, model, year) => {
         if (make === 'Isuzu' && model === 'VehiCross' && year === 2024) {
-          return { count: 1080, topComponents: [{ component: 'STEERING', count: 444 }, { component: 'ENGINE', count: 120 }] };
+          return { count: 1080, topComponents: [{ component: 'STEERING', count: 444 }, { component: 'ENGINE', count: 120 }], year: 2023, countedAs: ['VEHICROSS 4WD', 'VEHICROSS 2WD'] };
         }
         if (make === 'Isuzu' && model === 'Trooper') return { count: 0, topComponents: [] };
         return null;
@@ -102,6 +138,8 @@ describe('NHTSA owner complaints', function() {
       if (!res.text.includes('1,080 complaints filed')) throw new Error('count missing: ' + res.text.match(/[\d,]+ complaints? filed[^<]*/));
       if (!res.text.includes('STEERING')) throw new Error('top component missing');
       if (!res.text.includes('444')) throw new Error('component count missing');
+      if (!res.text.includes('Owner Complaints — 2023') || !res.text.includes('for the 2023 model year')) throw new Error('the year with complaints is not shown');
+      if (!res.text.includes('Counted across VEHICROSS 4WD, VEHICROSS 2WD.')) throw new Error('the counted names are not shown');
     });
 
     it('says so when NHTSA has no complaints on file', async function() {
