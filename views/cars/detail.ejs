@@ -146,7 +146,7 @@
           <h5 class="section-label">Owner Complaints<% if (complaintsYear) { %> — <%= complaintsYear %><% } %></h5>
           <% if (complaints.count > 0) { %>
             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
-              <%= complaints.count.toLocaleString() %> complaint<%= complaints.count === 1 ? '' : 's' %> filed with NHTSA<% if (complaintsYear) { %> for the <%= complaintsYear %> model year<% } %>.
+              <%= complaints.count.toLocaleString() %> complaint<%= complaints.count === 1 ? '' : 's' %> filed with NHTSA<% if (complaintsYear) { %> for the <%= complaintsYear %> model year<% } %>.<% if (complaints.countedAs) { %> Counted across <%= complaints.countedAs.join(', ') %>.<% } %>
             </p>
             <% if (complaints.topComponents.length) { %>
               <dl class="facts-list">

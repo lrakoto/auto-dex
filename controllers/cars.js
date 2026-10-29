@@ -428,7 +428,7 @@ router.get('/', async (req, res) => {
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
         gallery, mySpotCount, heroCredit, complaints,
-        complaintsYear: car && car.year_max,
+        complaintsYear: (complaints && complaints.year) || (car && car.year_max),
         years: carinfo.formatYears(car),
         typeLabel: type === 'car' ? null : carquery.VEHICLE_TYPES[type].singular,
         typeParam: typeParam(type),
