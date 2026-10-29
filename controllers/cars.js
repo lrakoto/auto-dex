@@ -8,6 +8,7 @@ const { isValidImageUrl } = require('../lib/validators');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carinfo = require('../lib/carinfo');
+const { sizeComparison, formatDims } = require('../lib/sizes');
 const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via the module so tests can stub them
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
 const { getMakeCountry } = carquery;
@@ -480,6 +481,7 @@ router.get('/', async (req, res) => {
         const facts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
         const factMap = {};
         facts.forEach(f => { factMap[f.label] = f.values.join(', '); });
+        const mmOf = label => (facts.find(f => f.label === label) || {}).mm || null;
         return {
           make, model,
           image: car && car.image ? car.image : PLACEHOLDER_URL,
@@ -487,13 +489,16 @@ router.get('/', async (req, res) => {
           years: carinfo.formatYears(car),
           specs: carSpecs,
           ratings: safetyRatings,
-          facts: factMap
+          facts: factMap,
+          dims: { length: mmOf('Length'), width: mmOf('Width'), height: mmOf('Height') }
         };
       }));
       // Only show fact rows at least one car actually has
       const factLabels = [...new Set(cars.flatMap(c => Object.keys(c.facts)))];
       res.render('cars/compare', {
         cars, factLabels,
+        size: sizeComparison(cars),
+        formatDims,
         pageTitle: cars.length
           ? `Compare ${cars.map(c => c.make + ' ' + c.model).join(' vs ')} — AutoDex`
           : 'Compare Cars — AutoDex',

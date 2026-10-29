@@ -1936,6 +1936,31 @@ textarea:focus-visible,
 /* Keep toasts clear of the tray */
 .compare-tray ~ .toast-notification { bottom: 5rem; }
 
+/* Size comparison on /cars/compare (R11): outlines to scale, one colour per car */
+.size-compare { margin-top: 2.5rem; }
+.size-heading {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 1rem;
+}
+.size-views { display: flex; align-items: flex-end; gap: 1.25rem; }
+.size-view { margin: 0; min-width: 0; }
+.size-view svg { display: block; width: 100%; height: auto; overflow: visible; }
+.size-caption { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.4rem; }
+.size-ground { stroke: var(--border-hover); stroke-width: 1px; }
+.size-car { stroke-width: 2.5px; }
+.size-car-0 { stroke: var(--red); fill: rgba(237, 83, 83, 0.05); }
+.size-car-1 { stroke: #60a5fa; fill: rgba(96, 165, 250, 0.05); }
+.size-car-2 { stroke: #fbbf24; fill: rgba(251, 191, 36, 0.05); }
+.size-legend { list-style: none; padding: 0; margin: 1rem 0 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; font-size: 0.85rem; }
+.size-legend li { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.size-swatch { width: 14px; height: 14px; border-radius: 3px; border: 2px solid; flex: none; }
+.size-swatch-0 { border-color: var(--red); background: rgba(237, 83, 83, 0.12); }
+.size-swatch-1 { border-color: #60a5fa; background: rgba(96, 165, 250, 0.12); }
+.size-swatch-2 { border-color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+.size-legend-name { font-weight: 600; }
+.size-legend-dims { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.size-legend-missing { font-style: italic; }
+
 /* ─── GARAGE: SUBNAV, DEX, BADGES, SETTINGS ────────────────────────────────── */
 .garage-subnav {
   display: flex;

@@ -148,8 +148,13 @@ R14 on 2026-10-01 so they ship before R4.
   page.
 
 ### R11 — Size comparison
-- [ ] On the compare page, draw the cars' length, width and height to scale
+- [x] On the compare page, draw the cars' length, width and height to scale
   (Wikidata P2043, P2049, P2048).
+  Shipped as side (length × height) and front (width × height) outlines on
+  one millimetre scale (`lib/sizes.js`, `views/partials/size-compare.ejs`).
+  On 40 random dev-catalog cars, 31 had a Wikipedia article and 11 had all
+  three dimensions; multi-generation model-line entries (Civic, 911, MX-5)
+  usually have none. Generation pages (R14) would raise that.
 
 ### R12 — Spot of the Day and an activity feed
 - [ ] Community vote on recent spots with photos; a feed of spots, badges and
