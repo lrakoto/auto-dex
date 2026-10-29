@@ -143,12 +143,14 @@ async function getCarData() {
 | POST | /garage/add | garage.js | Add a car to the garage |
 | PUT | /garage/car/:id | garage.js | Update a garage car |
 | DELETE | /garage/car/:id | garage.js | Remove a garage car |
-| GET | /garage/car/:id | garage.js | Garage car page: recalls, maintenance log + fuel log |
+| GET | /garage/car/:id | garage.js | Garage car page: recalls, maintenance, fuel and build logs |
 | GET | /garage/car/:id/recalls | garage.js | Recall count (JSON, for card badges) |
 | POST | /garage/car/:id/maintenance | garage.js | Add a maintenance entry |
 | DELETE | /garage/car/:id/maintenance/:logId | garage.js | Remove a maintenance entry |
 | POST | /garage/car/:id/fuel | garage.js | Add a fill-up to the fuel log |
 | DELETE | /garage/car/:id/fuel/:logId | garage.js | Remove a fuel log entry |
+| POST | /garage/car/:id/build | garage.js | Add a mod to the build log (multipart: optional photo) |
+| DELETE | /garage/car/:id/build/:entryId | garage.js | Remove a build log entry |
 | GET | /garage/vin | garage.js | Decode a VIN (JSON) |
 | POST | /garage/settings | garage.js | Username + public garage toggle |
 | DELETE | /garage/spot/:id | garage.js | Remove a spot |

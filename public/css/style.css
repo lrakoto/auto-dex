@@ -2047,6 +2047,22 @@ textarea:focus-visible,
 .nowrap { white-space: nowrap; }
 .maint-form { max-width: 900px; }
 
+/* Build log (R13): a dated timeline of mods, on the garage car page and public garages */
+.build-timeline { list-style: none; padding: 0 0 0 1rem; margin: 0 0 1.5rem; border-left: 2px solid var(--border-hover); max-width: 900px; }
+.build-entry { position: relative; display: flex; gap: 0.9rem; align-items: flex-start; padding: 0.6rem 0 0.9rem; }
+.build-entry::before {
+  content: ''; position: absolute; left: calc(-1rem - 6px); top: 1rem;
+  width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 3px var(--bg);
+}
+.build-photo { flex: none; }
+.build-photo img { width: 96px; height: 64px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--border); }
+.build-body { flex: 1; min-width: 0; }
+.build-date { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.04em; }
+.build-part { font-weight: 600; margin: 0.1rem 0 0; }
+.build-meta { font-size: 0.82rem; color: var(--text-muted); margin: 0.1rem 0 0; }
+.build-delete { margin: 0; }
+.build-public-car { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+
 @media (max-width: 768px) {
   .car-hero { height: 320px; }
   .detail-container { padding: 0 1rem; }

@@ -145,8 +145,11 @@ R14 on 2026-10-01 so they ship before R4.
   quiz records from public garages only.
 
 ### R13 — Build log
-- [ ] Modifications on garage cars (part, vendor, cost, date, photos) beside
+- [x] Modifications on garage cars (part, vendor, cost, date, photos) beside
   the maintenance log, with a timeline on the car page and the public garage.
+  Shipped as `build_entries` with a timeline on the garage car page and a
+  Build Logs section on public garages (part, vendor, date and photo only;
+  cost and notes stay private).
 
 ### R14 — Smaller ideas
 - [ ] "Find one for sale" search links (Autotrader, Cars.com, Bring a Trailer).

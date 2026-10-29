@@ -8,6 +8,8 @@ const { getDexStats, getBadges } = require('../lib/dex');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { favoritePhoto } = require('../lib/photos');
 
+const BUILD_ENTRIES_SHOWN = 10; // newest per car on the public page
+
 function notFound(res) {
   return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
 }
@@ -45,6 +47,16 @@ router.get('/:username', async (req, res) => {
     const badges = (await getBadges(owner.id, dex)).filter(b => b.earned);
 
     const cars = myCars.map(c => c.toJSON());
+    // Build logs (R13), public fields only: no cost, no notes
+    const entries = cars.length ? await db.build_entry.findAll({
+      where: { userCarId: cars.map(c => c.id) },
+      attributes: ['userCarId', 'date', 'part', 'vendor', 'imageUrl'],
+      order: [['date', 'DESC'], ['id', 'DESC']]
+    }) : [];
+    const builds = cars.map(c => ({
+      label: `${c.year} ${c.make} ${c.model}`,
+      entries: entries.filter(e => e.userCarId === c.id).slice(0, BUILD_ENTRIES_SHOWN).map(e => e.toJSON())
+    })).filter(b => b.entries.length);
     const favs = favorites.map(f => ({ make: f.make, model: f.model, photo: favoritePhoto(f) }));
     const shareImage = [...cars.map(c => c.image), ...favs.map(f => f.photo)]
       .find(url => url && url !== PLACEHOLDER_URL);
@@ -55,6 +67,7 @@ router.get('/:username', async (req, res) => {
       owner: owner.toJSON(),
       displayName,
       myCars: cars,
+      builds,
       favorites: favs,
       dex, badges,
       recentSpots: recentSpots.map(s => s.toJSON()),
