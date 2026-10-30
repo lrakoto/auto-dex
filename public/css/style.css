@@ -2566,6 +2566,7 @@ textarea:focus-visible,
   border-color: #facc15;
 }
 .puzzle-tile--wrong { opacity: 0.6; }
+.puzzle-tile--unknown { opacity: 0.5; font-style: italic; }
 .puzzle-arrow { font-size: 0.85rem; }
 .puzzle-result { padding-top: 1rem; border-top: 1px solid var(--border); }
 .puzzle-verdict { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 700; color: var(--text); }
