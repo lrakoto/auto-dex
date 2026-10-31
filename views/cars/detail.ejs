@@ -10,6 +10,9 @@
   <div class="car-hero-overlay">
     <div class="car-hero-text">
       <h1><%= make %> <span><%= model %></span></h1>
+      <% if (carRarity !== null) { %>
+        <span class="rarity-badge rarity-tier-<%= carRarity %>"><%= rarityTiers[carRarity].label %></span>
+      <% } %>
       <% if (typeLabel || country || years) { %>
         <p class="car-hero-sub"><%= [typeLabel, country, years].filter(Boolean).join(' · ') %></p>
       <% } %>

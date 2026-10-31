@@ -14,6 +14,7 @@ const carquery = require('../config/carquery'); // getModels via the module so t
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
 const coolWall = require('../lib/coolWall');
+const rarity = require('../lib/rarity');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
@@ -405,7 +406,10 @@ router.get('/', async (req, res) => {
       const relatedCars = related.map(c => c.toJSON());
       const userFavorite = favorite ? favorite.toJSON() : null;
       const country = getMakeCountry(make);
-      const wikiFacts = wiki && wiki.wikidataId ? await carinfo.getWikidataFacts(wiki.wikidataId) : [];
+      const [wikiFacts, carRarity] = await Promise.all([
+        wiki && wiki.wikidataId ? carinfo.getWikidataFacts(wiki.wikidataId) : [],
+        car ? rarity.getCarRarity(car, wiki && wiki.wikidataId) : null
+      ]);
       const wikiSummary = wiki ? wiki.summary : null;
       const wikiUrl = wiki ? wiki.url : null;
 
@@ -446,6 +450,8 @@ router.get('/', async (req, res) => {
         carUpdatedImg: car ? !!car.updated_img : false,
         cool,
         coolTiers: coolWall.TIERS,
+        carRarity,
+        rarityTiers: rarity.TIERS,
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
         pageDescription: wikiSummary ? wikiSummary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
         canonicalPath: carPath(make, model),
