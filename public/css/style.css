@@ -2756,6 +2756,26 @@ textarea:focus-visible,
 .cool-tier-bg-2 { background: #60a5fa; }
 .cool-tier-bg-3 { background: #a5f3fc; }
 
+/* ─── RARITY (R7) ──────────────────────────────────────────────────────────── */
+/* Tier colours, rarest last: 0 Common … 3 Legendary */
+.rarity-tier-0 { --tier: #cbd5e1; }
+.rarity-tier-1 { --tier: #4ade80; }
+.rarity-tier-2 { --tier: #60a5fa; }
+.rarity-tier-3 { --tier: #fbbf24; }
+.rarity-badge {
+  display: inline-block;
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  color: var(--tier);
+  border: 1px solid var(--tier);
+  background: color-mix(in srgb, var(--tier) 15%, transparent);
+}
+
 .cool-verdict { font-size: 0.9rem; margin-bottom: 0.75rem; }
 .cool-tier-name { color: var(--tier); }
 .cool-count { color: var(--text-muted); }
