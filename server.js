@@ -51,6 +51,7 @@ app.use(methodOverride('_method'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(__dirname + '/public'));
 app.use(layouts);
+require('./controllers/dev-car-3d')(app); // explicit local opt-in, no session required
 
 // In production, keep sessions in Postgres so they survive restarts and deploys.
 // The default MemoryStore drops every session on restart and leaks memory.

@@ -257,9 +257,10 @@ R14 on 2026-10-01 so they ship before R4.
   intended viewer and hosting. A marketplace purchase alone may not cover
   serving an extractable GLB. Record the source, license, and required
   credit with the asset. Obtain approval before any purchase or commission.
-- **Prove the viewer separately.** Use a permissively licensed sample in
-  local development while sourcing the real car. Evaluate self-hosted
-  `<model-viewer>` with a web-optimized GLB under the current CSP. Start
+- [x] Prototype the viewer separately at `/dev/3d` with the CC0 Khronos Toy
+  Car while sourcing the real car. The local lab loads self-hosted
+  `<model-viewer>` and same-origin glTF only on request. The split textures
+  avoid the need to relax CSP for embedded texture blob URLs. Start
   with a versioned mapping from the catalog entry to the exact variant,
   poster, model, and attribution. The first pilot needs no database
   migration or public upload flow.
