@@ -1,0 +1,28 @@
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1 class="jumbotron-heading" id="activity-heading">Recent sightings</h1>
+    <p class="lead text-muted">See what AutoDex members have spotted and shared in their public garages.</p>
+  </div>
+</section>
+
+<div class="container pb-5 activity">
+  <% if (spots.length) { %>
+    <ol id="activity-feed" class="activity-feed" role="list" aria-labelledby="activity-heading">
+      <% spots.forEach(spot => { %>
+        <li class="activity-sighting">
+          <div class="activity-details">
+            <h2><a href="<%= spot.carUrl %>"><%= spot.make %> <%= spot.model %></a></h2>
+            <a class="activity-garage" href="<%= spot.garageUrl %>"><%= spot.garageName %></a>
+          </div>
+          <time datetime="<%= spot.dateIso %>"><%= spot.dateLabel %></time>
+        </li>
+      <% }) %>
+    </ol>
+  <% } else { %>
+    <div id="activity-empty" class="empty-state empty-state--results">
+      <h2>No public sightings yet</h2>
+      <p>Recent spots will appear here when members share them in their public garages.</p>
+      <a class="btn btn-outline-secondary mt-3" href="/cars/explore">Explore cars</a>
+    </div>
+  <% } %>
+</div>
