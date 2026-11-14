@@ -9,6 +9,9 @@
 <div class="container py-5">
   <div class="puzzle-layout">
     <div class="puzzle-main">
+      <% if (typeof accountStatsPending !== 'undefined' && accountStatsPending) { %>
+        <p id="puzzle-account-save-notice" class="puzzle-note puzzle-save-notice" role="status">Reload to retry saving your results to your account.</p>
+      <% } %>
       <% if (!answer) { %>
         <div class="empty-state">
           <div class="empty-icon">?</div>
@@ -94,6 +97,42 @@
         <h5>How to read a tile</h5>
         <p class="puzzle-note"><span class="puzzle-tile puzzle-tile--exact">Green</span> is an exact match. <span class="puzzle-tile puzzle-tile--close">Yellow</span> means the decade is one off. An arrow points to a later (&uarr;) or earlier (&darr;) decade than your guess. Class, drive and fuel are exact or wrong only; a faded <span class="puzzle-tile puzzle-tile--unknown">Unknown</span> tile means the data needed to score it is unavailable.</p>
       </div>
+      <% if (typeof accountStats !== 'undefined' && accountStats) { %>
+        <section id="puzzle-account-stats" class="media-card puzzle-account-stats" aria-labelledby="puzzle-account-stats-heading">
+          <h2 id="puzzle-account-stats-heading">Your puzzle stats</h2>
+          <dl class="puzzle-account-summary">
+            <div>
+              <dt>Games played</dt>
+              <dd id="puzzle-games-played"><%= accountStats.gamesPlayed %></dd>
+            </div>
+            <div>
+              <dt>Win rate</dt>
+              <dd id="puzzle-win-rate"><%= accountStats.winRate %>%</dd>
+            </div>
+          </dl>
+          <% if (accountStats.gamesPlayed) { %>
+            <table id="puzzle-guess-distribution">
+              <caption>Wins by number of guesses</caption>
+              <thead>
+                <tr>
+                  <% accountStats.guessDistribution.forEach((_, index) => { %>
+                    <th scope="col"><%= index + 1 %><span class="sr-only"> <%= index === 0 ? 'guess' : 'guesses' %></span></th>
+                  <% }) %>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <% accountStats.guessDistribution.forEach((wins, index) => { %>
+                    <td data-guess-count="<%= index + 1 %>"><%= wins %></td>
+                  <% }) %>
+                </tr>
+              </tbody>
+            </table>
+          <% } else { %>
+            <p id="puzzle-stats-empty">Play a puzzle from start to finish while signed in to start tracking your results.</p>
+          <% } %>
+        </section>
+      <% } %>
     </aside>
   </div>
 </div>

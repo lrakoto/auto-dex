@@ -2602,6 +2602,19 @@ textarea:focus-visible,
 }
 .puzzle-input:focus { outline: none; border-color: rgba(255, 255, 255, 0.5); }
 .puzzle-hint, .puzzle-note { margin: 0.75rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.puzzle-account-stats { margin-top: 1rem; }
+.puzzle-account-stats h2 { margin: 0 0 0.8rem; font-size: 1rem; }
+.puzzle-account-summary { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin: 0; }
+.puzzle-account-summary dt,
+.puzzle-account-stats caption,
+.puzzle-account-stats p,
+.puzzle-save-notice { color: #a1a1aa; font-size: 0.8rem; }
+.puzzle-account-summary dd { margin: 0; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.puzzle-account-stats p { margin: 0.75rem 0 0; }
+.puzzle-account-stats table { width: 100%; margin-top: 0.8rem; text-align: center; font-variant-numeric: tabular-nums; }
+.puzzle-account-stats caption { caption-side: top; padding: 0 0 0.35rem; }
+.puzzle-account-stats th { border-bottom: 1px solid var(--border-hover); font-size: 0.75rem; }
+.puzzle-account-stats td { padding-top: 0.2rem; font-size: 0.9rem; }
 
 @media (max-width: 900px) {
   .puzzle-layout { grid-template-columns: 1fr; }

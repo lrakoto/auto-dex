@@ -6,7 +6,7 @@ const db = require('../models');
 const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
 const puzzle = require('../lib/puzzle');
-const { extractCsrf, getCsrfToken } = require('./helpers');
+const { createVerifiedUser, extractCsrf, getCsrfToken } = require('./helpers');
 
 function assertShareResult(html, score, rows) {
   const field = html.match(/<textarea\b[^>]*\bid="puzzle-share-text"[^>]*>([\s\S]*?)<\/textarea>/);
@@ -341,6 +341,113 @@ describe('Daily car puzzle', function() {
       if (!/data-puzzle-streak data-day="\d{4}-\d{2}-\d{2}" data-result="lost"/.test(res.text)) {
         throw new Error('finished loss missing streak context');
       }
+    });
+
+    describe('account stats', function() {
+      function guess(agent, token, guess) {
+        return agent.post('/puzzle/guess').type('form').send({ guess, _csrf: token })
+          .expect(302).expect('Location', '/puzzle');
+      }
+
+      it('combines past and current results and keeps the first result across sessions', async function() {
+        const credentials = { email: 'puzzle-stats@example.com', password: 'password123' };
+        const agent = request.agent(app);
+        const { id: userId } = await createVerifiedUser(agent, db, credentials);
+        const page = await agent.get('/puzzle').expect(200).expect('Cache-Control', 'private, no-store');
+        const [, day] = page.text.match(/name="day" value="(\d{4}-\d{2}-\d{2})"/);
+        assert.match(page.text, /id="puzzle-stats-empty"/);
+
+        const puzzleDate = daysAgo => new Date(Date.parse(`${day}T00:00:00Z`) - daysAgo * 86400000).toISOString().slice(0, 10);
+        await db.puzzle_result.bulkCreate([
+          { userId, puzzleDate: puzzleDate(1), guessCount: null },
+          { userId, puzzleDate: puzzleDate(2), guessCount: 6 }
+        ]);
+        await guess(agent, extractCsrf(page.text), 'Toyota Puzzle Mystery');
+
+        const otherSession = request.agent(app);
+        const loginToken = await getCsrfToken(otherSession);
+        await otherSession.post('/auth/login').type('form').send({ ...credentials, _csrf: loginToken }).expect(302);
+        const token = await getCsrfToken(otherSession, '/puzzle');
+        await guess(otherSession, token, 'Toyota Puzzle Twin');
+        await guess(otherSession, token, 'Toyota Puzzle Mystery');
+        const result = await otherSession.get('/puzzle').expect(200);
+        assert.match(result.text, /Got it in 2/);
+        assert.match(result.text, /id="puzzle-games-played">3</);
+        assert.match(result.text, /id="puzzle-win-rate">67%</);
+        assert.deepEqual(Array.from(result.text.matchAll(/data-guess-count="\d">(\d+)</g), match => Number(match[1])), [1, 0, 0, 0, 0, 1]);
+        assert.equal(await db.puzzle_result.count({ where: { userId } }), 3);
+        const saved = await db.puzzle_result.findOne({ where: { userId, puzzleDate: day } });
+        assert.equal(saved.guessCount, 1);
+      });
+
+      it('counts a finished loss without adding a win or exposing another account’s results', async function() {
+        const agent = request.agent(app);
+        const { id: userId } = await createVerifiedUser(agent, db, { email: 'puzzle-loss@example.com' });
+        const token = await getCsrfToken(agent, '/puzzle');
+        for (let i = 1; i < puzzle.MAX_GUESSES; i++) await guess(agent, token, 'Toyota Puzzle Twin');
+        assert.equal(await db.puzzle_result.count({ where: { userId } }), 0);
+        await guess(agent, token, 'Toyota Puzzle Twin');
+        const page = await agent.get('/puzzle').expect(200);
+        assert.match(page.text, /Out of guesses/);
+        assert.match(page.text, /id="puzzle-games-played">1</);
+        assert.match(page.text, /id="puzzle-win-rate">0%</);
+        assert.deepEqual(Array.from(page.text.matchAll(/data-guess-count="\d">(\d+)</g), match => Number(match[1])), [0, 0, 0, 0, 0, 0]);
+        const saved = await db.puzzle_result.findOne({ where: { userId } });
+        assert.equal(saved.guessCount, null);
+        const guest = await request(app).get('/puzzle').expect(200);
+        assert.doesNotMatch(guest.text, /id="puzzle-account-stats"/);
+      });
+
+      it('keeps a guest board playable after login without importing its result', async function() {
+        const agent = request.agent(app);
+        const guestToken = await getCsrfToken(agent, '/puzzle');
+        await guess(agent, guestToken, 'Toyota Puzzle Twin');
+        const { id: userId } = await createVerifiedUser(agent, db, { email: 'puzzle-handoff@example.com' });
+        const token = await getCsrfToken(agent, '/puzzle');
+        await guess(agent, token, 'Toyota Puzzle Mystery');
+        const page = await agent.get('/puzzle').expect(200);
+        assert.match(page.text, /Got it in 2/);
+        assert.match(page.text, /id="puzzle-games-played">0</);
+        assert.equal(await db.puzzle_result.count({ where: { userId } }), 0);
+      });
+
+      it('keeps the completed board and retries a failed save after UTC rollover', async function() {
+        const agent = request.agent(app);
+        const { id: userId } = await createVerifiedUser(agent, db, { email: 'puzzle-retry@example.com' });
+        const initial = await agent.get('/puzzle').expect(200);
+        const token = extractCsrf(initial.text);
+        const [, day] = initial.text.match(/name="day" value="(\d{4}-\d{2}-\d{2})"/);
+        const tomorrow = Date.parse(`${day}T00:00:00Z`) + 86400000;
+        const realDate = Date;
+        const bulkCreate = db.puzzle_result.bulkCreate;
+        db.puzzle_result.bulkCreate = async () => { throw new Error('fixture: save temporarily unavailable'); };
+        try {
+          await guess(agent, token, 'Toyota Puzzle Mystery');
+          const pending = await agent.get('/puzzle').expect(200);
+          assert.match(pending.text, /Got it in 1/);
+          assert.match(pending.text, /id="puzzle-account-save-notice"/);
+          assert.equal(await db.puzzle_result.count({ where: { userId } }), 0);
+
+          global.Date = class extends realDate {
+            constructor(...args) { super(...(args.length ? args : [tomorrow])); }
+          };
+          const nextBoard = await agent.get('/puzzle').expect(200);
+          assert.match(nextBoard.text, /6 guesses left/);
+          assert.match(nextBoard.text, /id="puzzle-account-save-notice"/);
+
+          db.puzzle_result.bulkCreate = bulkCreate;
+          const page = await agent.get('/puzzle').expect(200);
+          assert.match(page.text, /id="puzzle-games-played">1</);
+          assert.match(page.text, /id="puzzle-win-rate">100%</);
+          assert.doesNotMatch(page.text, /id="puzzle-account-save-notice"/);
+          const result = await db.puzzle_result.findOne({ where: { userId } });
+          assert.equal(result.puzzleDate, day);
+        } finally {
+          global.Date = realDate;
+          db.puzzle_result.bulkCreate = bulkCreate;
+        }
+        assert.equal(await db.puzzle_result.count({ where: { userId } }), 1);
+      });
     });
 
     it('suggests catalog names for the guess field', async function() {
