@@ -133,6 +133,7 @@ app.use('/auth', require('./controllers/auth'));
 app.use('/cars', require('./controllers/cars'));
 app.use('/garage', isLoggedIn, require('./controllers/garage'));
 app.use('/u', require('./controllers/profile'));   // public garages
+app.use('/activity', require('./controllers/activity'));
 app.use('/play', require('./controllers/play'));   // Who's That Car?
 app.use('/puzzle', require('./controllers/puzzle')); // Daily car puzzle
 

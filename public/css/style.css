@@ -859,11 +859,14 @@ small, .small { font-size: 0.78rem; }
 .nav-mobile-menu .nav-link:last-child { border-bottom: none; }
 .nav-mobile-menu .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 
-@media (max-width: 768px) {
-  .masthead .inner { padding: 0 1rem; }
+@media (max-width: 1080px) {
   .nav-masthead { display: none; }      /* hide desktop nav */
   .nav-hamburger { display: flex; }     /* show burger */
   .nav-mobile-menu { display: block; }  /* panel exists in DOM, toggled via .open */
+}
+
+@media (max-width: 768px) {
+  .masthead .inner { padding: 0 1rem; }
   .custom-wrap { padding: 80px 1.5rem; }
   .jumbotron { padding: 2.5rem 0; }
   .jumbotron .container { padding: 0 1.5rem; }
@@ -2209,6 +2212,28 @@ textarea:focus-visible,
 }
 .empty-state--results h3 { color: var(--text); }
 .empty-state--results p { color: #a1a1aa; }
+
+/* ─── PUBLIC SIGHTINGS ─────────────────────────────────────────────────────── */
+.container.activity { width: min(100%, 54rem); }
+.activity-feed { margin: 0; padding: 0; list-style: none; }
+.activity-sighting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-details { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.activity-details h2 { margin: 0; font-size: 1.05rem; }
+.activity-garage, .activity-sighting time { color: #a1a1aa; font-size: 0.82rem; }
+.activity-garage { text-decoration: underline; text-underline-offset: 0.15em; }
+.activity-sighting time { margin-left: auto; white-space: nowrap; }
+
+@media (max-width: 520px) {
+  .activity-sighting { column-gap: 0.75rem; }
+  .activity-sighting time { flex-basis: 100%; margin: 0; }
+}
 
 /* ─── TIMELINE ─────────────────────────────────────────────────────────────── */
 .timeline-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -205,8 +205,12 @@ R14 on 2026-10-01 so they ship before R4.
   usually have none. Generation pages (R14) would raise that.
 
 ### R12 — Spot of the Day and an activity feed
-- [ ] Community vote on recent spots with photos; a feed of spots, badges and
-  quiz records from public garages only.
+- [x] Recent sightings from public garages at `/activity`. Show the model,
+  public garage handle and UTC date for up to 12 sightings. The feed uses
+  the same ordering and limit as the public garage, and changes to garage
+  visibility or sighting deletion take effect on the next request.
+- [ ] Community voting on recent spots with photos, plus badge and quiz
+  record activity from public garages.
 
 ### R13 — Build log
 - [x] Modifications on garage cars (part, vendor, cost, date, photos) beside

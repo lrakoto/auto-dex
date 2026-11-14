@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../models');
-const { getDexStats, getBadges } = require('../lib/dex');
+const { getDexStats, getBadges, RECENT_SPOTS } = require('../lib/dex');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { favoritePhoto } = require('../lib/photos');
 
@@ -40,8 +40,7 @@ router.get('/:username', async (req, res) => {
         where: { userId: owner.id },
         attributes: ['id', 'imageUrl', 'createdAt'],
         include: [{ model: db.car, attributes: ['make', 'model', 'image'] }],
-        order: [['createdAt', 'DESC']],
-        limit: 12
+        ...RECENT_SPOTS
       })
     ]);
     const badges = (await getBadges(owner.id, dex)).filter(b => b.earned);
