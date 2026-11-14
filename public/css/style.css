@@ -2503,6 +2503,7 @@ textarea:focus-visible,
   gap: 2rem;
   align-items: start;
 }
+.puzzle-main { min-width: 0; }
 .puzzle-card {
   padding: 1.25rem;
   background: var(--grain) repeat, var(--glass-bg);
@@ -2529,7 +2530,9 @@ textarea:focus-visible,
   background: var(--danger-bg);
   border-left: 3px solid var(--danger);
 }
-.puzzle-board { width: 100%; margin-bottom: 1.25rem; border-collapse: collapse; }
+.puzzle-board-scroll { overflow-x: auto; max-width: 100%; margin-bottom: 1.25rem; }
+.puzzle-board-scroll:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.puzzle-board { width: 100%; border-collapse: collapse; }
 .puzzle-board th {
   padding: 0 0.5rem 0.4rem 0;
   font-size: 0.66rem;
@@ -2593,7 +2596,6 @@ textarea:focus-visible,
 @media (max-width: 520px) {
   .puzzle-form { flex-direction: column; }
   .puzzle-card { padding: 0.9rem; }
-  .puzzle-board { display: block; overflow-x: auto; }
 }
 
 /* ─── HOME: CAR OF THE DAY ─────────────────────────────────────────────────── */

@@ -27,30 +27,32 @@
           <% } %>
 
           <% if (guesses.length) { %>
-            <table class="puzzle-board" aria-label="Your guesses so far">
-              <thead>
-                <tr><th>Guess</th><th>Make</th><th>Country</th><th>Decade</th><th>Class</th><th>Drive</th><th>Fuel</th></tr>
-              </thead>
-              <tbody>
-                <% guesses.forEach(g => { %>
-                  <tr class="<%= g.correct ? 'is-correct-row' : '' %>">
-                    <td class="puzzle-guess-name"><%= g.make %> <%= g.model %></td>
-                    <td><span class="puzzle-tile puzzle-tile--<%= g.makeState %>"><%= g.make %></span></td>
-                    <td><span class="puzzle-tile puzzle-tile--<%= g.countryState %>"><%= g.country %></span></td>
-                    <td>
-                      <span class="puzzle-tile puzzle-tile--<%= g.decadeState %>">
-                        <%= g.decade %>s
-                        <% if (g.decadeDirection === 'higher') { %><span class="puzzle-arrow" aria-label="guess a later decade">&uarr;</span><% } %>
-                        <% if (g.decadeDirection === 'lower') { %><span class="puzzle-arrow" aria-label="guess an earlier decade">&darr;</span><% } %>
-                      </span>
-                    </td>
-                    <td><span class="puzzle-tile puzzle-tile--<%= g.bodyClassState %>"><%= g.bodyClass || 'Unknown' %></span></td>
-                    <td><span class="puzzle-tile puzzle-tile--<%= g.driveState %>"><%= g.drive || 'Unknown' %></span></td>
-                    <td><span class="puzzle-tile puzzle-tile--<%= g.fuelState %>"><%= g.fuel || 'Unknown' %></span></td>
-                  </tr>
-                <% }) %>
-              </tbody>
-            </table>
+            <div class="puzzle-board-scroll" role="region" aria-label="Guess board" tabindex="0">
+              <table class="puzzle-board" aria-label="Your guesses so far">
+                <thead>
+                  <tr><th>Guess</th><th>Make</th><th>Country</th><th>Decade</th><th>Class</th><th>Drive</th><th>Fuel</th></tr>
+                </thead>
+                <tbody>
+                  <% guesses.forEach(g => { %>
+                    <tr class="<%= g.correct ? 'is-correct-row' : '' %>">
+                      <td class="puzzle-guess-name"><%= g.make %> <%= g.model %></td>
+                      <td><span class="puzzle-tile puzzle-tile--<%= g.makeState %>"><%= g.make %></span></td>
+                      <td><span class="puzzle-tile puzzle-tile--<%= g.countryState %>"><%= g.country %></span></td>
+                      <td>
+                        <span class="puzzle-tile puzzle-tile--<%= g.decadeState %>">
+                          <%= g.decade %>s
+                          <% if (g.decadeDirection === 'higher') { %><span class="puzzle-arrow" aria-label="guess a later decade">&uarr;</span><% } %>
+                          <% if (g.decadeDirection === 'lower') { %><span class="puzzle-arrow" aria-label="guess an earlier decade">&darr;</span><% } %>
+                        </span>
+                      </td>
+                      <td><span class="puzzle-tile puzzle-tile--<%= g.bodyClassState || 'unknown' %>"><%= g.bodyClass || 'Unknown' %></span></td>
+                      <td><span class="puzzle-tile puzzle-tile--<%= g.driveState || 'unknown' %>"><%= g.drive || 'Unknown' %></span></td>
+                      <td><span class="puzzle-tile puzzle-tile--<%= g.fuelState || 'unknown' %>"><%= g.fuel || 'Unknown' %></span></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
           <% } %>
 
           <% if (done) { %>
@@ -78,7 +80,7 @@
     <aside class="puzzle-side">
       <div class="media-card">
         <h5>How to read a tile</h5>
-        <p class="puzzle-note"><span class="puzzle-tile puzzle-tile--exact">Green</span> is an exact match. <span class="puzzle-tile puzzle-tile--close">Yellow</span> means the decade is one off. An arrow points to a later (&uarr;) or earlier (&darr;) decade than your guess. Class, drive and fuel are exact or wrong only; a faded <span class="puzzle-tile puzzle-tile--unknown">Unknown</span> tile means AutoDex has no FuelEconomy.gov data for that car.</p>
+        <p class="puzzle-note"><span class="puzzle-tile puzzle-tile--exact">Green</span> is an exact match. <span class="puzzle-tile puzzle-tile--close">Yellow</span> means the decade is one off. An arrow points to a later (&uarr;) or earlier (&darr;) decade than your guess. Class, drive and fuel are exact or wrong only; a faded <span class="puzzle-tile puzzle-tile--unknown">Unknown</span> tile means the data needed to score it is unavailable.</p>
       </div>
     </aside>
   </div>
