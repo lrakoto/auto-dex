@@ -268,8 +268,10 @@ R14 on 2026-10-01 so they ship before R4.
   geometry brought the Toy Car sample from 5.43 MB to 4.13 MB (24% smaller),
   excluding the viewer and poster. The car and glass geometry are unchanged.
   Textures are still served separately from the same origin under the existing
-  CSP. The trimmed model rendered in desktop Chrome; real-phone testing is
-  still pending.
+  CSP. At 390 pixels wide in desktop Chrome, the poster fit, the model
+  loaded on demand, and dragging rotated the car. Retry recovered from a
+  one-time geometry download failure. Real-phone touch and load-time checks
+  are still pending.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
