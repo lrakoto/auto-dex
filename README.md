@@ -161,6 +161,23 @@ npm start                   # or: npm run nodemon
 Required `.env` values are documented in `.env.example`. The app refuses to
 boot without `SECRET_SESSION` (note: not `SESSION_SECRET`).
 
+### Local 3D viewer prototype
+
+After installing the app dependencies, run:
+
+```bash
+node scripts/setup-car-3d-demo.js
+NODE_ENV=development ENABLE_3D_DEMO=1 ENABLE_BACKGROUND_JOBS=false npm start
+```
+
+Open `http://localhost:3000/dev/3d`. The sample uses no database records.
+Setup fetches the pinned [Khronos Toy Car](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/8f492390ddc7a2ae221a1369ef560589cf8c70fb/Models/ToyCar)
+and [model-viewer](https://github.com/google/model-viewer/tree/v4.0.0) into
+an ignored local folder with their licenses. No runtime requests go to the
+asset providers. Neither the demo route nor its downloaded assets are served
+in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
+for the real-car pilot.
+
 ### Tests
 
 Tests run against a **separate `autodex_test` database** and build the schema

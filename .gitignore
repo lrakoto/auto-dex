@@ -1,5 +1,6 @@
 .env
 node_modules
+/dev-assets/car-3d/
 server.local
 CLAUDE.md
 .DS_Store

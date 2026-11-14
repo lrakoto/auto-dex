@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>3D Viewer Lab | AutoDex</title>
+  <link rel="stylesheet" href="/css/car-3d-demo.css">
+  <% if (assetsReady) { %><script src="/js/car-3d-demo.js" defer></script><% } %>
+</head>
+<body>
+  <header class="lab-masthead">
+    <a href="/" class="lab-brand">Auto<span>Dex</span></a>
+    <span class="lab-tag">Local preview</span>
+  </header>
+  <main id="car-3d-demo" class="lab" aria-labelledby="lab-title">
+    <div class="lab-intro">
+      <p class="lab-kicker">AutoDex Lab / 01</p>
+      <h1 id="lab-title">3D Viewer Lab</h1>
+      <p>Explore a sample model from different angles. This toy car is a demonstration asset.</p>
+    </div>
+    <section class="lab-card" aria-labelledby="lab-model">
+      <div class="lab-toolbar">
+        <div>
+          <p class="lab-kicker">Sample model</p>
+          <h2 id="lab-model">Khronos Toy Car</h2>
+        </div>
+        <% if (assetsReady) { %>
+          <div class="lab-actions">
+            <button id="car-3d-load" type="button" aria-controls="car-3d-stage" hidden>Load 3D model</button>
+            <p id="car-3d-status" role="status"></p>
+          </div>
+        <% } %>
+      </div>
+      <% if (assetsReady) { %>
+        <figure class="lab-figure">
+          <div id="car-3d-stage" class="lab-stage" data-state="idle">
+            <img id="car-3d-poster" class="lab-poster" src="/dev/3d/assets/poster.jpg" alt="Studio render of the Khronos toy car from the front and side">
+          </div>
+          <figcaption class="lab-caption">
+            <p id="car-3d-instructions">Drag to orbit. On touch, swipe sideways to turn the car. With the viewer focused, use the arrow keys.</p>
+            <noscript><p>Enable JavaScript to explore the 3D model.</p></noscript>
+          </figcaption>
+        </figure>
+      <% } else { %>
+        <div class="lab-missing" id="car-3d-missing">
+          <p>Demo assets are not installed.</p>
+          <p>Run the local 3D demo setup in the AutoDex checkout, then reload this page.</p>
+        </div>
+      <% } %>
+      <div class="lab-credit">
+        <p><a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/8f492390ddc7a2ae221a1369ef560589cf8c70fb/Models/ToyCar">Toy Car by Guido Odendahl and Eric Chadwick</a> · CC0 1.0</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
