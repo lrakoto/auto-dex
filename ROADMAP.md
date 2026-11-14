@@ -249,14 +249,28 @@ R14 on 2026-10-01 so they ship before R4.
   wheels, lights, trim, and realistic paint and glass. Show the exact year,
   generation, and variant represented; a single mesh does not represent
   every car on a multi-generation catalog page.
-- **Find one publishable model.** The 1967 Ford Mustang Fastback is a
-  candidate, not yet cleared for AutoDex. Prefer a manufacturer-approved
-  marketing model, a mesh licensed explicitly for public interactive web
-  delivery, or a commissioned model built from measured references. Get
-  written permission for the mesh and textures, optimization, and the
-  intended viewer and hosting. A marketplace purchase alone may not cover
-  serving an extractable GLB. Record the source, license, and required
-  credit with the asset. Obtain approval before any purchase or commission.
+- **1967 Ford Mustang Fastback.** Mark Peters publishes a 505,332-triangle
+  exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  The artist omitted the interior and underside. This is the leading option
+  for the existing Mustang page. Compare exterior details with Ford's 1967
+  2+2 reference before naming a trim, verify the texture credits, and confirm
+  Ford's clearance for public delivery of the downloadable browser asset.
+  [Creator listing](https://sketchfab.com/3d-models/1967-ford-mustang-fastback-4096px2-02933292f4d64a52a9bec5923e24b0af) ·
+  [Ford's 1967 sales brochure](https://ponynsnake.com/wp-content/uploads/2023/07/access-1967_Ford_Mustang_brochure_AR_96_212010_18065.pdf) ·
+  [Ford brand licensing](https://www.fordbrandlicensing.com/).
+- **Historical alternative.** Deutsches Museum publishes its reconstruction of
+  Benz Patent-Motorwagen No. 1, inventory 4710, under
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The model
+  has 218,846 triangles and uses laser scans and photogrammetry of the museum
+  specimen, which was reassembled in 1895. An optimized version would carry
+  the museum credit and the same license. This fits a historical feature
+  because there is no matching AutoDex catalog page.
+  [Museum specimen history](https://www.deutsches-museum.de/museum/aktuell/eine-ikone-der-automobilgeschichte-wird-140) ·
+  [Museum's 3D listing](https://sketchfab.com/3d-models/erster-dreirad-motorwagen-von-carl-benz-47df0cb894a34d33a09361f3cb182070).
+- **Before publishing.** Record the exact source, license, asset revision,
+  credits, changes, and any separate rights for marks and textures. Confirm
+  permission covers optimizing and serving the files the browser receives.
+  Obtain approval before any purchase or commission.
 - [x] Prototype the viewer separately at `/dev/3d` with the CC0 Khronos Toy
   Car while sourcing the real car. The local lab loads self-hosted
   `<model-viewer>` and same-origin glTF only on request. The split textures
@@ -282,9 +296,7 @@ R14 on 2026-10-01 so they ship before R4.
   for the exact generation.
 - References: [Khronos glTF](https://www.khronos.org/gltf/),
   [model-viewer loading examples](https://modelviewer.dev/examples/loading/),
-  [Mustang model candidate](https://www.turbosquid.com/3d-models/ford-mustang-fastback-1967-3d-model-1724493),
-  [Ford asset use restrictions](https://www.turbosquid.com/help/en/articles/9937458-ford-license-restrictions),
-  and [TurboSquid license](https://www.turbosquid.com/licensing).
+  and [Ford's TurboSquid approval process](https://www.turbosquid.com/help/en/articles/9937458-ford-license-restrictions).
 
 ## Sources
 
