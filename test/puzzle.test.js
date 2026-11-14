@@ -111,7 +111,8 @@ describe('Daily car puzzle', function() {
           make: 'Honda', model: 'Puzzle Guess', country: 'Japan', decade: 1990,
           makeState: 'wrong', countryState: 'exact', decadeState: 'exact', correct: false
         }],
-        done: false, shareText: null, error: null, csrfToken: 'test', guessesLeft: 5, maxGuesses: 6
+        done: false, puzzleDay: '2026-05-01', shareText: null, error: null,
+        csrfToken: 'test', guessesLeft: 5, maxGuesses: 6
       });
       if (!html.includes('Honda Puzzle Guess') || !html.includes('5 guesses left')) throw new Error('legacy guess was lost');
       if ((html.match(/puzzle-tile--unknown">Unknown<\/span><\/td>/g) || []).length !== 3) {
@@ -205,6 +206,9 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('name="guess"')) throw new Error('no guess field');
       if (!res.text.includes('6 guesses left')) throw new Error('guess count: ' + res.text.match(/\d+ guesses? left/));
       if (res.text.includes('id="puzzle-share-text"')) throw new Error('unplayed puzzle has a share result');
+      if (!/data-puzzle-streak data-day="\d{4}-\d{2}-\d{2}" data-result="pending"/.test(res.text)) {
+        throw new Error('unplayed puzzle missing pending streak context');
+      }
     });
 
     it('scores a wrong guess and keeps the board for the next one', async function() {
@@ -284,6 +288,9 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('/cars/car?make=Toyota&amp;model=Puzzle%20Mystery')) throw new Error('answer link missing');
       if (res.text.includes('name="guess"')) throw new Error('form should be gone once done');
       assertShareResult(res.text, 1, ['🟩🟩🟩🟩🟩🟩']);
+      if (!/data-puzzle-streak data-day="\d{4}-\d{2}-\d{2}" data-result="won"/.test(res.text)) {
+        throw new Error('finished win missing streak context');
+      }
     });
 
     it('loses after six wrong guesses and still reveals the answer', async function() {
@@ -299,6 +306,9 @@ describe('Daily car puzzle', function() {
       assertShareResult(res.text, 'X', [
         '🟩🟩🟩⬛⬛⬛', '⬛🟩⬛🟩🟩🟩', '⬛🟩🟨⬜⬜⬜', ...Array(3).fill('⬛⬛⬛⬜⬜⬜')
       ]);
+      if (!/data-puzzle-streak data-day="\d{4}-\d{2}-\d{2}" data-result="lost"/.test(res.text)) {
+        throw new Error('finished loss missing streak context');
+      }
     });
 
     it('suggests catalog names for the guess field', async function() {
