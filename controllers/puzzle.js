@@ -56,6 +56,7 @@ router.get('/', async (req, res) => {
       guesses: s.guesses,
       done: s.done,
       won: s.won,
+      puzzleDay: s.day,
       error,
       maxGuesses: puzzle.MAX_GUESSES,
       guessesLeft: puzzle.MAX_GUESSES - s.guesses.length,

@@ -129,8 +129,11 @@ R14 on 2026-10-01 so they ship before R4.
 - [x] A shareable result grid: completed boards offer a spoiler-free emoji
   summary with the UTC date, score, and puzzle link. Copy it with the button
   or select the text manually.
-- [ ] A streak across days in `localStorage`, plus stats (games played, win
-  rate, guess distribution) for signed-in players.
+- [x] A browser-saved streak for consecutive daily puzzle wins. The streak
+  uses the same UTC date as the puzzle, counts each day once, and resets
+  after a loss or missed day.
+- [ ] Account stats (games played, win rate, guess distribution) for
+  signed-in players.
 
 ### R5 — Recall alerts for garage cars
 - [x] Weekly job compares each garage car's NHTSA recalls with the last check

@@ -20,6 +20,7 @@
         <div class="puzzle-card">
           <div class="puzzle-stats" aria-live="polite">
             <span class="puzzle-stat">Guess <strong><%= guesses.length + (done ? 0 : 1) %></strong> of <%= maxGuesses %></span>
+            <span class="puzzle-stat" data-puzzle-streak data-day="<%= puzzleDay %>" data-result="<%= done ? (won ? 'won' : 'lost') : 'pending' %>" title="Consecutive wins. The puzzle resets at midnight UTC." hidden>Win streak <strong data-puzzle-streak-count>0</strong> <span>· this browser</span></span>
           </div>
 
           <% if (error) { %>
@@ -97,3 +98,4 @@
 </div>
 
 <script src="/js/puzzle.js" defer></script>
+<script src="/js/puzzle-streak.js" defer></script>
