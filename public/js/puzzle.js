@@ -1,8 +1,29 @@
-// Daily car puzzle — fills the guess field's datalist from /puzzle/suggest as
-// you type. The form itself is a plain POST, so the puzzle still works with
-// this disabled or without JS at all.
+// Daily car puzzle — suggestions while typing and clipboard copying after
+// finishing. The guess form and selectable result still work without JS.
 (function () {
   'use strict';
+
+  var shareText = document.getElementById('puzzle-share-text');
+  var copy = document.getElementById('puzzle-share-copy');
+  var status = document.getElementById('puzzle-share-status');
+  if (shareText && copy && status) {
+    var clipboard = navigator.clipboard;
+    var canCopy = clipboard && typeof clipboard.writeText === 'function';
+    if (!canCopy) copy.textContent = 'Select result';
+    copy.addEventListener('click', async function () {
+      if (canCopy) {
+        try {
+          await clipboard.writeText(shareText.value);
+          status.textContent = 'Result copied.';
+          return;
+        } catch (e) { /* use manual copying */ }
+      }
+      shareText.focus();
+      shareText.select();
+      status.textContent = 'Result selected. Use your device’s Copy command.';
+    });
+    copy.hidden = false;
+  }
 
   var input = document.getElementById('puzzle-guess');
   var list = document.getElementById('puzzle-suggestions');

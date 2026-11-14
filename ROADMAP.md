@@ -126,8 +126,9 @@ R14 on 2026-10-01 so they ship before R4.
   day's car warms its lookup without delaying the page, and guess scoring
   gives both cached lookups one short deadline. Missing or slow data reads
   as a faded "Unknown" tile without affecting the outcome of a guess.
-- [ ] A shareable result grid (copy an emoji summary of the day's guesses, à
-  la Wordle).
+- [x] A shareable result grid: completed boards offer a spoiler-free emoji
+  summary with the UTC date, score, and puzzle link. Copy it with the button
+  or select the text manually.
 - [ ] A streak across days in `localStorage`, plus stats (games played, win
   rate, guess distribution) for signed-in players.
 

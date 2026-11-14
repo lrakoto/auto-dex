@@ -2576,6 +2576,12 @@ textarea:focus-visible,
 .puzzle-verdict.is-correct { color: #4ade80; }
 .puzzle-verdict.is-wrong { color: var(--danger); }
 .puzzle-verdict a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; color: inherit; }
+.puzzle-share { max-width: 32rem; margin: 1rem 0 0; }
+.puzzle-share .field-label { color: var(--text); }
+.puzzle-share-text { display: block; width: 100%; line-height: 1.4; resize: vertical; }
+.puzzle-share-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.puzzle-share-actions > :not([hidden]):not(:empty) { margin-top: 0.5rem; }
+.puzzle-share-actions [role="status"] { font-size: 0.85rem; color: var(--text); }
 .puzzle-form { display: flex; gap: 0.6rem; margin: 0; }
 .puzzle-input {
   flex: 1;

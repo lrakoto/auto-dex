@@ -23,13 +23,9 @@ const suggestLimiter = rateLimit({
   legacyHeaders: false
 });
 
-function todayKey(now = new Date()) {
-  return now.toISOString().slice(0, 10);
-}
-
 // A fresh board for today if there's none yet, or yesterday's is still there
-function state(req) {
-  const day = todayKey();
+function state(req, now) {
+  const day = now.toISOString().slice(0, 10);
   if (!req.session.puzzle || req.session.puzzle.day !== day) {
     req.session.puzzle = { day, guesses: [], done: false, won: false, error: null };
   }
@@ -38,10 +34,21 @@ function state(req) {
 
 const carPath = (make, model) => `/cars/car?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
 
+const shareFields = ['makeState', 'countryState', 'decadeState', 'bodyClassState', 'driveState', 'fuelState'];
+const shareTiles = new Map([['exact', '🟩'], ['close', '🟨'], ['wrong', '⬛']]);
+
+// Share only an allowlist of scores, never the answer or the guessed models.
+function resultText(board, siteUrl) {
+  const score = board.won ? board.guesses.length : 'X';
+  const rows = board.guesses.map(guess => shareFields.map(field => shareTiles.get(guess[field]) || '⬜').join(''));
+  return `AutoDex Daily Puzzle ${board.day} ${score}/${puzzle.MAX_GUESSES}\n\n${rows.join('\n')}\n\n${siteUrl}/puzzle`;
+}
+
 router.get('/', async (req, res) => {
   try {
-    const answer = await puzzle.getPuzzleCar();
-    const s = state(req);
+    const now = new Date();
+    const answer = await puzzle.getPuzzleCar(now);
+    const s = state(req, now);
     const error = s.error;
     s.error = null;
     res.render('puzzle', {
@@ -53,6 +60,7 @@ router.get('/', async (req, res) => {
       maxGuesses: puzzle.MAX_GUESSES,
       guessesLeft: puzzle.MAX_GUESSES - s.guesses.length,
       answerUrl: s.done && answer ? carPath(answer.make, answer.model) : null,
+      shareText: s.done && answer ? resultText(s, res.locals.siteUrl) : null,
       pageTitle: "Daily Car Puzzle — AutoDex",
       pageDescription: 'Guess today\'s mystery car in six tries. Every guess checks the make, country and decade against the answer.',
       canonicalPath: '/puzzle'
@@ -64,10 +72,11 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/guess', guessLimiter, async (req, res) => {
-  const s = state(req);
+  const now = new Date();
+  const s = state(req, now);
   if (s.done || s.guesses.length >= puzzle.MAX_GUESSES) return res.redirect('/puzzle');
   try {
-    const answer = await puzzle.getPuzzleCar();
+    const answer = await puzzle.getPuzzleCar(now);
     if (!answer) return res.redirect('/puzzle');
 
     const text = (req.body.guess || '').trim();
