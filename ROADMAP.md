@@ -299,6 +299,11 @@ R14 on 2026-10-01 so they ship before R4.
   with a versioned mapping from the catalog entry to the exact variant,
   poster, model, and attribution. The first pilot needs no database
   migration or public upload flow.
+- **Catalog handoff.** The fictional AutoDex Lab / Khronos Toy Car fixture
+  links its normal detail page to the pinned Toy Car lab. The shared local
+  opt-in gates the link and viewer. The catalog page makes no 3D requests,
+  and the lab starts with the poster. A verified real-car mapping is still
+  needed for the pilot.
 - **Sample size checkpoint.** Removing the fabric textures and repacking the
   geometry brought the Toy Car sample from 5.43 MB to 4.13 MB (24% smaller),
   excluding the viewer and poster. The car and glass geometry are unchanged.
