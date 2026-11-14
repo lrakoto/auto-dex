@@ -270,8 +270,9 @@ R14 on 2026-10-01 so they ship before R4.
   Textures are still served separately from the same origin under the existing
   CSP. At 390 pixels wide in desktop Chrome, the poster fit, the model
   loaded on demand, and dragging rotated the car. Retry recovered from a
-  one-time geometry download failure. Real-phone touch and load-time checks
-  are still pending.
+  one-time geometry download failure. Zoom and Reset view buttons worked with
+  mouse and keyboard at phone width in Chrome. Real-phone touch and load-time
+  checks are still pending.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before

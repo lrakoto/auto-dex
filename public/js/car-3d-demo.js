@@ -6,17 +6,39 @@
   const status = document.getElementById('car-3d-status');
   const stage = document.getElementById('car-3d-stage');
   const poster = document.getElementById('car-3d-poster');
-  if (!button || !status || !stage || !poster) return;
+  const controls = document.getElementById('car-3d-controls');
+  const zoomIn = document.getElementById('car-3d-zoom-in');
+  const zoomOut = document.getElementById('car-3d-zoom-out');
+  const reset = document.getElementById('car-3d-reset');
+  if (!button || !status || !stage || !poster || !controls || !zoomIn || !zoomOut || !reset) return;
 
   const assets = '/dev/3d/assets/';
   const timeoutMs = 20000;
+  const defaultOrbit = '35deg 72deg auto';
+  const zoomSteps = ['auto', '24deg', '18deg', '12deg'];
   let current;
   let moduleAttempts = 0;
   let modelRetry = 0;
+  let zoomLevel = 0;
+
+  function syncZoomControls() {
+    zoomIn.setAttribute('aria-disabled', String(zoomLevel === zoomSteps.length - 1));
+    zoomOut.setAttribute('aria-disabled', String(zoomLevel === 0));
+  }
+
+  function changeZoom(direction) {
+    if (stage.dataset.state !== 'ready') return;
+    const next = zoomLevel + direction;
+    if (next < 0 || next >= zoomSteps.length) return;
+    zoomLevel = next;
+    current.model.fieldOfView = zoomSteps[zoomLevel];
+    syncZoomControls();
+  }
 
   function update(state, label, message) {
     stage.dataset.state = state;
     poster.hidden = state === 'ready';
+    controls.hidden = state !== 'ready';
     button.textContent = label;
     if (state === 'loading') button.setAttribute('aria-disabled', 'true');
     else button.removeAttribute('aria-disabled');
@@ -51,9 +73,11 @@
     model.setAttribute('aria-describedby', 'car-3d-instructions');
     model.setAttribute('aria-hidden', 'true');
     model.setAttribute('camera-controls', '');
-    model.setAttribute('camera-orbit', '35deg 72deg auto');
+    model.setAttribute('camera-orbit', defaultOrbit);
     model.setAttribute('touch-action', 'pan-y');
     model.setAttribute('disable-zoom', '');
+    // The built-in Page Up and Page Down controls otherwise still zoom.
+    model.setAttribute('zoom-sensitivity', '0');
     model.setAttribute('interaction-prompt', 'none');
     model.setAttribute('loading', 'eager');
     model.inert = true;
@@ -62,6 +86,8 @@
       clearTimeout(attempt.timer);
       model.inert = false;
       model.removeAttribute('aria-hidden');
+      zoomLevel = 0;
+      syncZoomControls();
       update('ready', 'Show poster', '3D model loaded.');
     }, { once: true });
     model.addEventListener('error', () => {
@@ -109,6 +135,18 @@
       remove(current);
       update('idle', 'Load 3D model', 'Poster shown.');
     } else start();
+  });
+  zoomIn.addEventListener('click', () => changeZoom(1));
+  zoomOut.addEventListener('click', () => changeZoom(-1));
+  reset.addEventListener('click', () => {
+    if (stage.dataset.state !== 'ready') return;
+    const { model } = current;
+    zoomLevel = 0;
+    model.fieldOfView = zoomSteps[zoomLevel];
+    model.cameraOrbit = defaultOrbit;
+    model.cameraTarget = 'auto auto auto';
+    model.jumpCameraToGoal();
+    syncZoomControls();
   });
   button.hidden = false;
 })();
