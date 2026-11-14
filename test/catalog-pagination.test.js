@@ -56,4 +56,34 @@ describe('Catalog pagination', function() {
       assert.ok(res.text.includes(`class="pg-btn active" data-no-transition>${page}</a>`));
     }
   });
+
+  it('keeps the car tab, year filter and pagination when the upstream list is empty', async function() {
+    const extraRows = await db.car.bulkCreate([
+      { model: 'A Different Year Fixture', vehicle_type: 'car', year: 2004 },
+      { model: 'Pagination Commercial Fixture', vehicle_type: 'commercial', year: 1990 }
+    ].map(({ model, vehicle_type, year }) => ({
+      make: 'Volvo', model, vehicle_type, image: PLACEHOLDER_URL, favcount: 0, updated_img: false,
+      model_years: [year], year_min: year, year_max: year
+    })));
+    const getModels = carquery.getModels;
+    carquery.getModels = (make, options) => make === 'Volvo' ? Promise.resolve([]) : getModels(make, options);
+
+    try {
+      const url = '/cars?selectmake=Volvo&year=1990&page=2';
+      const page = await request(app).get(url).expect(200);
+      assert.match(page.text, /class="type-tab active" href="\/cars\?selectmake=Volvo" aria-current="page"/);
+      assert.match(page.text, /href="\/cars\?selectmake=Volvo&amp;type=commercial"/);
+      assert.match(page.text, /<option value="1990" selected>/);
+      assert.match(page.text, /<option value="2004"\s*>/);
+      assert.match(page.text, /Pagination Fixture 13/);
+      assert.doesNotMatch(page.text, /Pagination Fixture 12|Pagination Commercial Fixture/);
+
+      const fragment = await request(app).get(url + '&partial=1').expect(200);
+      assertFragment(fragment.text);
+      assert.match(fragment.text, /href="\/cars\?selectmake=Volvo&amp;year=1990&amp;page=1"/);
+    } finally {
+      carquery.getModels = getModels;
+      await db.car.destroy({ where: { id: extraRows.map(row => row.id) } });
+    }
+  });
 });
