@@ -132,8 +132,9 @@ R14 on 2026-10-01 so they ship before R4.
 - [x] A browser-saved streak for consecutive daily puzzle wins. The streak
   uses the same UTC date as the puzzle, counts each day once, and resets
   after a loss or missed day.
-- [ ] Account stats (games played, win rate, guess distribution) for
-  signed-in players.
+- [x] Account stats (games played, win rate, guess distribution) for
+  signed-in players. The account counts the first completed result per UTC
+  day, starting with puzzles played entirely while signed in.
 
 ### R5 — Recall alerts for garage cars
 - [x] Weekly job compares each garage car's NHTSA recalls with the last check

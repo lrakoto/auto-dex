@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const puzzle = require('../lib/puzzle');
+const db = require('../models');
 
 const guessLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -44,13 +45,63 @@ function resultText(board, siteUrl) {
   return `AutoDex Daily Puzzle ${board.day} ${score}/${puzzle.MAX_GUESSES}\n\n${rows.join('\n')}\n\n${siteUrl}/puzzle`;
 }
 
+async function savePendingResults(session, userId) {
+  if (!userId || !session.puzzleResultsPending?.length) return false;
+  const pending = session.puzzleResultsPending.filter(result => result.userId === userId);
+  if (!pending.length) return false;
+  try {
+    await db.puzzle_result.bulkCreate(pending, { ignoreDuplicates: true });
+    const remaining = session.puzzleResultsPending.filter(result => result.userId !== userId);
+    if (remaining.length) session.puzzleResultsPending = remaining;
+    else delete session.puzzleResultsPending;
+    return false;
+  } catch (err) {
+    console.log('PUZZLE RESULT SAVE ERROR:', err);
+    return true;
+  }
+}
+
+async function accountStats(userId) {
+  if (!userId) return null;
+  try {
+    const { fn, col } = db.Sequelize;
+    const groups = await db.puzzle_result.findAll({
+      where: { userId },
+      attributes: ['guessCount', [fn('COUNT', col('id')), 'games']],
+      group: ['guessCount'],
+      raw: true
+    });
+    const guessDistribution = Array(puzzle.MAX_GUESSES).fill(0);
+    let gamesPlayed = 0;
+    let wins = 0;
+    for (const { guessCount, games } of groups) {
+      const count = Number(games);
+      gamesPlayed += count;
+      if (guessCount !== null) {
+        guessDistribution[guessCount - 1] = count;
+        wins += count;
+      }
+    }
+    return { gamesPlayed, winRate: gamesPlayed ? Math.round(wins / gamesPlayed * 100) : 0, guessDistribution };
+  } catch (err) {
+    console.log('PUZZLE ACCOUNT STATS ERROR:', err);
+    return null;
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const now = new Date();
-    const answer = await puzzle.getPuzzleCar(now);
+    const userId = req.user?.id;
+    const [answer, pending] = await Promise.all([
+      puzzle.getPuzzleCar(now),
+      savePendingResults(req.session, userId)
+    ]);
+    const stats = await accountStats(userId);
     const s = state(req, now);
     const error = s.error;
     s.error = null;
+    res.set('Cache-Control', 'private, no-store');
     res.render('puzzle', {
       answer,
       guesses: s.guesses,
@@ -62,6 +113,8 @@ router.get('/', async (req, res) => {
       guessesLeft: puzzle.MAX_GUESSES - s.guesses.length,
       answerUrl: s.done && answer ? carPath(answer.make, answer.model) : null,
       shareText: s.done && answer ? resultText(s, res.locals.siteUrl) : null,
+      accountStats: stats,
+      accountStatsPending: pending,
       pageTitle: "Daily Car Puzzle — AutoDex",
       pageDescription: 'Guess today\'s mystery car in six tries. Every guess checks the make, country and decade against the answer.',
       canonicalPath: '/puzzle'
@@ -98,10 +151,23 @@ router.post('/guess', guessLimiter, async (req, res) => {
 
     const result = await puzzle.compareGuess(guessCar, answer);
     const correct = guessCar.id === answer.id;
+    const userId = req.user?.id || null;
+    // Login preserves the session. Keep existing guesses playable, but only
+    // credit a board if every scored guess belonged to the same account.
+    if (!s.guesses.length) s.playerId = userId;
+    else if (s.playerId !== userId) s.playerId = null;
     s.guesses.push({ ...result, correct });
     if (correct || s.guesses.length >= puzzle.MAX_GUESSES) {
       s.done = true;
       s.won = correct;
+      if (userId && s.playerId === userId) {
+        // Keep pending results separate from the board so a failed write can
+        // be retried even after the puzzle rolls over to the next UTC day.
+        const pending = req.session.puzzleResultsPending || [];
+        const result = { userId, puzzleDate: s.day, guessCount: correct ? s.guesses.length : null };
+        req.session.puzzleResultsPending = [...pending, result];
+        await savePendingResults(req.session, userId);
+      }
     }
     res.redirect('/puzzle');
   } catch (err) {
