@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const axios = require('axios');
 const app = require('../server');
@@ -61,7 +62,7 @@ describe('Fuel log', function() {
   describe('Garage car fuel log routes', function() {
     const alice = request.agent(app);
     const bob = request.agent(app);
-    let aliceUser, myCar;
+    let aliceUser, myCar, realGet;
 
     before(async function() {
       aliceUser = await createVerifiedUser(alice, db, { email: 'alice-fuel@example.com', name: 'Alice' });
@@ -71,7 +72,12 @@ describe('Fuel log', function() {
       myCar = await db.user_car.findOne({ where: { userId: aliceUser.id, make: 'Toyota', model: 'Prius' } });
     });
 
-    beforeEach(function() { cacheClear(); axios.get = async () => { throw new Error('no FuelEconomy.gov in sandbox'); }; });
+    beforeEach(function() {
+      realGet = axios.get;
+      cacheClear();
+      axios.get = async () => { throw new Error('no FuelEconomy.gov in sandbox'); };
+    });
+    afterEach(function() { axios.get = realGet; });
 
     it('adds and deletes fuel log entries, owner only', async function() {
       let token = await getCsrfToken(alice, '/garage');
@@ -131,6 +137,63 @@ describe('Fuel log', function() {
     it('degrades gracefully when FuelEconomy.gov is unreachable', async function() {
       const res = await alice.get(`/garage/car/${myCar.id}`).expect(200);
       if (!res.text.includes('Fuel Log')) throw new Error('page should still render without EPA data');
+    });
+
+    it('only compares measured MPG with an EPA estimate for the garage car’s model year', async function() {
+      const logs = await db.fuel_log.bulkCreate([
+        { userCarId: myCar.id, date: '2026-09-01', odometer: 10000, gallons: 10 },
+        { userCarId: myCar.id, date: '2026-09-10', odometer: 10300, gallons: 10 }
+      ]);
+      const fuelSite = 'https://www.fueleconomy.gov/ws/rest/vehicle/';
+      const cacheKeys = new Set();
+      const menus = [];
+      let sameYearAvailable = false;
+      async function clearFixtures() {
+        cacheClear();
+        if (!cacheKeys.size) return;
+        // cachedGet also persists responses in Postgres, including JSON null.
+        await db.sequelize.query('DELETE FROM api_cache WHERE key IN (:keys)', {
+          replacements: { keys: [...cacheKeys] }
+        });
+        cacheKeys.clear();
+      }
+      axios.get = async (url, { params } = {}) => {
+        if (!url.startsWith(fuelSite)) throw new Error('fixture has no external data');
+        cacheKeys.add(params ? `${url}?${new URLSearchParams(params)}` : url);
+        if (params) menus.push(params);
+        if (url.endsWith('/menu/options')) {
+          if (params.year === 2014 && params.model === 'Prius') return { data: { menuItem: { value: 'garage-prius-2014' } } };
+          if (sameYearAvailable && params.year === 2015 && params.model === 'Prius Two') {
+            return { data: { menuItem: { value: 'garage-prius-2015' } } };
+          }
+          return { data: null };
+        }
+        if (url.endsWith('/menu/model')) {
+          return { data: sameYearAvailable && params.year === 2015 ? { menuItem: { value: 'Prius Two' } } : null };
+        }
+        if (url.endsWith('/garage-prius-2014')) return { data: { year: 2014, comb08: 48 } };
+        if (url.endsWith('/garage-prius-2015')) return { data: { year: '2015', comb08: 50 } };
+        throw new Error('unexpected EPA record');
+      };
+
+      try {
+        const url = `/garage/car/${myCar.id}`;
+        const older = await alice.get(url).expect(200);
+        assert.match(older.text, /30\.0 mpg avg/);
+        assert.doesNotMatch(older.text, /EPA (?:estimate:|rates it at)/);
+        assert.deepEqual([...new Set(menus.map(({ year }) => year))], [2015]);
+
+        await clearFixtures();
+        menus.length = 0;
+        sameYearAvailable = true;
+        const exact = await alice.get(url).expect(200);
+        assert.match(exact.text, /30\.0 mpg avg \(EPA estimate: 50 mpg\)/);
+        assert.deepEqual([...new Set(menus.map(({ year }) => year))], [2015]);
+        assert.ok(menus.some(({ model }) => model === 'Prius Two'), 'same-year trim fallback was skipped');
+      } finally {
+        await clearFixtures();
+        await db.fuel_log.destroy({ where: { id: logs.map(log => log.id) } });
+      }
     });
   });
 });

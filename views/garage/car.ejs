@@ -125,7 +125,7 @@
     <% if (fuelLogs.length > 0) { %>
       <p class="text-muted">
         <%= fuelLogs.length %> fill-up<%= fuelLogs.length === 1 ? '' : 's' %>
-        <% if (fuelStats.avgMpg != null) { %> · <%= fuelStats.avgMpg.toFixed(1) %> mpg avg<% if (epaCombMpg) { %> (EPA rates it at <%= epaCombMpg %>)<% } %><% } %>
+        <% if (fuelStats.avgMpg != null) { %> · <%= fuelStats.avgMpg.toFixed(1) %> mpg avg<% if (epaCombMpg) { %> (EPA estimate: <%= epaCombMpg %> mpg)<% } %><% } %>
         <% if (fuelStats.costPerMile != null) { %> · <%= (fuelStats.costPerMile * 100).toFixed(1) %>&cent;/mi<% } %>
         <% if (fuelStats.totalCost != null) { %> · $<%= fuelStats.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> <% if (fuelStats.pricedFillUps === fuelStats.fillUps) { %>total<% } else { %>across <%= fuelStats.pricedFillUps %> priced fill-up<%= fuelStats.pricedFillUps === 1 ? '' : 's' %><% } %><% } %>
       </p>
