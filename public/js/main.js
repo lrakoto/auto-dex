@@ -932,14 +932,11 @@
       renderCompareTray();
       return;
     }
-    // Compare page: drop a column by rebuilding the URL without it
+    // The link drops the column. Keep the saved tray in sync on normal clicks.
     var rm = e.target.closest && e.target.closest('.compare-remove-btn');
-    if (rm) {
+    if (rm && !e.defaultPrevented && e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
       var make = rm.dataset.make, model = rm.dataset.model;
       writeCompare(readCompare().filter(function (c) { return !(c.make === make && c.model === model); }));
-      var params = new URLSearchParams(window.location.search);
-      var keep = params.getAll('c').filter(function (v) { return v !== make + '|' + model; });
-      window.location.href = '/cars/compare' + (keep.length ? '?' + keep.map(function (v) { return 'c=' + encodeURIComponent(v); }).join('&') : '');
     }
   });
 

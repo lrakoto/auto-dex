@@ -56,7 +56,7 @@
                   <span class="compare-make"><%= c.make %></span>
                   <span class="compare-model"><%= c.model %></span>
                 </a>
-                <button type="button" class="compare-remove-btn" data-make="<%= c.make %>" data-model="<%= c.model %>" aria-label="Remove <%= c.make %> <%= c.model %> from comparison">Remove</button>
+                <a class="compare-remove-btn" href="<%= c.removeHref %>" data-no-transition data-make="<%= c.make %>" data-model="<%= c.model %>" aria-label="Remove <%= c.make %> <%= c.model %> from comparison">Remove</a>
               </th>
             <% }) %>
           </tr>
