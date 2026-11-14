@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
@@ -163,16 +164,49 @@ describe('Features', function() {
       const token = await getCsrfToken(alice, '/garage');
       await form(alice, 'post', '/cars/spot', { make: 'Datsun', model: '240Z', location: 'PCH', _csrf: token }, token).expect(302);
       await form(alice, 'post', '/cars/spot', { make: 'Datsun', model: '240Z', _csrf: token }, token).expect(302);
-      const spots = await db.spotting.count({ where: { userId: aliceUser.id, carId: car.id } });
-      if (spots !== 2) throw new Error(`expected 2 spots, got ${spots}`);
+      const spots = await db.spotting.findAll({ where: { userId: aliceUser.id, carId: car.id }, order: [['id', 'ASC']] });
+      assert.deepEqual(spots.map(spot => spot.rarityXp), [20, 20]);
 
       const { getDexStats, getBadges } = require('../lib/dex');
       const dex = await getDexStats(aliceUser.id);
       const datsun = dex.makes.find(m => m.make === 'Datsun');
       if (!datsun || datsun.spotted !== 1 || datsun.total !== 2) throw new Error('dex progress wrong: ' + JSON.stringify(datsun));
+      assert.deepEqual(dex.progress, { xp: 20, level: 1, levelStartXp: 0, nextLevelXp: 100 });
       const badges = await getBadges(aliceUser.id, dex);
       if (!badges.find(b => b.id === 'first-spot').earned) throw new Error('First Spot not earned');
       if (badges.find(b => b.id === 'spotter').earned) throw new Error('Spotter earned too early');
+    });
+
+    it('snapshots the award in insertion order for concurrent spots and recomputes XP after deletion', async function() {
+      const classic = await db.car.create({ make: 'Triumph', model: 'Dex XP Classic', year_max: 1960 });
+      const token = await getCsrfToken(bob, '/garage');
+      const spot = () => form(bob, 'post', '/cars/spot', { make: classic.make, model: classic.model, rarityXp: 10 }, token).expect(302);
+      await Promise.all([spot(), spot()]);
+      const spots = await db.spotting.findAll({ where: { userId: bobUser.id, carId: classic.id }, order: [['id', 'ASC']] });
+      assert.deepEqual(spots.map(spot => spot.rarityXp), [50, 35]);
+
+      // The stored award survives a later change to the car's rarity inputs.
+      await classic.update({ year_max: new Date().getFullYear() });
+      const { getDexStats } = require('../lib/dex');
+      assert.equal((await getDexStats(bobUser.id)).progress.xp, 50);
+      const remove = id => form(bob, 'post', `/garage/spot/${id}?_method=DELETE`, {}, token).expect(302);
+      await remove(spots[0].id);
+      assert.equal((await getDexStats(bobUser.id)).progress.xp, 35);
+      await remove(spots[1].id);
+      assert.equal((await getDexStats(bobUser.id)).progress.xp, 0);
+    });
+
+    it('gives older sightings base XP once per model and uses the whole log for progress', async function() {
+      const cars = await db.car.bulkCreate(Array.from({ length: 13 }, (_, i) => ({ make: 'Pontiac', model: `Legacy Dex XP ${i}` })));
+      const sightings = cars.map(({ id }) => ({ userId: bobUser.id, carId: id }));
+      await db.spotting.bulkCreate([...sightings, sightings[0]]);
+      const { getDexStats } = require('../lib/dex');
+      const progress = (await getDexStats(bobUser.id)).progress;
+      assert.deepEqual(progress, { xp: 130, level: 2, levelStartXp: 100, nextLevelXp: 200 });
+      const res = await bob.get('/garage').expect(200);
+      assert.match(res.text, /id="dex-level"/);
+      assert.match(res.text, /130 XP/);
+      assert.match(res.text, /Level 2/);
     });
 
     it('rejects a spot with an unsafe photo URL', async function() {
@@ -192,6 +226,8 @@ describe('Features', function() {
     it('shows Dex and badges on the garage page', async function() {
       const res = await alice.get('/garage').expect(200);
       if (!res.text.includes('My Dex') || !res.text.includes('First Spot')) throw new Error('dex section missing');
+      assert.match(res.text, /id="dex-level"/);
+      assert.match(res.text, /20 XP/);
     });
   });
 
@@ -261,6 +297,9 @@ describe('Features', function() {
       await db.user_car.update({ notes: 'secret spare key under bumper' }, { where: { userId: aliceUser.id } });
       const res = await request(app).get('/u/Alice_Drives').expect(200);
       if (!res.text.includes("Alice's Garage")) throw new Error('title missing');
+      assert.match(res.text, /id="dex-level"/);
+      assert.match(res.text, /20 XP/);
+      assert.doesNotMatch(res.text, /130 XP|PCH/);
       if (res.text.includes('alice@example.com')) throw new Error('email leaked');
       if (res.text.includes('1HGCM82633A004352')) throw new Error('VIN leaked');
       if (res.text.includes('secret spare key')) throw new Error('notes leaked');

@@ -66,6 +66,7 @@ router.get('/', async (req, res) => {
       myCars: myCars.map(c => c.toJSON()),
       favorites: favorites.map(f => ({ ...f.toJSON(), photo: favoritePhoto(f) })),
       dex, badges,
+      dexProgress: dex.progress,
       recentSpots: recentSpots.map(s => s.toJSON()),
       pageTitle: 'My Garage — AutoDex',
       canonicalPath: '/garage',

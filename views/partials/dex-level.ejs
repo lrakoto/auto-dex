@@ -1,0 +1,9 @@
+<div class="media-card dex-level" id="dex-level">
+  <div class="dex-level-summary">
+    <strong>Level <%= dexProgress.level %></strong>
+    <span><%= dexProgress.xp.toLocaleString('en-US') %> XP</span>
+  </div>
+  <progress class="dex-level-bar" aria-label="Dex XP progress toward Level <%= dexProgress.level + 1 %>" value="<%= dexProgress.xp - dexProgress.levelStartXp %>" max="<%= dexProgress.nextLevelXp - dexProgress.levelStartXp %>"></progress>
+  <p class="dex-level-target"><%= (dexProgress.nextLevelXp - dexProgress.xp).toLocaleString('en-US') %> XP to Level <%= dexProgress.level + 1 %></p>
+  <p class="dex-level-note">Earn XP once per model, based on its age and prior community sightings.</p>
+</div>

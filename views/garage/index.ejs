@@ -96,6 +96,9 @@
   <hr class="my-5">
 
   <h2 class="text-left mb-3" id="dex">My Dex</h2>
+  <% if (typeof dexProgress !== 'undefined' && dexProgress) { %>
+    <%- include('../partials/dex-level', { dexProgress }) %>
+  <% } %>
   <% if (dex.spottedCars === 0) { %>
     <p class="text-muted">You haven't spotted anything yet. Open any car and hit <strong>👀 Spotted it</strong> when you see one in the wild.</p>
   <% } else { %>
