@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const ejs = require('ejs');
 const app = require('../server');
@@ -5,7 +6,7 @@ const db = require('../models');
 const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
 const puzzle = require('../lib/puzzle');
-const { getCsrfToken } = require('./helpers');
+const { extractCsrf, getCsrfToken } = require('./helpers');
 
 function assertShareResult(html, score, rows) {
   const field = html.match(/<textarea\b[^>]*\bid="puzzle-share-text"[^>]*>([\s\S]*?)<\/textarea>/);
@@ -222,6 +223,37 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('puzzle-tile--exact">Japan<')) throw new Error('country should read exact (Honda is Japanese too)');
       if (!res.text.includes('5 guesses left')) throw new Error('did not spend a guess');
       if (res.text.includes('id="puzzle-share-text"')) throw new Error('unfinished puzzle has a share result');
+    });
+
+    it('skips stale form guesses and shows the UTC rollover notice only once', async function() {
+      const agent = request.agent(app);
+      const page = await agent.get('/puzzle').expect(200);
+      const formDay = page.text.match(/<input type="hidden" name="day" value="(\d{4}-\d{2}-\d{2})">/);
+      assert.ok(formDay, 'guess form is missing its UTC puzzle day');
+      const yesterday = new Date(Date.parse(`${formDay[1]}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+      const token = extractCsrf(page.text);
+      const submit = (day, guess) => agent.post('/puzzle/guess').type('form').send({ day, guess, _csrf: token })
+        .expect(302).expect('Location', '/puzzle');
+      const notice = 'A new daily puzzle is up. Your guess was not used.';
+
+      // A known car would otherwise spend a guess on the current board.
+      await submit(yesterday, 'Toyota Puzzle Mystery');
+      const fresh = await agent.get('/puzzle').expect(200);
+      assert.ok(fresh.text.includes(notice));
+      assert.match(fresh.text, /6 guesses left/);
+      assert.doesNotMatch(fresh.text, /Got it in|class="puzzle-guess-name"/);
+
+      const reload = await agent.get('/puzzle').expect(200);
+      assert.ok(!reload.text.includes(notice));
+      assert.match(reload.text, /6 guesses left/);
+
+      await submit(formDay[1], 'Honda Puzzle Future');
+      await submit(yesterday, 'Toyota Puzzle Twin');
+      const ongoing = await agent.get('/puzzle').expect(200);
+      assert.ok(ongoing.text.includes(notice));
+      assert.match(ongoing.text, /5 guesses left/);
+      assert.match(ongoing.text, /class="puzzle-guess-name">Honda Puzzle Future<\/td>/);
+      assert.doesNotMatch(ongoing.text, /class="puzzle-guess-name">Toyota Puzzle Twin<\/td>/);
     });
 
     it('scores class, drive and fuel tiles on their own data, independent of make', async function() {

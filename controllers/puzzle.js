@@ -74,7 +74,14 @@ router.get('/', async (req, res) => {
 
 router.post('/guess', guessLimiter, async (req, res) => {
   const now = new Date();
+  // Use the form's date, since another tab may already have opened today's
+  // board. Forms rendered before the date field can still use their session.
+  const submittedDay = req.body.day ?? req.session.puzzle?.day;
   const s = state(req, now);
+  if (submittedDay !== undefined && submittedDay !== s.day) {
+    s.error = 'A new daily puzzle is up. Your guess was not used.';
+    return res.redirect('/puzzle');
+  }
   if (s.done || s.guesses.length >= puzzle.MAX_GUESSES) return res.redirect('/puzzle');
   try {
     const answer = await puzzle.getPuzzleCar(now);
