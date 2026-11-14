@@ -243,8 +243,8 @@ router.get('/timeline', async (req, res) => {
 
 // GET /cars?selectmake=Honda[&type=motorcycle][&year=2005][&page=2] — the
 // models of one vehicle type for a make, with a tab per type the make has.
-// Cars of curated car makes come from NHTSA's list (it includes models the
-// catalog hasn't seeded yet); everything else from classified catalog rows.
+// Cars of curated makes use NHTSA's list when it has models, including ones
+// not yet seeded. If the list is empty, use the classified catalog rows.
 router.get('/', async (req, res) => {
   const requested = typeof req.query.selectmake === 'string' ? req.query.selectmake.trim() : '';
   if (!requested) return res.redirect('/makes');
@@ -261,9 +261,9 @@ router.get('/', async (req, res) => {
       return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${wantedType ? typeParam(wantedType) : ''}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
     }
 
-    const listedCars = carquery.MAKES_LIST.includes(make);
+    const isCarMake = carquery.MAKES_LIST.includes(make);
     const [nhtsaCars, typeRows] = await Promise.all([
-      listedCars ? carquery.getModels(make) : [],
+      isCarMake ? carquery.getModels(make) : [],
       db.car.findAll({
         attributes: ['vehicle_type', [fn('COUNT', col('id')), 'n']],
         where: { make },
@@ -277,13 +277,14 @@ router.get('/', async (req, res) => {
       const t = r.vehicle_type || 'car';
       counts[t] = (counts[t] || 0) + parseInt(r.n, 10);
     });
-    if (listedCars) counts.car = nhtsaCars.length;
+    const hasListedCars = nhtsaCars.length > 0;
+    if (hasListedCars) counts.car = nhtsaCars.length;
     const tabs = TYPE_KEYS.filter(t => counts[t] > 0)
       .map(t => ({ key: t, label: carquery.VEHICLE_TYPES[t].label, count: counts[t] }));
     const type = wantedType || (tabs[0] ? tabs[0].key : (carquery.MOTORCYCLE_MAKES.includes(make) ? 'motorcycle' : 'car'));
 
     let pagedCars, total, yearOptions;
-    if (type === 'car' && listedCars) {
+    if (type === 'car' && hasListedCars) {
       let cqModels = nhtsaCars;
       // Year filter + dropdown come from the catalog's NHTSA model years
       // (jobs/years.js), for listed models only. Models with no year data
