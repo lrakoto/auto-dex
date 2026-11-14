@@ -174,7 +174,9 @@ Open `http://localhost:3000/dev/3d`. The sample uses no database records.
 Setup fetches the pinned [Khronos Toy Car](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/8f492390ddc7a2ae221a1369ef560589cf8c70fb/Models/ToyCar)
 and [model-viewer](https://github.com/google/model-viewer/tree/v4.0.0) into
 an ignored local folder with their licenses. No runtime requests go to the
-asset providers. Neither the demo route nor its downloaded assets are served
+asset providers. Setup removes the backdrop and repacks the model, keeping
+the original render as a poster. Rerun setup if you installed an earlier demo.
+Neither the demo route nor its downloaded assets are served
 in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
 for the real-car pilot.
 

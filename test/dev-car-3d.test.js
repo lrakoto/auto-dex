@@ -10,7 +10,6 @@ const registerDevCar3d = require('../controllers/dev-car-3d');
 const manifest = [
   'viewer.min.js', 'ToyCar.gltf', 'ToyCar.bin', 'ToyCar_normal.png',
   'ToyCar_emissive.png', 'ToyCar_basecolor.png', 'ToyCar_occlusion_roughness_metallic.png',
-  'Fabric_normal.png', 'Fabric_occlusion.png', 'Fabric_baseColor.png',
   'ToyCar_clearcoat.png', 'poster.jpg'
 ];
 
@@ -81,13 +80,14 @@ describe('Local 3D viewer lab', function () {
     await fs.writeFile(path.join(assets, 'ToyCar.gltf'), '{"asset":{"version":"2.0"}}');
     await fs.writeFile(path.join(assets, 'private.txt'), 'not public');
     await fs.writeFile(path.join(assets, '.not-public'), 'not public');
+    await fs.writeFile(path.join(assets, 'Fabric_normal.png'), 'old backdrop texture');
     await fs.symlink('private.txt', path.join(assets, 'ToyCar.bin'));
     const app = lab(enabled);
     await app.get('/dev/3d/assets/ToyCar.gltf')
       .expect('Content-Type', /^model\/gltf\+json\b/)
       .expect('Cache-Control', 'no-store')
       .expect(200);
-    for (const name of ['private.txt', '.not-public', 'ToyCar.bin', 'toycar.gltf', 'missing.png']) {
+    for (const name of ['private.txt', '.not-public', 'Fabric_normal.png', 'ToyCar.bin', 'toycar.gltf', 'missing.png']) {
       await app.get('/dev/3d/assets/' + name).expect(404);
     }
     await app.get('/dev/3d/assets/').expect(404);

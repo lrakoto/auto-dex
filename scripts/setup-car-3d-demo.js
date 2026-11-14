@@ -6,6 +6,7 @@ const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
+const trimToyCar = require('./trim-toy-car');
 
 const revision = '8f492390ddc7a2ae221a1369ef560589cf8c70fb';
 const sample = `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/${revision}/Models/ToyCar/`;
@@ -13,8 +14,7 @@ const sample = `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Asset
 const viewer = 'https://registry.npmjs.org/@google/model-viewer/-/model-viewer-4.0.0.tgz';
 const viewerSha512 = 'hf4mixP178gGtvWQq97a0uULr7k98BwJGRU3lvt12XnurOdLmZA/RPdW4tPsINNNQxZvmvQsjud4lZWre6WGNw==';
 const sampleFiles = ['ToyCar.gltf', 'ToyCar.bin', 'ToyCar_normal.png', 'ToyCar_emissive.png',
-  'ToyCar_basecolor.png', 'ToyCar_occlusion_roughness_metallic.png', 'Fabric_normal.png',
-  'Fabric_occlusion.png', 'Fabric_baseColor.png', 'ToyCar_clearcoat.png'];
+  'ToyCar_basecolor.png', 'ToyCar_occlusion_roughness_metallic.png', 'ToyCar_clearcoat.png'];
 
 async function fetchBytes(url) {
   const response = await globalThis.fetch(url, { signal: globalThis.AbortSignal.timeout(60000) });
@@ -23,7 +23,8 @@ async function fetchBytes(url) {
 }
 
 async function main() {
-  const dir = path.join(__dirname, '..', 'dev-assets', 'car-3d');
+  // Use a new folder so an older, untrimmed setup is never served as this build.
+  const dir = path.join(__dirname, '..', 'dev-assets', 'car-3d', 'car-only-v1');
   const staging = await fs.mkdtemp(path.join(os.tmpdir(), 'autodex-3d-'));
   try {
     const bytes = await fetchBytes(viewer);
@@ -42,10 +43,16 @@ async function main() {
       fetchBytes(`${sample}screenshot/screenshot.jpg`).then(poster => files.set('poster.jpg', poster)),
       fetchBytes(`${sample}LICENSE.md`).then(license => files.set('TOY-CAR-LICENSE.md', license))
     ]);
+    const { gltf, geometry } = trimToyCar(JSON.parse(files.get('ToyCar.gltf')), files.get('ToyCar.bin'));
+    files.set('ToyCar.gltf', JSON.stringify(gltf));
+    files.set('ToyCar.bin', geometry);
+    const modelBytes = sampleFiles.reduce((sum, name) => sum + Buffer.byteLength(files.get(name)), 0);
     await fs.mkdir(dir, { recursive: true });
-    await Promise.all([...files].map(([name, content]) => fs.writeFile(path.join(dir, name), content)));
-    const servedBytes = [...files].filter(([name]) => !name.includes('LICENSE')).reduce((sum, [, content]) => sum + content.length, 0);
-    console.log(`Local 3D sample ready (${(servedBytes / 1024 / 1024).toFixed(2)} MiB including the viewer and poster).`);
+    // Publish the manifest last so a failed initial setup won't show as ready.
+    await Promise.all([...files].filter(([name]) => name !== 'ToyCar.gltf')
+      .map(([name, content]) => fs.writeFile(path.join(dir, name), content)));
+    await fs.writeFile(path.join(dir, 'ToyCar.gltf'), files.get('ToyCar.gltf'));
+    console.log(`Local 3D sample ready (${(modelBytes / 1_000_000).toFixed(2)} MB for the model).`);
   } finally {
     await fs.rm(staging, { recursive: true, force: true });
   }
