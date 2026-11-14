@@ -27,7 +27,7 @@ describe('Fuel log', function() {
       // Miles driven since the first fill (1000) over the gallons at the later fills (11 + 12 = 23)
       if (Math.abs(stats.avgMpg - 1000 / 23) > 1e-9) throw new Error('avgMpg wrong: ' + stats.avgMpg);
       if (stats.totalCost !== 113.5) throw new Error('totalCost wrong: ' + stats.totalCost);
-      if (Math.abs(stats.costPerMile - 113.5 / 1000) > 1e-9) throw new Error('costPerMile wrong: ' + stats.costPerMile);
+      if (Math.abs(stats.costPerMile - 78.5 / 1000) > 1e-9) throw new Error('costPerMile wrong: ' + stats.costPerMile);
     });
 
     it('returns nulls instead of dividing by zero with fewer than two fill-ups', function() {
@@ -37,12 +37,21 @@ describe('Fuel log', function() {
       if (stats.costPerMile !== null) throw new Error('costPerMile should be null with no miles');
     });
 
-    it('withholds cost/mile (but not MPG) when any fill-up has no cost', function() {
+    it('calculates cost per mile without a price at the starting fill', function() {
       const logs = [
         { odometer: 10000, gallons: 10, cost: null },
-        { odometer: 10300, gallons: 10, cost: 30 }
+        { odometer: 10300, gallons: 10, cost: '30.00' }
       ];
       const stats = fuelStats(logs);
+      if (stats.costPerMile !== 0.10) throw new Error('costPerMile should use the later fill: ' + stats.costPerMile);
+      if (stats.totalCost !== 30) throw new Error('totalCost should only sum priced fill-ups');
+    });
+
+    it('withholds cost per mile when a measured fill has no price', function() {
+      const stats = fuelStats([
+        { odometer: 10000, gallons: 10, cost: 30 },
+        { odometer: 10300, gallons: 10, cost: null }
+      ]);
       if (stats.avgMpg !== 30) throw new Error('avgMpg should still compute: ' + stats.avgMpg);
       if (stats.costPerMile !== null) throw new Error('costPerMile should be null with a missing price');
       if (stats.totalCost !== 30) throw new Error('totalCost should only sum priced fill-ups');
@@ -106,6 +115,7 @@ describe('Fuel log', function() {
       const res = await alice.get(`/garage/car/${myCar.id}`).expect(200);
       if (!res.text.includes('Fuel Log')) throw new Error('fuel log section missing');
       if (!res.text.includes('30.0 mpg avg')) throw new Error('avg mpg not shown: expected 300mi/10gal = 30.0');
+      if (!res.text.includes('11.3&cent;/mi')) throw new Error('cost per mile should use $34 over 300 miles');
       if (!res.text.includes('$69.00 total')) throw new Error('total for fully priced fill-ups missing');
 
       // An unpriced fill-up: the sum says what it covers
@@ -113,6 +123,7 @@ describe('Fuel log', function() {
       const partial = await alice.get(`/garage/car/${myCar.id}`).expect(200);
       if (!partial.text.includes('$69.00 across 2 priced fill-ups')) throw new Error('partial total not labelled');
       if (partial.text.includes('$69.00 total')) throw new Error('partial sum still called the total');
+      if (partial.text.includes('&cent;/mi')) throw new Error('cost per mile shown with missing price');
 
       await db.fuel_log.destroy({ where: { userCarId: myCar.id } });
     });
