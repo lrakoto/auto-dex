@@ -304,12 +304,12 @@ R14 on 2026-10-01 so they ship before R4.
   one-time geometry download failure. Zoom and Reset view buttons worked with
   mouse and keyboard at phone width in Chrome. Real-phone touch and load-time
   checks are still pending.
-- **Mobile network benchmark (2026-11-14).** Local `/dev/3d` in desktop Chrome
+- **Mobile network baseline (2026-11-14).** Local `/dev/3d` in desktop Chrome
   157 on an Apple M2, using a 390 × 844 CSS-pixel viewport at 2×, touch
   emulation, and disabled HTTP cache. Each trial started on a fresh page.
   The 26 KB poster was the only file fetched from the demo's asset directory
-  before opening. Successful opens fetched 5,082,287 bytes in response
-  bodies, including 4,126,731 for the model and 955,556 for the viewer.
+  before opening. Successful opens without Brotli fetched 5,082,287 bytes
+  in response bodies, including 4,126,731 for the model and 955,556 for the viewer.
   Time runs from the click to the app's ready or timeout state. Chrome
   applied network throttling over loopback with desktop CPU and GPU performance.
 
@@ -319,6 +319,13 @@ R14 on 2026-10-01 so they ship before R4.
   | 10 / 3 Mbps | 75 ms | 3 | 4.51 s (4.47–4.55 s) |
   | 3 / 1 Mbps | 150 ms | 3 | 14.26 s (14.24–14.27 s) |
   | 1.5 / 0.75 Mbps | 200 ms | 1 | Timed out at 20.00 s. Poster stayed visible. |
+
+  With setup-time Brotli for the viewer, manifest, and geometry, complete
+  opens transferred 2,903,423 bytes (43% fewer). The browser decoded the
+  original bytes and still fetched only the poster from the asset directory
+  before opening. Under the same throttled profiles, median click-to-ready
+  time was 2.73 s at 10 Mbps, 8.43 s at 3 Mbps, and 16.36 s at 1.5 Mbps.
+  All three trials at each speed reached ready.
 
   Measure the first real asset and viewer bytes together on a real phone
   before setting the pilot's mobile performance budget.

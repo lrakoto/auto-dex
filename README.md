@@ -175,7 +175,9 @@ Setup fetches the pinned [Khronos Toy Car](https://github.com/KhronosGroup/glTF-
 and [model-viewer](https://github.com/google/model-viewer/tree/v4.0.0) into
 an ignored local folder with their licenses. No runtime requests go to the
 asset providers. Setup removes the backdrop and repacks the model, keeping
-the original render as a poster. Rerun setup if you installed an earlier demo.
+the original render as a poster. It also prepares lossless Brotli copies of
+the geometry, manifest, and viewer script for browsers that accept Brotli.
+Rerun setup to add these files to an existing demo installation.
 Neither the demo route nor its downloaded assets are served
 in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
 for the real-car pilot.
