@@ -264,6 +264,12 @@ R14 on 2026-10-01 so they ship before R4.
   with a versioned mapping from the catalog entry to the exact variant,
   poster, model, and attribution. The first pilot needs no database
   migration or public upload flow.
+- **Sample size checkpoint.** The current Toy Car glTF, geometry, and
+  textures total 5.43 MB, excluding the viewer and poster. A car-only sample
+  is estimated at 4.14 MB if the fabric textures and geometry are physically
+  removed and the buffer repacked; hiding the cloth alone leaves those
+  geometry bytes. Keep separate same-origin textures and avoid decoder
+  dependencies under the existing CSP. Real-phone testing is still pending.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
