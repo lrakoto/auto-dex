@@ -14,6 +14,7 @@ function element() {
     dataset: {}, hidden: false,
     get src() { return attrs.get('src'); },
     set src(value) { attrs.set('src', value); },
+    getAttribute(name) { return attrs.get(name) ?? null; },
     setAttribute(name, value) { attrs.set(name, value); },
     removeAttribute(name) { attrs.delete(name); },
     addEventListener(type, handler, { once } = {}) { listeners.set(type, { handler, once }); },
@@ -29,17 +30,28 @@ function element() {
 
 function loadDemo() {
   const button = element(), stage = element(), poster = element(), status = element();
+  const controls = element(), zoomIn = element(), zoomOut = element(), reset = element();
   const modules = [], models = [], timers = new Map();
   let registered = false, nextTimer = 0;
   stage.dataset.state = 'idle';
-  button.hidden = true;
+  controls.hidden = button.hidden = true;
   stage.appendChild = model => models.push(model);
-  const nodes = { 'car-3d-load': button, 'car-3d-stage': stage, 'car-3d-poster': poster, 'car-3d-status': status };
+  const nodes = {
+    'car-3d-load': button, 'car-3d-stage': stage, 'car-3d-poster': poster, 'car-3d-status': status,
+    'car-3d-controls': controls, 'car-3d-zoom-in': zoomIn, 'car-3d-zoom-out': zoomOut, 'car-3d-reset': reset
+  };
   const customElements = { get: name => registered && name === 'model-viewer' ? function ModelViewer() {} : undefined };
   vm.runInNewContext(source, {
     document: {
       getElementById: id => nodes[id] || null,
-      createElement: element,
+      createElement(tag) {
+        const viewer = element();
+        if (tag === 'model-viewer') Object.assign(viewer, {
+          fieldOfView: 'auto', jumps: 0,
+          jumpCameraToGoal() { this.jumps++; }
+        });
+        return viewer;
+      },
       head: { appendChild: module => modules.push(module) }
     },
     window: { customElements },
@@ -47,7 +59,7 @@ function loadDemo() {
     clearTimeout(id) { timers.delete(id); }
   }, { filename: scriptPath });
   return {
-    button, stage, poster, modules, models,
+    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset,
     click: () => button.emit('click'),
     installViewer() { registered = true; modules[0].emit('load'); },
     expireTimers() {
@@ -109,5 +121,51 @@ describe('Local 3D viewer in the browser', function() {
     demo.models[1].emit('load');
     assert.equal(demo.stage.dataset.state, 'ready');
     assert.equal(demo.poster.hidden, true);
+  });
+
+  it('offers bounded camera controls only while the model is ready and restores the initial view', function() {
+    const demo = loadDemo();
+    assert.equal(demo.controls.hidden, true);
+    demo.click();
+    demo.installViewer();
+    const [model] = demo.models;
+    assert.equal(demo.controls.hidden, true);
+    demo.zoomIn.emit('click');
+    assert.equal(model.fieldOfView, 'auto');
+    model.emit('load');
+
+    assert.equal(demo.controls.hidden, false);
+    assert.equal(demo.zoomOut.getAttribute('aria-disabled'), 'true');
+    demo.zoomOut.emit('click');
+    assert.equal(model.fieldOfView, 'auto');
+    for (const step of ['24deg', '18deg', '12deg']) {
+      demo.zoomIn.emit('click');
+      assert.equal(model.fieldOfView, step);
+    }
+    assert.equal(demo.zoomIn.getAttribute('aria-disabled'), 'true');
+    demo.zoomIn.emit('click');
+    assert.equal(model.fieldOfView, '12deg');
+    demo.zoomOut.emit('click');
+    assert.equal(model.fieldOfView, '18deg');
+    assert.equal(demo.zoomIn.getAttribute('aria-disabled'), 'false');
+
+    model.cameraOrbit = '60deg 80deg 0.5m';
+    model.cameraTarget = '0m 0.02m 0m';
+    demo.reset.emit('click');
+    assert.equal(model.fieldOfView, 'auto');
+    assert.equal(model.cameraOrbit, '35deg 72deg auto');
+    assert.equal(model.cameraTarget, 'auto auto auto');
+    assert.equal(model.jumps, 1);
+    assert.equal(demo.zoomOut.getAttribute('aria-disabled'), 'true');
+
+    demo.click();
+    assert.equal(demo.controls.hidden, true);
+    assert.equal(demo.poster.hidden, false);
+    demo.click();
+    demo.models[1].emit('load');
+    assert.equal(demo.controls.hidden, false);
+    demo.models[1].emit('error');
+    assert.equal(demo.controls.hidden, true);
+    assert.equal(demo.poster.hidden, false);
   });
 });

@@ -116,6 +116,28 @@ h2 { margin-top: 0.2rem; font-size: clamp(1.25rem, 3vw, 1.6rem); }
 .lab-poster { z-index: 1; object-fit: contain; background: #0c111d; }
 .lab-stage[data-state="loading"] model-viewer { pointer-events: none; }
 .lab-stage model-viewer:focus-within { outline: 2px solid var(--accent); outline-offset: -3px; }
+.lab-camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.95rem clamp(0.9rem, 3vw, 1.35rem) 0;
+}
+.lab-camera-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--edge);
+  border-radius: 0.5rem;
+  background: var(--background);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lab-camera-controls button:enabled:not([aria-disabled="true"]):hover { border-color: var(--accent); color: var(--accent); }
+.lab-camera-controls button:disabled,
+.lab-camera-controls button[aria-disabled="true"] { color: var(--muted); opacity: 0.65; cursor: default; }
 .lab-credit { border-top: 1px solid var(--edge); }
 
 .lab-missing {
