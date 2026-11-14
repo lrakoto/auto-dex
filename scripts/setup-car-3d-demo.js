@@ -6,6 +6,8 @@ const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
+const { brotliCompressSync, constants } = require('node:zlib');
+const { assetRoot, brotliAssets } = require('../config/car-3d');
 const trimToyCar = require('./trim-toy-car');
 
 const revision = '8f492390ddc7a2ae221a1369ef560589cf8c70fb';
@@ -22,9 +24,23 @@ async function fetchBytes(url) {
   return Buffer.from(await response.arrayBuffer());
 }
 
+async function installAssets(files) {
+  await fs.mkdir(assetRoot, { recursive: true });
+  const pending = await fs.mkdtemp(path.join(assetRoot, '.setup-'));
+  try {
+    await Promise.all(Array.from(files, ([name, content]) => fs.writeFile(path.join(pending, name), content)));
+    // Rename each completed file into place on the same filesystem. The
+    // original manifest is last so an incomplete setup won't appear ready.
+    for (const name of files.keys()) {
+      if (name !== 'ToyCar.gltf') await fs.rename(path.join(pending, name), path.join(assetRoot, name));
+    }
+    await fs.rename(path.join(pending, 'ToyCar.gltf'), path.join(assetRoot, 'ToyCar.gltf'));
+  } finally {
+    await fs.rm(pending, { recursive: true, force: true });
+  }
+}
+
 async function main() {
-  // Use a new folder so an older, untrimmed setup is never served as this build.
-  const dir = path.join(__dirname, '..', 'dev-assets', 'car-3d', 'car-only-v1');
   const staging = await fs.mkdtemp(path.join(os.tmpdir(), 'autodex-3d-'));
   try {
     const bytes = await fetchBytes(viewer);
@@ -46,12 +62,12 @@ async function main() {
     const { gltf, geometry } = trimToyCar(JSON.parse(files.get('ToyCar.gltf')), files.get('ToyCar.bin'));
     files.set('ToyCar.gltf', JSON.stringify(gltf));
     files.set('ToyCar.bin', geometry);
+    const brotliOptions = { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } };
+    for (const name of brotliAssets) {
+      files.set(`${name}.br`, brotliCompressSync(files.get(name), brotliOptions));
+    }
     const modelBytes = sampleFiles.reduce((sum, name) => sum + Buffer.byteLength(files.get(name)), 0);
-    await fs.mkdir(dir, { recursive: true });
-    // Publish the manifest last so a failed initial setup won't show as ready.
-    await Promise.all([...files].filter(([name]) => name !== 'ToyCar.gltf')
-      .map(([name, content]) => fs.writeFile(path.join(dir, name), content)));
-    await fs.writeFile(path.join(dir, 'ToyCar.gltf'), files.get('ToyCar.gltf'));
+    await installAssets(files);
     console.log(`Local 3D sample ready (${(modelBytes / 1_000_000).toFixed(2)} MB for the model).`);
   } finally {
     await fs.rm(staging, { recursive: true, force: true });
