@@ -104,36 +104,38 @@ const EXPLORE_SORTS = {
 
 router.get('/explore', async (req, res) => {
   const { Op } = require('sequelize');
-  const MAKES = carquery.ALL_MAKES;
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const str = v => (typeof v === 'string' ? v : '');
   const firstDecade = 1980;
   const lastDecade = Math.floor(new Date().getFullYear() / 10) * 10;
   const decades = [];
   for (let d = lastDecade; d >= firstDecade; d -= 10) decades.push(d);
-  const countries = [...new Set(MAKES.map(getMakeCountry).filter(Boolean))].sort();
-
   const decade = decades.includes(parseInt(req.query.decade, 10)) ? parseInt(req.query.decade, 10) : null;
-  const country = countries.includes(str(req.query.country)) ? str(req.query.country) : '';
-  const make = MAKES.includes(str(req.query.make)) ? str(req.query.make) : '';
   const type = req.query.type === 'all' ? 'all' : (TYPE_KEYS.includes(req.query.type) ? req.query.type : 'car');
   const photos = req.query.photos === '1';
   const sort = EXPLORE_SORTS[req.query.sort] ? req.query.sort : 'popular';
 
-  const where = {};
-  const makes = MAKES.filter(m => (!make || m === make) && (!country || getMakeCountry(m) === country));
-  where.make = { [Op.in]: makes };
-  if (type !== 'all') Object.assign(where, vehicleTypeWhere(type));
-  if (decade) {
-    const span = [];
-    for (let y = decade; y < decade + 10; y++) span.push(y);
-    where.model_years = { [Op.overlap]: span };
-  }
-  if (photos) where.image = {
-    [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: PLACEHOLDER_URL }, { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN }]
-  };
-
   try {
+    // Include the makes stored in AutoDex, including commercial manufacturers
+    // outside the curated car and motorcycle lists.
+    const catalogMakes = await db.car.findAll({ attributes: ['make'], group: ['make'], raw: true });
+    const makesList = [...new Set([...carquery.ALL_MAKES, ...catalogMakes.map(row => row.make).filter(make => make?.trim())])]
+      .sort((a, b) => a.localeCompare(b));
+    const countries = [...new Set(makesList.map(getMakeCountry).filter(Boolean))].sort();
+    const country = countries.includes(str(req.query.country)) ? str(req.query.country) : '';
+    const make = makesList.includes(str(req.query.make)) ? str(req.query.make) : '';
+    const makes = makesList.filter(m => (!make || m === make) && (!country || getMakeCountry(m) === country));
+    const where = { make: { [Op.in]: makes } };
+    if (type !== 'all') Object.assign(where, vehicleTypeWhere(type));
+    if (decade) {
+      const span = [];
+      for (let y = decade; y < decade + 10; y++) span.push(y);
+      where.model_years = { [Op.overlap]: span };
+    }
+    if (photos) where.image = {
+      [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: PLACEHOLDER_URL }, { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN }]
+    };
+
     const { rows, count } = makes.length === 0 ? { rows: [], count: 0 } : await db.car.findAndCountAll({
       where,
       order: EXPLORE_SORTS[sort],
@@ -178,7 +180,7 @@ router.get('/explore', async (req, res) => {
       return res.render('partials/car-grid', { ...viewData, layout: false });
     }
     Object.assign(viewData, {
-      decades, countries, makesList: MAKES,
+      decades, countries, makesList,
       vehicleTypes: TYPE_KEYS.map(k => ({ key: k, label: carquery.VEHICLE_TYPES[k].label })),
       filters: { decade, country, make, photos, sort, type },
       pageTitle: `Explore ${label === 'those filters' ? noun : label + ' ' + noun} — AutoDex`,

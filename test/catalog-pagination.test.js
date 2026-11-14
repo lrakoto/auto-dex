@@ -46,6 +46,37 @@ describe('Catalog pagination', function() {
     assert.match(res.text, /href="\/cars\/explore\?decade=1990&amp;make=Volvo&amp;sort=az&amp;page=1"/);
   });
 
+  it('includes catalog-only manufacturers in Explore without weakening make and country filters', async function() {
+    const make = 'Catalog Hauler Works';
+    const model = 'Catalog Hauler Fixture';
+    const row = await db.car.create({
+      make, model, image: PLACEHOLDER_URL, favcount: 100000, updated_img: false,
+      vehicle_type: 'commercial', model_years: [1990], year_min: 1990, year_max: 1990
+    });
+    try {
+      const broad = await request(app).get('/cars/explore?type=commercial&sort=popular').expect(200);
+      assert.match(broad.text, /<option value="Catalog Hauler Works"\s*>Catalog Hauler Works<\/option>/);
+      assert.match(broad.text, /class="card-model">Catalog Hauler Fixture<\/span>/);
+      assert.doesNotMatch(broad.text, /class="card-model">Pagination Fixture/);
+
+      const makeUrl = `make=${encodeURIComponent(make)}`;
+      const direct = await request(app).get(`/cars/explore?type=commercial&${makeUrl}`).expect(200);
+      assert.match(direct.text, /<option value="Catalog Hauler Works" selected>Catalog Hauler Works<\/option>/);
+      assert.match(direct.text, /class="card-model">Catalog Hauler Fixture<\/span>/);
+
+      const japan = await request(app).get('/cars/explore?type=all&country=Japan&sort=popular').expect(200);
+      assert.match(japan.text, /<option value="Japan" selected>Japan<\/option>/);
+      assert.doesNotMatch(japan.text, /class="card-model">Catalog Hauler Fixture<\/span>/);
+
+      // The known Swedish Volvo fixtures would leak if the make filter vanished.
+      const mismatch = await request(app).get(`/cars/explore?type=all&country=Sweden&${makeUrl}`).expect(200);
+      assert.match(mismatch.text, /No vehicles match these filters/);
+      assert.doesNotMatch(mismatch.text, /class="card-model"/);
+    } finally {
+      await db.car.destroy({ where: { id: row.id } });
+    }
+  });
+
   it('serves a complete page with the matching results for normal navigation', async function() {
     for (const [page, present, absent] of [[1, models[0], models[12]], [2, models[12], models[0]]]) {
       const res = await request(app).get(`/cars?selectmake=Volvo&page=${page}`).expect(200);
