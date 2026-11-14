@@ -270,7 +270,7 @@ router.get('/car/:id', async (req, res) => {
         where: { userCarId: car.id },
         order: [['odometer', 'DESC'], ['id', 'DESC']]
       }),
-      getFuelSpecs(car.make, car.model, parseInt(car.year, 10) || undefined),
+      getFuelSpecs(car.make, car.model, car.year, { exactYear: true }),
       db.build_entry.findAll({
         where: { userCarId: car.id },
         order: [['date', 'DESC'], ['id', 'DESC']]
@@ -290,7 +290,7 @@ router.get('/car/:id', async (req, res) => {
       totalCost,
       fuelLogs: fuelLogs.map(l => l.toJSON()),
       fuelStats: fuelStats(fuelLogs),
-      epaCombMpg: epaSpecs ? epaSpecs.combMpg : null,
+      epaCombMpg: epaSpecs?.combMpg ?? null,
       buildEntries: buildEntries.map(b => b.toJSON()),
       buildTotal: buildEntries.reduce((sum, b) => sum + (b.cost != null ? Number(b.cost) : 0), 0),
       today: new Date().toISOString().slice(0, 10),

@@ -71,6 +71,18 @@ describe('FuelEconomy.gov running-cost specs', function() {
       assert.equal(await carinfo.getFuelSpecs('Dacia', 'Duster', 2025), null);
     });
 
+    it('rejects a mismatched vehicle year and ignores unavailable MPG in exact-year results', async function() {
+      axios.get = async (url, { params } = {}) => {
+        if (params) return { data: { menuItem: { value: params.model } } };
+        const year = url.endsWith('/ExactYearWrong') ? 2023 : 2024;
+        return { data: { year, comb08: '-1' } };
+      };
+      const options = { exactYear: true };
+      assert.equal(await carinfo.getFuelSpecs('Fixture', 'ExactYearWrong', 2024, options), null);
+      const specs = await carinfo.getFuelSpecs('Fixture', 'ExactYearUnavailable', 2024, options);
+      assert.equal(specs.combMpg, null);
+    });
+
     it('reports overspend as a negative fiveYearSavings, left for callers to format', async function() {
       axios.get = async url => {
         if (url.includes('/menu/options')) return { data: { menuItem: { value: '1' } } };
