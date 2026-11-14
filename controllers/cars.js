@@ -11,6 +11,7 @@ const carinfo = require('../lib/carinfo');
 const { sizeComparison, formatDims } = require('../lib/sizes');
 const nhtsa = require('../lib/nhtsa'); // getSafetyRatings / getComplaints via the module so tests can stub them
 const carquery = require('../config/carquery'); // getModels via the module so tests can stub it
+const { catalogPreviewFor } = require('../config/car-3d');
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
 const coolWall = require('../lib/coolWall');
@@ -443,6 +444,8 @@ router.get('/', async (req, res) => {
       const heroImage = gallery.find(g => g.url === image);
       const heroCredit = photoCredit(image, heroImage);
       const cool = await coolWall.getCarCool(car && car.id, req.user && req.user.id);
+      const local3dPreview = catalogPreviewFor(car);
+      if (local3dPreview) res.set('Cache-Control', 'no-store');
 
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
@@ -458,6 +461,8 @@ router.get('/', async (req, res) => {
         coolTiers: coolWall.TIERS,
         carRarity,
         rarityTiers: rarity.TIERS,
+        local3dPreview,
+        noindex: Boolean(local3dPreview),
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
         pageDescription: wikiSummary ? wikiSummary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
         canonicalPath: carPath(make, model),

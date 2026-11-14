@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const axios = require('axios');
 const { escapeXML } = require('ejs');
@@ -5,6 +6,7 @@ const app = require('../server');
 const db = require('../models');
 const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
+const nhtsa = require('../lib/nhtsa');
 const { cacheClear } = require('../lib/cache');
 const { addImage } = require('../lib/gallery');
 const { buildTimeline } = require('../lib/timeline');
@@ -72,6 +74,55 @@ describe('Catalog', function() {
         throw new Error('asked for the wrong vehicle types: ' + asked.join(' '));
       }
     });
+  });
+
+  it('links only the exact local preview car to the 3D lab when explicitly enabled', async function () {
+    const lookups = stubLookups({});
+    const realNhtsa = { getSafetyRatings: nhtsa.getSafetyRatings, getComplaints: nhtsa.getComplaints };
+    const previous = { NODE_ENV: process.env.NODE_ENV, ENABLE_3D_DEMO: process.env.ENABLE_3D_DEMO };
+    const make = 'AutoDex Lab';
+    const models = ['Khronos Toy Car', 'Khronos Toy Car Sport'];
+    const page = model => '/cars/car?make=' + encodeURIComponent(make) + '&model=' + encodeURIComponent(model);
+    const previewId = /\bid="local-3d-preview"/;
+    const previewLink = /<a\b(?=[^>]*\bid="local-3d-preview")(?=[^>]*\bhref="\/dev\/3d")[^>]*>/;
+    const fixtureIds = [];
+
+    nhtsa.getSafetyRatings = async () => null;
+    nhtsa.getComplaints = async () => null;
+    try {
+      const fixtures = await db.car.bulkCreate(models.map(model => ({
+        make, model, image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'car'
+      })));
+      fixtureIds.push(...fixtures.map(row => row.id));
+      const [exact, near] = models;
+
+      process.env.NODE_ENV = 'test';
+      delete process.env.ENABLE_3D_DEMO;
+      assert.doesNotMatch((await request(app).get(page(exact)).expect(200)).text, previewId);
+
+      process.env.ENABLE_3D_DEMO = '1';
+      const enabled = await request(app).get(page(exact)).expect(200).expect('Cache-Control', 'no-store');
+      assert.match(enabled.text, previewLink);
+      assert.match(enabled.text, /name="robots" content="noindex, nofollow"/);
+      assert.doesNotMatch(enabled.text, /<model-viewer\b|\/js\/car-3d-demo\.js|\/dev\/3d\/assets\//i);
+      assert.doesNotMatch((await request(app).get(page(near)).expect(200)).text, previewId);
+
+      // The real app remains loaded against the test DB throughout this test.
+      await fixtures[0].update({ vehicle_type: 'motorcycle' });
+      assert.doesNotMatch((await request(app).get(page(exact)).expect(200)).text, previewId);
+      await fixtures[0].update({ vehicle_type: 'car' });
+
+      process.env.NODE_ENV = 'production';
+      assert.doesNotMatch((await request(app).get(page(exact)).expect(200)).text, previewId);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      Object.assign(nhtsa, realNhtsa);
+      lookups.restore();
+      if (fixtureIds.length) await db.car.destroy({ where: { id: fixtureIds } });
+    }
   });
 
   describe('car and make URLs', function() {

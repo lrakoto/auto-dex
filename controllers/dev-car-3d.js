@@ -29,7 +29,7 @@ module.exports = function registerDevCar3d(app, {
   env = process.env,
   assetRoot = demo.assetRoot
 } = {}) {
-  if (env.ENABLE_3D_DEMO !== '1' || !['development', 'test'].includes(env.NODE_ENV)) return;
+  if (!demo.isEnabled(env)) return;
 
   const root = path.resolve(assetRoot);
   const router = express.Router({ caseSensitive: true });
@@ -78,5 +78,5 @@ module.exports = function registerDevCar3d(app, {
   router.use((req, res) => res.sendStatus(404));
   // Express's string mounts best match /dev/3d and descendants, including
   // a trailing slash, without capturing another route's prefix.
-  app.use('/dev/3d', router);
+  app.use(demo.labPath, router);
 };
