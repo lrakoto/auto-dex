@@ -487,7 +487,7 @@ router.get('/', async (req, res) => {
       for (const hit of await Promise.all(pairs.map(p => lookupCatalogCar(p.make, p.model)))) {
         if (hit && !hits.some(h => h.make === hit.make && h.model === hit.model)) hits.push(hit);
       }
-      const cars = await Promise.all(hits.map(async ({ make, model, car, type }) => {
+      const cars = await Promise.all(hits.map(async ({ make, model, car, type }, index) => {
         const passenger = type === 'car'; // see the detail page
         const [wiki, carSpecs, safetyRatings] = await Promise.all([
           carinfo.getWikiSummary(make, model),
@@ -498,8 +498,13 @@ router.get('/', async (req, res) => {
         const factMap = {};
         facts.forEach(f => { factMap[f.label] = f.values.join(', '); });
         const mmOf = label => (facts.find(f => f.label === label) || {}).mm || null;
+        const remaining = new URLSearchParams();
+        hits.forEach((hit, otherIndex) => {
+          if (otherIndex !== index) remaining.append('c', `${hit.make}|${hit.model}`);
+        });
         return {
           make, model,
+          removeHref: remaining.size ? `/cars/compare?${remaining}` : '/cars/compare',
           image: car && car.image ? car.image : PLACEHOLDER_URL,
           favcount: car ? car.favcount : 0,
           years: carinfo.formatYears(car),

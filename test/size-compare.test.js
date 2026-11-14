@@ -109,6 +109,13 @@ describe('Size comparison (R11)', function() {
     });
     after(function() { Object.assign(carinfo, { getWikiSummary: real.getWikiSummary, getFuelSpecs: real.getFuelSpecs, getWikidataFacts: real.getWikidataFacts }); carquery.getModels = real.getModels; nhtsa.getSafetyRatings = real.getSafetyRatings; });
 
+    function removeLinks(html) {
+      return [...html.matchAll(/<a\b[^>]*\bclass="compare-remove-btn"[^>]*>/g)].map(([tag]) => ({
+        make: /\bdata-make="([^"]*)"/.exec(tag)?.[1],
+        href: /\bhref="([^"]*)"/.exec(tag)?.[1].replaceAll('&amp;', '&')
+      }));
+    }
+
     it('draws side and front views to scale with a legend', async function() {
       const res = await request(app).get('/cars/compare?c=Tesla|Model%203&c=Fiat|500&c=Lancia|Flavia').expect(200);
       assert.ok(res.text.includes('id="size-heading"'), 'size section missing');
@@ -122,6 +129,36 @@ describe('Size comparison (R11)', function() {
     it('leaves the section out when no compared car has dimensions', async function() {
       const res = await request(app).get('/cars/compare?c=Lancia|Flavia').expect(200);
       assert.ok(!res.text.includes('id="size-heading"'));
+    });
+
+    it('removes a car from a shared comparison even when aliases repeat it', async function() {
+      const res = await request(app)
+        .get('/cars/compare?c=tEsLa|moDEL%203&c=Tesla|Model%203&c=fIaT|500').expect(200);
+      const links = removeLinks(res.text);
+      assert.deepEqual(links.map(link => link.make), ['Tesla', 'Fiat']);
+      const destination = new URL(links[0].href, 'https://autodex.example');
+      assert.equal(destination.pathname, '/cars/compare');
+      assert.deepEqual(destination.searchParams.getAll('c'), ['Fiat|500']);
+
+      const remaining = await request(app).get(links[0].href).expect(200);
+      assert.deepEqual(removeLinks(remaining.text), [{ make: 'Fiat', href: '/cars/compare' }]);
+      assert.match(remaining.text, /class="compare-model">500<\/span>/);
+      assert.doesNotMatch(remaining.text, /class="compare-model">Model 3<\/span>/);
+
+      const empty = await request(app).get(removeLinks(remaining.text)[0].href).expect(200);
+      assert.match(empty.text, /Nothing to compare yet/);
+    });
+
+    it('keeps the other vehicles in their original order with catalog spelling', async function() {
+      const res = await request(app)
+        .get('/cars/compare?c=fIaT|500&c=tesla|model%203&c=lancia|flavia').expect(200);
+      const removeTesla = removeLinks(res.text).find(link => link.make === 'Tesla');
+      assert.ok(removeTesla, 'Tesla removal link missing');
+      const destination = new URL(removeTesla.href, 'https://autodex.example');
+      assert.equal(destination.pathname, '/cars/compare');
+      assert.deepEqual(destination.searchParams.getAll('c'), ['Fiat|500', 'Lancia|Flavia']);
+      const remaining = await request(app).get(removeTesla.href).expect(200);
+      assert.deepEqual(removeLinks(remaining.text).map(link => link.make), ['Fiat', 'Lancia']);
     });
   });
 });

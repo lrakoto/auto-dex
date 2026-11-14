@@ -1854,6 +1854,9 @@ textarea:focus-visible,
 .compare-remove-btn:hover,
 .compare-clear:hover { color: var(--danger); }
 .compare-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 44px;
   min-height: 44px;
   padding: 0.45rem 0.6rem;
