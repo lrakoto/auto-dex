@@ -30,17 +30,22 @@
   if (!input || !list || !window.fetch) return;
 
   var timer = null;
+  var revision = 0;
 
   input.addEventListener('input', function () {
     var q = input.value.trim();
+    var requestedRevision = ++revision;
     clearTimeout(timer);
-    if (q.length < 2) { list.innerHTML = ''; return; }
+    list.innerHTML = '';
+    if (q.length < 2) return;
     timer = setTimeout(function () {
       fetch('/puzzle/suggest?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
-          list.innerHTML = '';
-          (data.names || []).forEach(function (name) {
+          // Every edit invalidates earlier requests, including deletion and retyping.
+          if (requestedRevision !== revision || !data || !Array.isArray(data.names)) return;
+          data.names.forEach(function (name) {
+            if (typeof name !== 'string' || !name.trim()) return;
             var opt = document.createElement('option');
             opt.value = name;
             list.appendChild(opt);
