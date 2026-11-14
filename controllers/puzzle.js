@@ -79,7 +79,7 @@ router.post('/guess', guessLimiter, async (req, res) => {
       return res.redirect('/puzzle');
     }
 
-    const result = puzzle.compareGuess(guessCar, answer);
+    const result = await puzzle.compareGuess(guessCar, answer);
     const correct = guessCar.id === answer.id;
     s.guesses.push({ ...result, correct });
     if (correct || s.guesses.length >= puzzle.MAX_GUESSES) {

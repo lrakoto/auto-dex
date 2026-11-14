@@ -118,10 +118,14 @@ R14 on 2026-10-01 so they ship before R4.
   review on its own.
 
 ### R16 — Daily car puzzle: extras
-- [ ] Body class, drivetrain and fuel tiles on `/puzzle` (FuelEconomy.gov's
+- [x] Body class, drivetrain and fuel tiles on `/puzzle` (FuelEconomy.gov's
   `VClass`/`drive`/`fuelType1`, already fetched for the detail page by
   `lib/carinfo.js#getFuelSpecs`; cache the day's answer lookup the same way
   `lib/puzzle.js` caches the car itself).
+  Shipped as three more tiles per guess, exact/wrong only (no "close"). The
+  day's car warms its lookup without delaying the page, and guess scoring
+  gives both cached lookups one short deadline. Missing or slow data reads
+  as a faded "Unknown" tile without affecting the outcome of a guess.
 - [ ] A shareable result grid (copy an emoji summary of the day's guesses, à
   la Wordle).
 - [ ] A streak across days in `localStorage`, plus stats (games played, win
