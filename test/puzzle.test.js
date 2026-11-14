@@ -7,6 +7,21 @@ const carinfo = require('../lib/carinfo');
 const puzzle = require('../lib/puzzle');
 const { getCsrfToken } = require('./helpers');
 
+function assertShareResult(html, score, rows) {
+  const field = html.match(/<textarea\b[^>]*\bid="puzzle-share-text"[^>]*>([\s\S]*?)<\/textarea>/);
+  if (!field) throw new Error('completed puzzle has no shareable text');
+  const canonical = html.match(/<link rel="canonical" href="([^"]+)"/);
+  if (!canonical) throw new Error('completed puzzle has no canonical URL');
+  if (!/\/puzzle$/.test(canonical[1])) throw new Error('puzzle canonical includes unexpected details');
+  const date = field[1].match(/^AutoDex Daily Puzzle (\d{4}-\d{2}-\d{2}) /);
+  if (!date) throw new Error('share text has no board date');
+  const expected = `AutoDex Daily Puzzle ${date[1]} ${score}/6\n\n${rows.join('\n')}\n\n${canonical[1]}`;
+  // Exact equality prevents the answer, guessed models or their URLs from
+  // appearing in the shared payload while leaving the on-page reveal intact.
+  if (field[1] !== expected) throw new Error('unexpected share result: ' + field[1]);
+  if (!/\breadonly\b/.test(field[0].split('>')[0])) throw new Error('share text must be usable for manual copying');
+}
+
 describe('Daily car puzzle', function() {
   describe('pure helpers', function() {
     let realGetFuelSpecs;
@@ -96,7 +111,7 @@ describe('Daily car puzzle', function() {
           make: 'Honda', model: 'Puzzle Guess', country: 'Japan', decade: 1990,
           makeState: 'wrong', countryState: 'exact', decadeState: 'exact', correct: false
         }],
-        done: false, error: null, csrfToken: 'test', guessesLeft: 5, maxGuesses: 6
+        done: false, shareText: null, error: null, csrfToken: 'test', guessesLeft: 5, maxGuesses: 6
       });
       if (!html.includes('Honda Puzzle Guess') || !html.includes('5 guesses left')) throw new Error('legacy guess was lost');
       if ((html.match(/puzzle-tile--unknown">Unknown<\/span><\/td>/g) || []).length !== 3) {
@@ -166,6 +181,7 @@ describe('Daily car puzzle', function() {
         { make: 'Toyota', model: 'Puzzle Mystery', favcount: 0, updated_img: false, year_min: 1995, year_max: 1998, model_years: [1995, 1996, 1997, 1998] },
         { make: 'Toyota', model: 'Puzzle Twin', favcount: 0, updated_img: false, year_min: 1992, year_max: 1994, model_years: [1992, 1993, 1994] },
         { make: 'Honda', model: 'Puzzle Future', favcount: 0, updated_img: false, year_min: 2015, year_max: 2020, model_years: [2015, 2016, 2017, 2018, 2019, 2020] },
+        { make: 'Honda', model: 'Puzzle Recent', favcount: 0, updated_img: false, year_min: 2001, year_max: 2001, model_years: [2001] },
         { make: 'Ford', model: 'Puzzle Vintage', favcount: 0, updated_img: false, year_min: 1965, year_max: 1968, model_years: [1965, 1966, 1967, 1968] }
       ], { returning: true });
       answerRow = rows.find(r => r.model === 'Puzzle Mystery');
@@ -188,6 +204,7 @@ describe('Daily car puzzle', function() {
       const res = await agent.get('/puzzle').expect(200);
       if (!res.text.includes('name="guess"')) throw new Error('no guess field');
       if (!res.text.includes('6 guesses left')) throw new Error('guess count: ' + res.text.match(/\d+ guesses? left/));
+      if (res.text.includes('id="puzzle-share-text"')) throw new Error('unplayed puzzle has a share result');
     });
 
     it('scores a wrong guess and keeps the board for the next one', async function() {
@@ -200,6 +217,7 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('puzzle-tile--wrong">Honda<')) throw new Error('make should read wrong');
       if (!res.text.includes('puzzle-tile--exact">Japan<')) throw new Error('country should read exact (Honda is Japanese too)');
       if (!res.text.includes('5 guesses left')) throw new Error('did not spend a guess');
+      if (res.text.includes('id="puzzle-share-text"')) throw new Error('unfinished puzzle has a share result');
     });
 
     it('scores class, drive and fuel tiles on their own data, independent of make', async function() {
@@ -244,6 +262,7 @@ describe('Daily car puzzle', function() {
       const res = await agent.get('/puzzle').expect(200);
       if (!res.text.includes("isn&#39;t a car") && !res.text.includes("isn't a car")) throw new Error('no error shown');
       if (!res.text.includes('6 guesses left')) throw new Error('spent a guess on a bad name');
+      if (res.text.includes('id="puzzle-share-text"')) throw new Error('invalid guess produced a share result');
     });
 
     it('shortens a long unknown guess before echoing it back', async function() {
@@ -264,17 +283,22 @@ describe('Daily car puzzle', function() {
       if (!res.text.includes('Got it in 1')) throw new Error('win message missing: ' + res.text.slice(0, 2000));
       if (!res.text.includes('/cars/car?make=Toyota&amp;model=Puzzle%20Mystery')) throw new Error('answer link missing');
       if (res.text.includes('name="guess"')) throw new Error('form should be gone once done');
+      assertShareResult(res.text, 1, ['🟩🟩🟩🟩🟩🟩']);
     });
 
     it('loses after six wrong guesses and still reveals the answer', async function() {
       const agent = request.agent(app);
-      for (let i = 0; i < 6; i++) {
+      const guesses = ['Toyota Puzzle Twin', 'Honda Puzzle Future', 'Honda Puzzle Recent', ...Array(3).fill('Ford Puzzle Vintage')];
+      for (const guess of guesses) {
         const token = await getCsrfToken(agent, '/puzzle');
-        await agent.post('/puzzle/guess').type('form').send({ guess: 'Ford Puzzle Vintage', _csrf: token }).expect(302);
+        await agent.post('/puzzle/guess').type('form').send({ guess, _csrf: token }).expect(302);
       }
       const res = await agent.get('/puzzle').expect(200);
       if (!res.text.includes('Out of guesses')) throw new Error('loss message missing');
       if (!res.text.includes('Puzzle Mystery')) throw new Error('answer not revealed');
+      assertShareResult(res.text, 'X', [
+        '🟩🟩🟩⬛⬛⬛', '⬛🟩⬛🟩🟩🟩', '⬛🟩🟨⬜⬜⬜', ...Array(3).fill('⬛⬛⬛⬜⬜⬜')
+      ]);
     });
 
     it('suggests catalog names for the guess field', async function() {

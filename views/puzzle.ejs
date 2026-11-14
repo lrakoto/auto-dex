@@ -61,6 +61,16 @@
                 <% if (won) { %>Got it in <%= guesses.length %><% } else { %>Out of guesses<% } %> —
                 it was the <a href="<%= answerUrl %>"><%= answer.make %> <%= answer.model %></a>.
               </p>
+              <% if (shareText) { %>
+                <div class="puzzle-share">
+                  <label for="puzzle-share-text" class="field-label">Spoiler-free result</label>
+                  <textarea id="puzzle-share-text" class="puzzle-input puzzle-share-text" rows="<%= shareText.split('\n').length %>" readonly><%= shareText %></textarea>
+                  <div class="puzzle-share-actions">
+                    <button type="button" id="puzzle-share-copy" class="btn btn-outline-secondary btn-sm" hidden>Copy result</button>
+                    <span id="puzzle-share-status" role="status"></span>
+                  </div>
+                </div>
+              <% } %>
               <p class="puzzle-note">A new car is up at midnight UTC.</p>
             </div>
           <% } else { %>
