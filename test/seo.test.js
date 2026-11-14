@@ -35,6 +35,9 @@ describe('SEO', function() {
     if (!res.text.includes('/cars/car?make=Toyota&amp;model=Supra')) {
       throw new Error('sitemap missing a known car URL');
     }
+    for (const path of ['/puzzle', '/cars/cool-wall']) {
+      if (!res.text.includes(`${path}</loc>`)) throw new Error(`sitemap missing ${path}`);
+    }
   });
 
   it('serves robots.txt', async function() {

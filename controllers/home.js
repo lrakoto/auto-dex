@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
   });
 });
 
-// XML sitemap for crawlers — makes + the models we have real rows for.
+// XML sitemap for crawlers — public pages, makes, models and opted-in garages.
 // Capped so a large catalog can't produce an unbounded response.
 const SITEMAP_MODEL_LIMIT = 5000;
 router.get('/sitemap.xml', async (req, res) => {
@@ -103,6 +103,8 @@ router.get('/sitemap.xml', async (req, res) => {
       { loc: '/makes', priority: '0.8' },
       { loc: '/cars/explore', priority: '0.6' },
       { loc: '/play', priority: '0.6' },
+      { loc: '/puzzle', priority: '0.6' },
+      { loc: '/cars/cool-wall', priority: '0.6' },
       // Motorcycle makes are listed once, at their canonical &type=motorcycle URL below
       ...makes.filter(m => !carquery.MOTORCYCLE_MAKES.includes(m))
         .map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
