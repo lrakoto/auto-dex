@@ -12,6 +12,7 @@
   const timeoutMs = 20000;
   let current;
   let moduleAttempts = 0;
+  let modelRetry = 0;
 
   function update(state, label, message) {
     stage.dataset.state = state;
@@ -31,6 +32,8 @@
 
   function fail(attempt, message) {
     if (current !== attempt) return;
+    // Model-viewer caches failures by URL as well as successful loads.
+    if (attempt.model) modelRetry++;
     remove(attempt);
     update('error', 'Retry 3D model', message);
   }
@@ -65,7 +68,8 @@
       fail(attempt, 'The 3D model could not be displayed.');
     }, { once: true });
     stage.appendChild(model);
-    model.setAttribute('src', assets + 'ToyCar.gltf');
+    const suffix = modelRetry ? '?retry=' + modelRetry : '';
+    model.setAttribute('src', assets + 'ToyCar.gltf' + suffix);
   }
 
   function start() {
