@@ -146,13 +146,23 @@ R14 on 2026-10-01 so they ship before R4.
   `carinfo.getFuelSpecs`'s `combMpg` for the car's year.
 
 ### R7 — Dex rarity tiers and levels
-- [ ] Rarity per catalog car (common → legendary) from Wikidata production
+- [x] Rarity per catalog car (common → legendary) from Wikidata production
   numbers (P1092, already fetched), model age and how often it is spotted.
   XP per spot scaled by rarity; levels on the garage and public pages.
   Data check (2026-10-29): Wikidata's P1092 (units built) is on 1 of 40
   random catalog cars, so it can't drive rarity yet; spot counts are the
   better signal once there are enough spots. Consider spot frequency plus
   model age first, P1092 only as an override where it exists.
+  Shipped the tier itself as a badge on the car detail page (`lib/rarity.js`):
+  common/uncommon/rare/legendary, scored live from global spot count (never
+  spotted scores higher) and model age (older scores higher), with a very
+  low P1092 figure jumping straight to legendary. XP per spot and levels on
+  the garage and public pages move to R7b below — rarity needed to exist
+  first, and this PR was already a full round of review on its own.
+
+### R7b — XP and levels from rarity
+- [ ] XP per spot scaled by the spotted car's rarity tier (R7); levels on
+  the garage and public pages.
 
 ### R8 — Photo verification with Claude vision *(needs `ANTHROPIC_API_KEY`)*
 - [ ] Before an automatically suggested photo or a user proposal becomes a hero, ask a
