@@ -238,6 +238,41 @@ R14 on 2026-10-01 so they ship before R4.
   Swept against all 5,201 dev-catalog rows: 16 new matches, all chassis or
   medium-duty trucks.
 
+### R17 — High-fidelity 3D cars *(requested by the owner)*
+
+- [ ] Prototype an optional **View in 3D** on one car detail page. Show a
+  poster first; load the viewer and model only when opened. Start with an
+  exterior that visitors can rotate and zoom, with accurate proportions,
+  wheels, lights, trim, and realistic paint and glass. Show the exact year,
+  generation, and variant represented; a single mesh does not represent
+  every car on a multi-generation catalog page.
+- **Find one publishable model.** The 1967 Ford Mustang Fastback is a
+  candidate, not yet cleared for AutoDex. Prefer a manufacturer-approved
+  marketing model, a mesh licensed explicitly for public interactive web
+  delivery, or a commissioned model built from measured references. Get
+  written permission for the mesh and textures, optimization, and the
+  intended viewer and hosting. A marketplace purchase alone may not cover
+  serving an extractable GLB. Record the source, license, and required
+  credit with the asset. Obtain approval before any purchase or commission.
+- **Prove the viewer separately.** Use a permissively licensed sample in
+  local development while sourcing the real car. Evaluate self-hosted
+  `<model-viewer>` with a web-optimized GLB under the current CSP. Start
+  with a versioned mapping from the catalog entry to the exact variant,
+  poster, model, and attribution. The first pilot needs no database
+  migration or public upload flow.
+- **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
+  target. Check proportions against trusted references and measure load
+  time and interaction on a real phone. Verify no 3D bytes load before
+  opening, touch and keyboard controls work, and the photo remains usable
+  if 3D fails. Add interiors, paint variants, or to-scale 3D comparisons
+  only after the exterior pilot works; comparison needs verified dimensions
+  for the exact generation.
+- References: [Khronos glTF](https://www.khronos.org/gltf/),
+  [model-viewer loading examples](https://modelviewer.dev/examples/loading/),
+  [Mustang model candidate](https://www.turbosquid.com/3d-models/ford-mustang-fastback-1967-3d-model-1724493),
+  [Ford asset use restrictions](https://www.turbosquid.com/help/en/articles/9937458-ford-license-restrictions),
+  and [TurboSquid license](https://www.turbosquid.com/licensing).
+
 ## Sources
 
 - Car spotting apps: Carva (carvapp.com), CarSpotter, Spotter, AutoSpotterX,
