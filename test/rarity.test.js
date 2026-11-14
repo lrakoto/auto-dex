@@ -95,7 +95,8 @@ describe('Rarity (R7)', function() {
         getFuelSpecs: carinfo.getFuelSpecs,
         getWikidataFacts: carinfo.getWikidataFacts,
         getUnitsBuilt: carinfo.getUnitsBuilt,
-        getSafetyRatings: nhtsa.getSafetyRatings
+        getSafetyRatings: nhtsa.getSafetyRatings,
+        getComplaints: nhtsa.getComplaints
       };
       carquery.getModels = async () => [];
       carinfo.getWikiSummary = async () => null;
@@ -103,6 +104,7 @@ describe('Rarity (R7)', function() {
       carinfo.getWikidataFacts = async () => [];
       carinfo.getUnitsBuilt = async () => null;
       nhtsa.getSafetyRatings = async () => null;
+      nhtsa.getComplaints = async () => null;
       await db.car.findOrCreate({
         where: { make: 'Isdera', model: 'Commendatore 112i' },
         defaults: { image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: 'car', year_max: 1960 }
@@ -115,12 +117,24 @@ describe('Rarity (R7)', function() {
         getWikidataFacts: real.getWikidataFacts, getUnitsBuilt: real.getUnitsBuilt
       });
       nhtsa.getSafetyRatings = real.getSafetyRatings;
+      nhtsa.getComplaints = real.getComplaints;
     });
 
     it('shows a rarity badge for a catalog car with no spots on record', async function() {
       const res = await agent.get('/cars/car?make=Isdera&model=Commendatore%20112i').expect(200);
       assert.match(res.text, /rarity-badge rarity-tier-3/);
       assert.match(res.text, />Legendary</);
+    });
+
+    it('still serves the detail page if the rarity spot count fails', async function() {
+      const count = db.spotting.count;
+      db.spotting.count = async () => { throw new Error('Spot count unavailable'); };
+      try {
+        const res = await agent.get('/cars/car?make=Isdera&model=Commendatore%20112i').expect(200);
+        assert.doesNotMatch(res.text, /<span class="rarity-badge/);
+      } finally {
+        db.spotting.count = count;
+      }
     });
   });
 });

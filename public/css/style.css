@@ -2775,6 +2775,11 @@ textarea:focus-visible,
   border: 1px solid var(--tier);
   background: color-mix(in srgb, var(--tier) 15%, transparent);
 }
+.rarity-note {
+  color: rgba(250,250,250,0.8);
+  font-size: 0.8rem;
+  margin: 0.35rem 0 0.45rem;
+}
 
 .cool-verdict { font-size: 0.9rem; margin-bottom: 0.75rem; }
 .cool-tier-name { color: var(--tier); }

@@ -408,7 +408,10 @@ router.get('/', async (req, res) => {
       const country = getMakeCountry(make);
       const [wikiFacts, carRarity] = await Promise.all([
         wiki && wiki.wikidataId ? carinfo.getWikidataFacts(wiki.wikidataId) : [],
-        car ? rarity.getCarRarity(car, wiki && wiki.wikidataId) : null
+        car ? rarity.getCarRarity(car, wiki && wiki.wikidataId).catch(err => {
+          console.log('CAR RARITY ERROR:', err);
+          return null;
+        }) : null
       ]);
       const wikiSummary = wiki ? wiki.summary : null;
       const wikiUrl = wiki ? wiki.url : null;
