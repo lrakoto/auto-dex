@@ -10,9 +10,6 @@ const assets = new Map([
   ['ToyCar_emissive.png', 'image/png'],
   ['ToyCar_basecolor.png', 'image/png'],
   ['ToyCar_occlusion_roughness_metallic.png', 'image/png'],
-  ['Fabric_normal.png', 'image/png'],
-  ['Fabric_occlusion.png', 'image/png'],
-  ['Fabric_baseColor.png', 'image/png'],
   ['ToyCar_clearcoat.png', 'image/png'],
   ['poster.jpg', 'image/jpeg']
 ]);
@@ -29,7 +26,7 @@ async function hasAsset(root, name) {
 
 module.exports = function registerDevCar3d(app, {
   env = process.env,
-  assetRoot = path.join(__dirname, '..', 'dev-assets', 'car-3d')
+  assetRoot = path.join(__dirname, '..', 'dev-assets', 'car-3d', 'car-only-v1')
 } = {}) {
   if (env.ENABLE_3D_DEMO !== '1' || !['development', 'test'].includes(env.NODE_ENV)) return;
 
