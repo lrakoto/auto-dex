@@ -251,12 +251,25 @@ R14 on 2026-10-01 so they ship before R4.
   every car on a multi-generation catalog page.
 - **1967 Ford Mustang Fastback.** Mark Peters publishes a 505,332-triangle
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-  The artist omitted the interior and underside. This is the leading option
-  for the existing Mustang page. Compare exterior details with Ford's 1967
-  2+2 reference before naming a trim, verify the texture credits, and confirm
-  Ford's clearance for public delivery of the downloadable browser asset.
+  The download listing says the interior and underside are absent. The
+  artist's portfolio describes modeling an interior, so plan for an exterior
+  viewer and confirm the contents when inspecting the source mesh. This is the
+  leading option for the existing Mustang page. The preview shows the fastback
+  roof sweep, rear roof louvers, and a recessed tail panel with three individually
+  framed lamps per side. These match Ford's 1967 Fastback 2+2 references.
+  The model has GT-style grille fog lamps and a personalized plate. Ford's
+  GT Equipment Group also included a GT or GTA side stripe, which isn't
+  visible on the model. Use **1967 Ford Mustang Fastback 2+2 — artist's
+  exterior model** as the working label, with trim, engine, and wheel
+  specification unverified.
+  Check the mesh against Ford's 108-inch wheelbase and overall dimensions
+  of 183.6 × 70.9 × 51.8 inches (length × width × height) when the source
+  files are available. Verify the texture credits and confirm Ford's
+  clearance for public delivery of the downloadable browser asset.
   [Creator listing](https://sketchfab.com/3d-models/1967-ford-mustang-fastback-4096px2-02933292f4d64a52a9bec5923e24b0af) ·
+  [Artist's portfolio](https://markpeters.art/ford-mustang-fastback-1967) ·
   [Ford's 1967 sales brochure](https://ponynsnake.com/wp-content/uploads/2023/07/access-1967_Ford_Mustang_brochure_AR_96_212010_18065.pdf) ·
+  [Ford's 1967 launch release, pp. 2–3 and 10](https://www.1967shelbyresearch.com/library/docs/files/1966-09-16%20Ford%20Press%20Release%20-%201967%20Mustang.pdf#page=2) ·
   [Ford brand licensing](https://www.fordbrandlicensing.com/).
 - **Historical alternative.** Deutsches Museum publishes its reconstruction of
   Benz Patent-Motorwagen No. 1, inventory 4710, under
