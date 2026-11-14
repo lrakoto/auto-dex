@@ -182,6 +182,10 @@ Neither the demo route nor its downloaded assets are served
 in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
 for the real-car pilot.
 
+The catalog link is exercised by a fictional Toy Car fixture in the test
+database. Run `npm test -- --grep 'exact local preview car'` from a checkout
+with the test database configured.
+
 ### Tests
 
 Tests run against a **separate `autodex_test` database** and build the schema
