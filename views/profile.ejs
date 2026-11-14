@@ -67,8 +67,14 @@
     <% }) %>
   <% } %>
 
-  <% if (dex.spottedCars > 0) { %>
+  <% const showDexLevel = typeof dexProgress !== 'undefined' && dexProgress; %>
+  <% if (dex.spottedCars > 0 || showDexLevel) { %>
     <h2 class="text-left mb-3 mt-5">Dex</h2>
+  <% } %>
+  <% if (showDexLevel) { %>
+    <%- include('partials/dex-level', { dexProgress }) %>
+  <% } %>
+  <% if (dex.spottedCars > 0) { %>
     <div class="dex-makes mb-4">
       <% dex.makes.forEach(m => { %>
         <a class="dex-make" href="/cars?selectmake=<%= encodeURIComponent(m.make) %>">

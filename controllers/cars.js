@@ -19,7 +19,7 @@ const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
 const { saleLinks } = require('../lib/forSale');
-const { getMakeProgress } = require('../lib/dex');
+const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
 require('dotenv').config();
 
@@ -556,12 +556,20 @@ router.get('/', async (req, res) => {
         return res.redirect('/');
       }
       const clip = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
-      await db.spotting.create({
-        userId: req.user.id,
-        carId: car.id,
-        imageUrl,
-        location: clip(req.body.location, 120),
-        notes: clip(req.body.notes, 1000)
+      await db.sequelize.transaction({ isolationLevel: db.Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED }, async transaction => {
+        // Serialize awards for the same car. The count preceding this spot
+        // is then consistent even when two users post at the same time.
+        const currentCar = await db.car.findByPk(car.id, { transaction, lock: transaction.LOCK.NO_KEY_UPDATE });
+        // Award from local age and spot counts without waiting for Wikidata.
+        const tier = await rarity.getCarRarity(currentCar, null, { transaction });
+        await db.spotting.create({
+          userId: req.user.id,
+          carId: car.id,
+          imageUrl,
+          location: clip(req.body.location, 120),
+          notes: clip(req.body.notes, 1000),
+          rarityXp: XP_BY_RARITY[tier]
+        }, { transaction });
       });
       req.flash('success', `Spotted: ${car.make} ${car.model}! It's in your Dex.`);
     } catch (err) {

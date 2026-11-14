@@ -17,7 +17,8 @@ module.exports = (sequelize, DataTypes) => {
       return isRetiredPhoto(value) ? null : value;
     } },
     location: { type: DataTypes.STRING, validate: { len: [0, 120] } },
-    notes:    { type: DataTypes.TEXT }
+    notes:    { type: DataTypes.TEXT },
+    rarityXp: { type: DataTypes.SMALLINT, allowNull: true, validate: { isIn: [[10, 20, 35, 50]] } }
   }, {
     sequelize,
     modelName: 'spotting'

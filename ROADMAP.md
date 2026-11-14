@@ -170,8 +170,11 @@ R14 on 2026-10-01 so they ship before R4.
   first, and this PR was already a full round of review on its own.
 
 ### R7b — XP and levels from rarity
-- [ ] XP per spot scaled by the spotted car's rarity tier (R7); levels on
-  the garage and public pages.
+- [x] Dex XP and levels on private and opted-in public garages. Each distinct
+  model uses the XP from its earliest retained sighting. New sightings save
+  10, 20, 35, or 50 XP according to model age and prior community sightings.
+  Existing sightings count as 10 XP per model. Level 1 starts at 0 XP, and
+  each additional 100 XP raises the level by one.
 
 ### R8 — Photo verification with Claude vision *(needs `ANTHROPIC_API_KEY`)*
 - [ ] Before an automatically suggested photo or a user proposal becomes a hero, ask a

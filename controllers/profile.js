@@ -70,6 +70,7 @@ router.get('/:username', async (req, res) => {
       builds,
       favorites: favs,
       dex, badges,
+      dexProgress: dex.progress,
       recentSpots: recentSpots.map(s => s.toJSON()),
       pageTitle: `${displayName}'s Garage — AutoDex`,
       pageDescription: summary,

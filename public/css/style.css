@@ -1993,6 +1993,31 @@ textarea:focus-visible,
   color: var(--text-muted);
   margin: 2.5rem 0 1rem;
 }
+.dex-level { max-width: 28rem; margin: 0 0 1rem; padding: 1rem; }
+.dex-level-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.dex-level-summary strong { font-size: 1.2rem; }
+.dex-level-bar {
+  display: block;
+  width: 100%;
+  height: 0.45rem;
+  margin: 0.6rem 0 0;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--border-hover);
+  appearance: none;
+}
+.dex-level-bar::-webkit-progress-bar { background: var(--border-hover); }
+.dex-level-bar::-webkit-progress-value { background: var(--red); }
+.dex-level-bar::-moz-progress-bar { background: var(--red); }
+.dex-level-target, .dex-level-note { margin: 0.35rem 0 0; color: #a1a1aa; font-size: 0.8rem; }
 .dex-makes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
