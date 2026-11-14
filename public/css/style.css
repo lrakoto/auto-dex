@@ -859,7 +859,7 @@ small, .small { font-size: 0.78rem; }
 .nav-mobile-menu .nav-link:last-child { border-bottom: none; }
 .nav-mobile-menu .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 
-@media (max-width: 920px) {
+@media (max-width: 1080px) {
   .nav-masthead { display: none; }      /* hide desktop nav */
   .nav-hamburger { display: flex; }     /* show burger */
   .nav-mobile-menu { display: block; }  /* panel exists in DOM, toggled via .open */
@@ -2214,7 +2214,7 @@ textarea:focus-visible,
 .empty-state--results p { color: #a1a1aa; }
 
 /* ─── PUBLIC SIGHTINGS ─────────────────────────────────────────────────────── */
-.container.activity { max-width: 54rem; }
+.container.activity { width: min(100%, 54rem); }
 .activity-feed { margin: 0; padding: 0; list-style: none; }
 .activity-sighting {
   display: flex;
