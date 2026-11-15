@@ -263,6 +263,29 @@ R14 on 2026-10-01 so they ship before R4.
   wheels, lights, trim, and realistic paint and glass. Show the exact year,
   generation, and variant represented; a single mesh does not represent
   every car on a multi-generation catalog page.
+- **2011 BMW 1 Series M Coupé.** Mike Pan modeled the E82 exterior from
+  photos. It fits the exact [BMW 1M catalog entry](https://autodx.io/cars/car?make=BMW&model=1M),
+  which lists 2011. Blender's archived demo page credits Pan and labels its
+  `BMW27_2.blend.zip` benchmark CC0. Pan's separate BlendSwap upload lists
+  CC BY-SA. The local inspection used `bmw27/bmw27_cpu.blend` from the Blender
+  archive (ZIP SHA-256 `74f5dc6d718fc565e0ff50e355be7f8b1a58983cc9ae79775608d8905c269ee4`).
+  After isolating one car and scaling to BMW's 2,660 mm wheelbase, the model
+  measures 4,358 × 1,946 × 1,430 mm (length × overall width × height). The
+  turned front tires set the model's width. BMW lists 4,380 mm long,
+  1,932 mm across the mirrors, and 1,420 mm high.
+  The local GLB has 320,380 triangles and weighs 5,252,256 bytes with neutral
+  materials and no textures. The source uses Cycles shaders for paint and
+  glass, and Pan describes a simplified cabin. A local Chrome orbit check
+  shows that the right-front rim faces inward in this export. Correct its
+  orientation and start geometry reduction with the tires, rims, and wheel
+  bolts (141,856 triangles). Build browser-ready paint and glass, then test
+  the exterior on a real phone. Verify rights for the vehicle design, badges,
+  and any retained textures before public delivery.
+  [Blender's archived release](https://web.archive.org/web/20211226043144id_/https://www.blender.org/download/demo-files/) ·
+  [Benchmark archive](https://download.blender.org/demo/test/BMW27_2.blend.zip) ·
+  [Artist's portfolio](https://mikepan.com/bmw.html) ·
+  [Artist's BlendSwap release](https://blendswap.com/blend/4066) ·
+  [BMW factory dimensions](https://www.press.bmwgroup.com/united-kingdom/article/attachment/T0110413EN_GB/159995).
 - **1967 Ford Mustang Fastback.** Mark Peters publishes a 505,332-triangle
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   The download listing says the interior and underside are absent. The
