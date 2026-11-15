@@ -52,12 +52,17 @@ describe('Public sightings feed', function () {
 
   it('shows a useful empty state when there are no public sightings', async function () {
     // Isolate the view's empty state from fixtures left in the shared test DB.
-    const findAll = db.spotting.findAll;
+    const findSpots = db.spotting.findAll;
+    const findRecords = db.user.findAll;
     db.spotting.findAll = async () => [];
+    db.user.findAll = async () => [];
     try {
-      assert.match(await feed(), /id="activity-empty"/);
+      const html = await feed();
+      assert.match(html, /id="activity-empty"/);
+      assert.doesNotMatch(html, /id="quiz-records"/);
     } finally {
-      db.spotting.findAll = findAll;
+      db.spotting.findAll = findSpots;
+      db.user.findAll = findRecords;
     }
   });
 
@@ -122,6 +127,51 @@ describe('Public sightings feed', function () {
     const deleted = await feed();
     assert.ok(!deleted.includes(modelMarker(models[11])));
     assert.ok(deleted.includes(modelMarker(models[10])));
+  });
+
+  it('shows dated records from public garages in time and ID order, and hides them on unpublish', async function () {
+    const latest = new Date(Date.now() - 86_400_000);
+    latest.setUTCHours(0, 0, 0, 123);
+    const older = new Date(latest.getTime() - 86_400_000);
+    const first = await owner('quiz_tie_first', true);
+    const second = await owner('quiz_tie_second', true);
+    // The older record has a higher ID, so ID order alone gets this wrong.
+    const previous = await owner('quiz_older', true);
+    const hidden = await owner('quiz_hidden', false);
+    const legacy = await owner('quiz_legacy', true);
+    const noHandle = await owner('quiz_unset', true, null);
+    const blank = await owner('quiz_blank', true, null);
+    await Promise.all([
+      first.update({ quizBest: 17, quizBestAt: latest }),
+      second.update({ quizBest: 23, quizBestAt: latest }),
+      previous.update({ quizBest: 39, quizBestAt: older }),
+      hidden.update({ quizBest: 151, quizBestAt: latest }),
+      legacy.update({ quizBest: 152 }),
+      noHandle.update({ quizBest: 153, quizBestAt: latest }),
+      blank.update({ quizBest: 154, quizBestAt: latest })
+    ]);
+    await db.sequelize.query('UPDATE users SET username = :username WHERE id = :id', {
+      replacements: { id: blank.id, username: '' }
+    });
+
+    const page = await feed();
+    assert.match(page, /id="quiz-records"/);
+    const links = [second, first, previous].map(user => page.indexOf(`href="/u/${user.username}"`));
+    assert.ok(links[0] >= 0 && links[0] < links[1] && links[1] < links[2]);
+    for (const score of [17, 23, 39]) assert.ok(page.includes(`${score} in a row`));
+    assert.ok(page.includes(`datetime="${latest.toISOString().slice(0, 10)}"`));
+    assert.ok(!page.includes(latest.toISOString()));
+    for (const user of [first, second, previous, hidden, legacy, noHandle, blank]) {
+      assert.ok(!page.includes(user.email) && !page.includes(user.name));
+    }
+    for (const excluded of [hidden.username, legacy.username, '151 in a row', '152 in a row', '153 in a row', '154 in a row']) {
+      assert.ok(!page.includes(excluded), `activity feed exposed ${excluded}`);
+    }
+
+    await second.update({ garagePublic: false });
+    const unpublished = await feed();
+    assert.ok(!unpublished.includes(second.username) && !unpublished.includes('23 in a row'));
+    assert.ok(unpublished.includes(first.username));
   });
 
   describe('Spot of the Day', function () {

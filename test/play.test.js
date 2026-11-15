@@ -121,17 +121,22 @@ describe("Who's That Car?", function() {
       if (!b.next || b.next.choices.length !== 4 || 'answer' in b.next) throw new Error('next round wrong');
       await playerUser.reload();
       if (playerUser.quizBest !== 1) throw new Error('best not saved');
+      if (!(playerUser.quizBestAt instanceof Date)) throw new Error('record date not saved with the score');
     });
 
     it('a miss ends the streak but never lowers the saved best', async function() {
       let token = await getCsrfToken(player, '/play');
       await guess(player, round.answer, token).expect(200); // streak 2
+      const recordDate = new Date('2026-01-01T12:00:00Z');
+      await playerUser.update({ quizBestAt: recordDate });
+      await Promise.all([quiz.saveBest(playerUser.id, 2), quiz.saveBest(playerUser.id, 1)]);
       token = await getCsrfToken(player, '/play');
       const res = await guess(player, byModel('F40').id, token).expect(200);
       if (res.body.correct || res.body.streak !== 0 || res.body.best !== 2) throw new Error('miss: ' + JSON.stringify(res.body));
       if (res.body.answerId !== round.answer || res.body.choice !== byModel('F40').id) throw new Error('reveal ids wrong');
       await playerUser.reload();
       if (playerUser.quizBest !== 2) throw new Error('best changed on a miss: ' + playerUser.quizBest);
+      if (playerUser.quizBestAt.getTime() !== recordDate.getTime()) throw new Error('equal or lower score retimed the record');
     });
 
     it('turns away a guess from a stale tab', async function() {

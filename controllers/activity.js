@@ -4,6 +4,7 @@ const db = require('../models');
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { RECENT_SPOTS } = require('../lib/dex');
+const { getRecentRecords } = require('../lib/quiz');
 const { isValidImageUrl } = require('../lib/validators');
 
 const router = express.Router();
@@ -84,13 +85,20 @@ router.get('/', async (req, res, next) => {
   try {
     const now = new Date();
     const voteDay = utcDay(now);
-    const recent = await recentSightings();
+    const [recent, records] = await Promise.all([recentSightings(), getRecentRecords()]);
     res.render('activity', {
       spots: recent.map(publicSighting),
+      quizRecords: records.map(({ username, quizBest, quizBestAt }) => ({
+        garageName: `@${username}`,
+        garageUrl: `/u/${encodeURIComponent(username)}`,
+        best: quizBest,
+        dateIso: utcDay(quizBestAt),
+        dateLabel: dayLabel.format(quizBestAt)
+      })),
       voteDay,
       ...await ballot(recent, voteDay, now, req.user?.id),
       pageTitle: 'Recent Sightings — AutoDex',
-      pageDescription: 'See what AutoDex members have spotted in their public garages.',
+      pageDescription: 'See recent car sightings and photo quiz records from public AutoDex garages.',
       canonicalPath: '/activity',
       noindex: true
     });

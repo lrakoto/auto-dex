@@ -102,6 +102,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0
     },
+    // When a strictly higher personal quiz best was set; older records have no date.
+    quizBestAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     // Email me new recalls for my garage cars — see jobs/recalls.js
     recallAlerts: {
       type: DataTypes.BOOLEAN,
