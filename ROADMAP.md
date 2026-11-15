@@ -391,7 +391,7 @@ R14 on 2026-10-01 so they ship before R4.
   one-time geometry download failure. Zoom and Reset view buttons worked with
   mouse and keyboard at phone width in Chrome. Real-phone touch and load-time
   checks are still pending.
-- **Mobile network baseline (2026-11-14).** Local `/dev/3d` in desktop Chrome
+- **Toy Car network baseline (2026-11-14).** Local `/dev/3d` in desktop Chrome
   157 on an Apple M2, using a 390 × 844 CSS-pixel viewport at 2×, touch
   emulation, and disabled HTTP cache. Each trial started on a fresh page.
   The 26 KB poster was the only file fetched from the demo's asset directory
@@ -414,8 +414,29 @@ R14 on 2026-10-01 so they ship before R4.
   time was 2.73 s at 10 Mbps, 8.43 s at 3 Mbps, and 16.36 s at 1.5 Mbps.
   All three trials at each speed reached ready.
 
-  Measure the first real asset and viewer bytes together on a real phone
-  before setting the pilot's mobile performance budget.
+- **BMW 1M network baseline (2026-11-15).** A private loopback fixture used
+  the lab's poster-first controls and AutoDex CSP. Desktop Chrome 157 on
+  Apple M2 used a 390 × 844 CSS-pixel viewport at 2×, touch emulation, and
+  a fresh tab with HTTP cache disabled per trial. Only the poster was
+  requested from the model asset directory before opening. The painted
+  BMW GLB and pinned viewer transferred 5,851,132 response-body bytes
+  uncompressed. Setup-time Brotli at quality 11 brought the total to
+  2,231,708 bytes (62% fewer), including 2,022,986 for the model and 208,722
+  for the viewer. Chrome decoded the original byte counts.
+
+  | Down / up | Added latency | Trials per encoding | Identity click to ready | Brotli click to ready |
+  | --- | ---: | ---: | ---: | ---: |
+  | 10 / 3 Mbps | 75 ms | 3 | 4.98 s (4.96–4.99 s) | 2.08 s (2.07–2.08 s) |
+  | 3 / 1 Mbps | 150 ms | 3 | 16.07 s (16.05–16.07 s) | 6.42 s (6.39–6.42 s) |
+  | 1.5 / 0.75 Mbps | 200 ms | 1 | Timed out at 20.00 s | 12.45 s |
+
+  Repeated trials show medians with the observed range in parentheses.
+  The slow uncompressed trial kept the poster visible and offered Retry.
+  Retry loaded the scene after removing the throttle.
+  Emulated touch drag rotated the car, Zoom In narrowed the field of view,
+  and Reset restored the initial orbit and zoom. A physical handset was
+  unavailable. Verify loading, touch, and fallback on a real phone before
+  setting the mobile performance budget.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
