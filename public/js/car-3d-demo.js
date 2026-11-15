@@ -17,7 +17,7 @@
   const defaultOrbit = '35deg 72deg auto';
   const zoomSteps = ['auto', '24deg', '18deg', '12deg'];
   let current;
-  let moduleAttempts = 0;
+  let moduleAttempt = 1;
   let modelRetry = 0;
   let zoomLevel = 0;
 
@@ -40,8 +40,6 @@
     poster.hidden = state === 'ready';
     controls.hidden = state !== 'ready';
     button.textContent = label;
-    if (state === 'loading') button.setAttribute('aria-disabled', 'true');
-    else button.removeAttribute('aria-disabled');
     status.textContent = message;
   }
 
@@ -56,6 +54,7 @@
     if (current !== attempt) return;
     // Model-viewer caches failures by URL as well as successful loads.
     if (attempt.model) modelRetry++;
+    else if (attempt.script) moduleAttempt++;
     remove(attempt);
     update('error', 'Retry 3D model', message);
   }
@@ -105,7 +104,7 @@
     }
     const attempt = {};
     current = attempt;
-    update('loading', 'Loading 3D model…', 'Keep viewing the poster while 3D loads.');
+    update('loading', 'Cancel 3D load', 'Keep viewing the poster while 3D loads.');
     attempt.timer = setTimeout(() => {
       fail(attempt, 'Loading took too long.');
     }, timeoutMs);
@@ -118,8 +117,9 @@
     const script = document.createElement('script');
     attempt.script = script;
     script.type = 'module';
-    // A failed module URL can be cached by the browser until reload.
-    const suffix = moduleAttempts++ ? '?retry=' + moduleAttempts : '';
+    // Reuse the module URL after cancellation so a pending import is evaluated
+    // only once. Change the URL only after an error or timeout.
+    const suffix = moduleAttempt > 1 ? '?retry=' + moduleAttempt : '';
     script.src = assets + 'viewer.min.js' + suffix;
     script.addEventListener('load', () => showModel(attempt), { once: true });
     script.addEventListener('error', () => {
@@ -130,8 +130,8 @@
   }
 
   button.addEventListener('click', () => {
-    if (stage.dataset.state === 'loading') return;
-    if (stage.dataset.state === 'ready') {
+    const state = stage.dataset.state;
+    if (state === 'loading' || state === 'ready') {
       remove(current);
       update('idle', 'Load 3D model', 'Poster shown.');
     } else start();
