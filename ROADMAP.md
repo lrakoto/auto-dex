@@ -302,6 +302,12 @@ R14 on 2026-10-01 so they ship before R4.
   with a versioned mapping from the catalog entry to the exact variant,
   poster, model, and attribution. The first pilot needs no database
   migration or public upload flow.
+- **Asset inspection.** Run `node scripts/inspect-car-gltf.js` with the local
+  glTF or GLB file to record triangles, exported bounds, texture dimensions,
+  and raw asset size. Compare the mesh and axle positions with references
+  for the exact variant before testing it in the viewer. The trimmed Toy
+  Car reports 91,331 triangles, 18.71 × 11.62 × 38.38 mm along glTF X/Y/Z,
+  and five 1024 × 1024 PNG images in 4,126,731 asset bytes.
 - **Catalog handoff.** The fictional AutoDex Lab / Khronos Toy Car fixture
   links its normal detail page to the pinned Toy Car lab. The shared local
   opt-in gates the link and viewer. The catalog page makes no 3D requests,
