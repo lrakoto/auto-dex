@@ -114,7 +114,8 @@ router.get('/explore', async (req, res) => {
   const decade = decades.includes(parseInt(req.query.decade, 10)) ? parseInt(req.query.decade, 10) : null;
   const type = req.query.type === 'all' ? 'all' : (TYPE_KEYS.includes(req.query.type) ? req.query.type : 'car');
   const photos = req.query.photos === '1';
-  const sort = EXPLORE_SORTS[req.query.sort] ? req.query.sort : 'popular';
+  const requestedSort = str(req.query.sort);
+  const sort = Object.hasOwn(EXPLORE_SORTS, requestedSort) ? requestedSort : 'popular';
 
   try {
     // Include the makes stored in AutoDex, including commercial manufacturers
@@ -139,7 +140,8 @@ router.get('/explore', async (req, res) => {
 
     const { rows, count } = makes.length === 0 ? { rows: [], count: 0 } : await db.car.findAndCountAll({
       where,
-      order: EXPLORE_SORTS[sort],
+      // Break ties consistently before applying the page offset.
+      order: [...EXPLORE_SORTS[sort], ['id', 'ASC']],
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE
     });
