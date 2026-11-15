@@ -272,6 +272,33 @@ describe('Catalog', function() {
     it('treats LIKE wildcards as plain text', async function() {
       await request(app).get('/search?q=honda%20%25').expect(302).expect('Location', '/cars?selectmake=Honda');
     });
+
+    it('ranks literal and spacing-equivalent model suggestions before popular variants in the same make', async function() {
+      const models = await db.car.bulkCreate([
+        { make: 'Toyota', model: 'Q7', favcount: 1 },
+        { make: 'Toyota', model: 'Q 7', favcount: 5 },
+        { make: 'Audi', model: 'Q 7', favcount: 100 },
+        ...Array.from({ length: 15 }, (_, index) => ({ make: 'Toyota', model: `Q7 Sport ${index + 1}`, favcount: 10 }))
+      ].map(row => ({ ...row, image: PLACEHOLDER_URL })));
+      const lookups = stubLookups({});
+      const suggest = async q => (await request(app).get('/suggest').query({ q }).expect(200)).body.models;
+      try {
+        const literal = await suggest('Toyota Q7');
+        assert.equal(literal.length, 15);
+        assert.deepEqual(literal.slice(0, 2).map(row => row.model), ['Q7', 'Q 7']);
+        assert.ok(literal.every(row => row.make === 'Toyota'));
+
+        const spaced = await suggest('Toyota Q 7');
+        assert.deepEqual(spaced.slice(0, 2).map(row => row.model), ['Q 7', 'Q7']);
+
+        const tab = await suggest('Toyota Q\t7');
+        assert.deepEqual(tab.map(({ make, model }) => [make, model]), [['Toyota', 'Q 7'], ['Toyota', 'Q7']]);
+        assert.deepEqual(lookups.calls.models, []);
+      } finally {
+        lookups.restore();
+        await db.car.destroy({ where: { id: models.map(model => model.id) } });
+      }
+    });
   });
 
   describe('sessions', function() {
