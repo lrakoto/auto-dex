@@ -156,12 +156,7 @@ router.get('/explore', async (req, res) => {
       showMakes: true,
       showTypes: type === 'all',
       resetFiltersUrl: qs ? '/cars/explore' : null,
-      emptyState: count > 0 ? {
-        title: 'No vehicles on this page',
-        message: 'The results may have changed. Return to the first page to keep exploring.',
-        href: `/cars/explore?${qs ? qs + '&' : ''}page=1`,
-        action: 'Back to first page'
-      } : {
+      emptyState: {
         title: qs ? 'No vehicles match these filters' : 'No vehicles found',
         message: qs ? 'Try changing a filter, or clear the filters to start again.' : 'There are no vehicles to show right now.',
         href: qs ? '/cars/explore' : '/makes',

@@ -1,12 +1,19 @@
 <% var TYPE_BADGES = { motorcycle: 'Motorcycle', offroad: 'Off-road', commercial: 'Commercial' }; %>
 <div class="row" id="cars-row">
-  <% if (carImg.length === 0) { %>
-    <div class="empty-state<%= typeof emptyState !== 'undefined' && emptyState ? ' empty-state--results' : '' %>">
+  <% if (carImg.length === 0) {
+    const state = total > 0 ? {
+      title: 'No vehicles on this page',
+      message: 'The results may have changed. Return to the first page to keep exploring.',
+      href: baseUrl + '1',
+      action: 'Back to first page'
+    } : (typeof emptyState !== 'undefined' ? emptyState : null);
+  %>
+    <div class="empty-state<%= state ? ' empty-state--results' : '' %>">
       <div class="empty-icon">⊘</div>
-      <% if (typeof emptyState !== 'undefined' && emptyState) { %>
-        <h3><%= emptyState.title %></h3>
-        <p><%= emptyState.message %></p>
-        <a href="<%= emptyState.href %>" class="btn btn-outline-secondary mt-3"><%= emptyState.action %></a>
+      <% if (state) { %>
+        <h3><%= state.title %></h3>
+        <p><%= state.message %></p>
+        <a href="<%= state.href %>" class="btn btn-outline-secondary mt-3"><%= state.action %></a>
       <% } else { %>
         <h3>No models found</h3>
         <p>We don't have any models on record for <strong><%= search %></strong> yet.</p>
@@ -55,4 +62,4 @@
     <% }) %>
   <% } %>
 </div>
-<%- include('pagination') %>
+<% if (carImg.length > 0) { %><%- include('pagination') %><% } %>
