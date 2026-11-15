@@ -242,6 +242,33 @@ describe('Catalog', function() {
       await request(app).get('/search?q=HONDA%20CIVIC%20TYPE').expect(302).expect('Location', '/cars/car?make=Honda&model=Civic%20Type%20R');
     });
 
+    it('opens a whole model when a submitted make-and-model search uses different spacing', async function() {
+      await request(app).get('/search').query({ q: 'HoNdA Civic  Type\tR' })
+        .expect(302).expect('Location', '/cars/car?make=Honda&model=Civic%20Type%20R');
+    });
+
+    it('keeps literal search matches and only opens unambiguous spacing matches within the make', async function() {
+      const models = await db.car.bulkCreate([
+        { make: 'Honda', model: 'Spacing A5', favcount: 0 },
+        { make: 'Honda', model: 'Spacing A 5', favcount: 40 },
+        { make: 'Toyota', model: 'Spacing B5', favcount: 0 }
+      ].map(row => ({ ...row, image: PLACEHOLDER_URL })));
+      try {
+        const cases = [
+          ['Honda Spacing A5', '/cars/car?make=Honda&model=Spacing%20A5'],
+          ['Honda Spacing  A5', '/cars?selectmake=Honda'],
+          ['Honda Spacing B 5', '/cars?selectmake=Honda'],
+          ['Toyota Spacing B 5', '/cars/car?make=Toyota&model=Spacing%20B5'],
+          ['Toyota SpacingB', '/cars?selectmake=Toyota']
+        ];
+        for (const [q, location] of cases) {
+          await request(app).get('/search').query({ q }).expect(302).expect('Location', location);
+        }
+      } finally {
+        await db.car.destroy({ where: { id: models.map(model => model.id) } });
+      }
+    });
+
     it('treats LIKE wildcards as plain text', async function() {
       await request(app).get('/search?q=honda%20%25').expect(302).expect('Location', '/cars?selectmake=Honda');
     });
