@@ -55,7 +55,10 @@ router.get('/', async (req, res) => {
   try {
     const type = quizType(req.query.type);
     const s = state(req, type);
-    const [round, leaders] = await Promise.all([currentRound(s, type), quiz.getLeaders()]);
+    const [round, leaders] = await Promise.all([
+      currentRound(s, type),
+      type === 'car' ? quiz.getLeaders() : []
+    ]);
     const last = s.last || null; // result of a no-JS guess, shown once
     delete s.last;
     const noun = type === 'car' ? 'Car' : 'Motorcycle';

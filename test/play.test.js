@@ -206,6 +206,7 @@ describe("Who's That Car?", function() {
       const page = await request(app).get('/play').expect(200);
       if (!/@quiz_ace<\/a>\s*<span class="play-leader-score">10</.test(page.text)) throw new Error('public player missing');
       if (page.text.includes('hidden_ace')) throw new Error('private garage on the leaderboard');
+      assert.match(page.text, /Log in<\/a> to keep your best streak and earn the <strong>Car Whisperer<\/strong> badge/);
     });
   });
 
@@ -242,6 +243,14 @@ describe("Who's That Car?", function() {
       }
     });
 
+    it('explains that motorcycle bests are session-only and links to the car quiz', async function() {
+      const page = await request(app).get('/play?type=motorcycle').expect(200);
+      const sidebar = page.text.match(/<aside class="play-side">[\s\S]*?<\/aside>/)?.[0] || '';
+      assert.match(sidebar, /Your motorcycle best lasts for this session/);
+      assert.match(sidebar, /<a href="\/play">car quiz<\/a>/);
+      assert.doesNotMatch(sidebar, /Top streaks|Car Whisperer|keep your best streak/);
+    });
+
     it('has its own page and streak, and leaves the saved car best alone', async function() {
       const realNewRound = quiz.newRound;
       const motoRound = { answer: bikes[0].id, choices: bikes.map(b => b.id) };
@@ -253,6 +262,7 @@ describe("Who's That Car?", function() {
         if (!page.text.includes("Who's That Motorcycle?")) throw new Error('heading');
         if (!page.text.includes('<input type="hidden" name="type" value="motorcycle">')) throw new Error('type not carried in the forms');
         if (!page.text.includes(photo('monster'))) throw new Error('photo missing');
+        assert.match(page.text, /Your motorcycle best lasts for this session/);
 
         const fields = { _csrf: extractCsrf(page.text), roundId: extractQuizRoundId(page.text) };
         const res = await agent.post('/play/guess').type('form').set('X-Requested-With', 'XMLHttpRequest')
