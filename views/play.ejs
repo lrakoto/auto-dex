@@ -77,28 +77,34 @@
     </div>
 
     <aside class="play-side">
-      <div class="media-card">
-        <h5>Top streaks</h5>
-        <% if (leaders.length === 0) { %>
-          <p class="play-empty">No streaks on the board yet. Players with a public garage show up here.</p>
-        <% } else { %>
-          <ol class="play-leaders">
-            <% leaders.forEach(u => { %>
-              <li>
-                <a href="/u/<%= encodeURIComponent(u.username) %>">@<%= u.username %></a>
-                <span class="play-leader-score"><%= u.quizBest %></span>
-              </li>
-            <% }) %>
-          </ol>
-        <% } %>
-      </div>
-      <p class="play-note">
-        <% if (currentUser) { %>
-          Your best streak is saved. Reach 10 in a row for the <strong>Car Whisperer</strong> badge<% if (!currentUser.garagePublic) { %>, and <a href="/garage#settings">make your garage public</a> to join the board<% } %>.
-        <% } else { %>
-          <a href="/auth/login">Log in</a> to keep your best streak and earn the <strong>Car Whisperer</strong> badge at 10 in a row.
-        <% } %>
-      </p>
+      <% if (type === 'motorcycle') { %>
+        <div class="media-card">
+          <p class="play-note m-0">Your motorcycle best lasts for this session. The <a href="/play">car quiz</a> saves best streaks for signed-in players.</p>
+        </div>
+      <% } else { %>
+        <div class="media-card">
+          <h5>Top streaks</h5>
+          <% if (leaders.length === 0) { %>
+            <p class="play-empty">No streaks on the board yet. Players with a public garage show up here.</p>
+          <% } else { %>
+            <ol class="play-leaders">
+              <% leaders.forEach(u => { %>
+                <li>
+                  <a href="/u/<%= encodeURIComponent(u.username) %>">@<%= u.username %></a>
+                  <span class="play-leader-score"><%= u.quizBest %></span>
+                </li>
+              <% }) %>
+            </ol>
+          <% } %>
+        </div>
+        <p class="play-note">
+          <% if (currentUser) { %>
+            Your best streak is saved. Reach 10 in a row for the <strong>Car Whisperer</strong> badge<% if (!currentUser.garagePublic) { %>, and <a href="/garage#settings">make your garage public</a> to join the board<% } %>.
+          <% } else { %>
+            <a href="/auth/login">Log in</a> to keep your best streak and earn the <strong>Car Whisperer</strong> badge at 10 in a row.
+          <% } %>
+        </p>
+      <% } %>
     </aside>
   </div>
 </div>
