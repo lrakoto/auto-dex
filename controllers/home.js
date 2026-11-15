@@ -11,6 +11,12 @@ async function getKnownMakes() {
   return makes.map(m => m.display);
 }
 
+function modelSpacingMatch(query) {
+  const { fn, col, where } = db.Sequelize;
+  const withoutSpaces = value => fn('lower', fn('regexp_replace', value, '[[:space:]]+', '', 'g'));
+  return where(withoutSpaces(col('model')), withoutSpaces(query));
+}
+
 // The fuzzy pass needs a pool of the most-favorited cars. Loading it from the
 // DB on every keystroke was wasteful (and the queries ordered by a column that
 // had no index), so cache the pools briefly. Suggestions tolerate staleness.
@@ -157,10 +163,13 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
     );
     if (makePrefix) {
       const modelQ = q.slice(makePrefix.length + 1).trim();
+      const { fn, col, where } = db.Sequelize;
+      const exactMatch = where(fn('lower', col('model')), fn('lower', modelQ));
+      const spacingMatch = modelSpacingMatch(modelQ);
       const dbModels = await db.car.findAll({
-        where: { make: makePrefix, model: { [Op.iLike]: '%' + modelQ + '%' } },
+        where: { make: makePrefix, [Op.or]: [{ model: { [Op.iLike]: '%' + modelQ + '%' } }, spacingMatch] },
         attributes: ['make', 'model', 'favcount'],
-        order: [['favcount', 'DESC']],
+        order: [[exactMatch, 'DESC'], [spacingMatch, 'DESC'], ['favcount', 'DESC'], ['id', 'ASC']],
         limit: 15
       });
       let models = dbModels.map(c => c.toJSON());
@@ -249,7 +258,7 @@ router.get('/search', async (req, res) => {
         const modelQ = q.slice(make.length + 1).trim();
         // Any case; an exact name beats a prefix, and a shorter prefix match
         // beats a longer one ("civic" → Civic, not Civic Type R)
-        const { fn, col, literal, where } = db.Sequelize;
+        const { fn, col, literal } = db.Sequelize;
         let match = await db.car.findOne({
           where: { make, model: { [Op.iLike]: modelQ.replace(/[\\%_]/g, '\\$&') + '%' } },
           order: [
@@ -260,10 +269,9 @@ router.get('/search', async (req, res) => {
         });
         if (!match) {
           // Open a spacing match only when the full name identifies one model of this make.
-          const withoutSpaces = value => fn('lower', fn('regexp_replace', value, '[[:space:]]+', '', 'g'));
           const spacingMatches = await db.car.findAll({
             attributes: ['make', 'model'],
-            where: { make, [Op.and]: where(withoutSpaces(col('model')), withoutSpaces(modelQ)) },
+            where: { make, [Op.and]: modelSpacingMatch(modelQ) },
             limit: 2
           });
           if (spacingMatches.length === 1) [match] = spacingMatches;
