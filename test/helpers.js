@@ -9,6 +9,12 @@ function extractCsrf(html) {
   return m[1];
 }
 
+function extractQuizRoundId(html) {
+  const match = html.match(/name="roundId" value="([^"]+)"/);
+  if (!match) throw new Error('No quiz round ID in the form');
+  return match[1];
+}
+
 // GET a form page with the agent (keeping the session cookie), return its CSRF token
 async function getCsrfToken(agent, path = '/auth/login') {
   const res = await agent.get(path).expect(200);
@@ -67,4 +73,4 @@ async function createVerifiedUser(agent, db, { email, name = 'Test User', passwo
   return db.user.findOne({ where: { email } });
 }
 
-module.exports = { extractCsrf, getCsrfToken, runMigrations, createVerifiedUser };
+module.exports = { extractCsrf, extractQuizRoundId, getCsrfToken, runMigrations, createVerifiedUser };

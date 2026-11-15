@@ -21,6 +21,9 @@
   var csrf = form.querySelector('input[name="_csrf"]').value;
   var typeInput = form.querySelector('input[name="type"]');
   var quizType = typeInput ? typeInput.value : 'car';
+  var roundInput = form.querySelector('input[name="roundId"]');
+  var skipRoundInput = document.querySelector('.play-skip-form input[name="roundId"]');
+  if (!roundInput || !skipRoundInput) return;
 
   var next = null;  // the round that comes with each answer
   var busy = false;
@@ -90,6 +93,7 @@
     if (String(data.best) !== bestEl.textContent) bump(bestEl, data.best);
 
     next = data.next;
+    skipRoundInput.value = next ? next.id : '';
     if (next && next.image) new Image().src = next.image; // preload
     nextBtn.focus({ preventScroll: true });
   }
@@ -102,7 +106,7 @@
     fetch(form.action, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-      body: new URLSearchParams({ _csrf: csrf, choice: btn.value, type: quizType })
+      body: new URLSearchParams({ _csrf: csrf, choice: btn.value, type: quizType, roundId: roundInput.value })
     })
       .then(function (r) {
         // 409: this tab's round is over (answered elsewhere, session expired)
@@ -125,6 +129,7 @@
   function showNext() {
     if (card.dataset.state !== 'answered') return;
     if (!next) { window.location.reload(); return; }
+    roundInput.value = next.id;
     img.classList.add('is-swapping');
     img.src = next.image;
     renderCredit(next.credit);

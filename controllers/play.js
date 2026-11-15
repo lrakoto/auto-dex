@@ -4,6 +4,7 @@
 // without JS (form posts + redirect); public/js/play.js makes it instant.
 // ?type=motorcycle plays the motorcycle round: its own streak in the session,
 // while saved bests, the badge and the leaderboard stay with cars.
+const { randomUUID } = require('node:crypto');
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
@@ -40,7 +41,9 @@ async function currentRound(s, type) {
     s.round = await quiz.newRound(s, type);
     view = await quiz.roundView(s.round);
   }
-  return view;
+  if (!view) return null;
+  s.round.id ??= randomUUID(); // also identifies a persisted round from an earlier version
+  return { ...view, id: s.round.id };
 }
 
 // Signed-in players' records outlive the session (cars only, for now)
@@ -71,7 +74,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /play/guess — { choice: carId }. JSON for fetch(), redirect otherwise.
+// POST /play/guess — { choice: carId, roundId }. JSON for fetch(), redirect otherwise.
 router.post('/guess', guessLimiter, async (req, res) => {
   const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
   const type = quizType(req.body.type);
@@ -79,7 +82,7 @@ router.post('/guess', guessLimiter, async (req, res) => {
   const round = s.round;
   const choice = parseInt(req.body.choice, 10);
   // No round, or a stale tab answering a round that's already over
-  if (!round || !round.choices.includes(choice)) {
+  if (!round?.id || req.body.roundId !== round.id || !round.choices.includes(choice)) {
     return isAjax ? res.status(409).json({ success: false, stale: true }) : res.redirect(playPath(type));
   }
   try {
@@ -118,8 +121,10 @@ router.post('/guess', guessLimiter, async (req, res) => {
 router.post('/skip', guessLimiter, async (req, res) => {
   const type = quizType(req.body.type);
   const s = state(req, type);
-  s.round = null;
-  s.streak = 0;
+  if (s.round?.id && req.body.roundId === s.round.id) {
+    s.round = null;
+    s.streak = 0;
+  }
   res.redirect(playPath(type));
 });
 
