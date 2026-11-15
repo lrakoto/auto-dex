@@ -299,6 +299,42 @@ describe('Catalog', function() {
         await db.car.destroy({ where: { id: models.map(model => model.id) } });
       }
     });
+
+    it('keeps whole model names from multiple makes in results and suggestions before their caps', async function() {
+      const models = await db.car.bulkCreate([
+        { make: 'Honda', model: 'ZX9Q', favcount: 3 },
+        { make: 'Toyota', model: 'ZX9Q', favcount: 2 },
+        { make: 'BMW', model: 'ZX 9Q', favcount: 4 },
+        ...Array.from({ length: 49 }, (_, index) => ({ make: 'Toyota', model: `ZX9Q Sport ${index + 1}`, favcount: 10 }))
+      ].map(row => ({ ...row, image: PLACEHOLDER_URL })));
+      const resultCards = async q => {
+        const { text } = await request(app).get('/cars/search').query({ q }).expect(200);
+        return Array.from(text.matchAll(/class="card-make">([^<]+)<\/span> <span class="card-model">([^<]+)<\/span>/g),
+          ([, make, model]) => [make, model]);
+      };
+      const suggestions = async q => {
+        const { body } = await request(app).get('/suggest').query({ q }).expect(200);
+        return body.models.map(({ make, model }) => [make, model]);
+      };
+      try {
+        await request(app).get('/search').query({ q: 'ZX9Q' }).expect(302).expect('Location', '/cars/search?q=ZX9Q');
+        const expected = [['Honda', 'ZX9Q'], ['Toyota', 'ZX9Q'], ['BMW', 'ZX 9Q']];
+        const literalResults = await resultCards('ZX9Q');
+        assert.equal(literalResults.length, 48);
+        assert.deepEqual(literalResults.slice(0, 3), expected);
+        const literalSuggestions = await suggestions('ZX9Q');
+        assert.equal(literalSuggestions.length, 15);
+        assert.deepEqual(literalSuggestions.slice(0, 3), expected);
+
+        const spaced = 'ZX\t9Q';
+        await request(app).get('/search').query({ q: spaced }).expect(302).expect('Location', '/cars/search?q=ZX%099Q');
+        const spacedExpected = [['BMW', 'ZX 9Q'], ['Honda', 'ZX9Q'], ['Toyota', 'ZX9Q']];
+        assert.deepEqual(await resultCards(spaced), spacedExpected);
+        assert.deepEqual((await suggestions(spaced)).slice(0, 3), spacedExpected);
+      } finally {
+        await db.car.destroy({ where: { id: models.map(model => model.id) } });
+      }
+    });
   });
 
   describe('sessions', function() {

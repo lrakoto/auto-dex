@@ -5,16 +5,11 @@ const carquery = require('../config/carquery');
 const rateLimit = require('express-rate-limit');
 const { fuzzyScore } = require('../lib/fuzzy');
 const { getCarOfTheDay } = require('../lib/daily');
+const { modelSpacingMatch, modelSearchOptions } = require('../lib/catalog');
 
 async function getKnownMakes() {
   const makes = await carquery.getMakes();
   return makes.map(m => m.display);
-}
-
-function modelSpacingMatch(query) {
-  const { fn, col, where } = db.Sequelize;
-  const withoutSpaces = value => fn('lower', fn('regexp_replace', value, '[[:space:]]+', '', 'g'));
-  return where(withoutSpaces(col('model')), withoutSpaces(query));
 }
 
 // The fuzzy pass needs a pool of the most-favorited cars. Loading it from the
@@ -154,7 +149,6 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
   const q = (req.query.q || '').trim();
   if (q.length < 2) return res.json({ makes: [], models: [] });
   try {
-    const { Op } = require('sequelize');
     const KNOWN_MAKES = await getKnownMakes();
 
     // Detect "Make ModelPrefix" pattern (e.g. "Ferrari F", "Honda Civ")
@@ -163,13 +157,9 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
     );
     if (makePrefix) {
       const modelQ = q.slice(makePrefix.length + 1).trim();
-      const { fn, col, where } = db.Sequelize;
-      const exactMatch = where(fn('lower', col('model')), fn('lower', modelQ));
-      const spacingMatch = modelSpacingMatch(modelQ);
       const dbModels = await db.car.findAll({
-        where: { make: makePrefix, [Op.or]: [{ model: { [Op.iLike]: '%' + modelQ + '%' } }, spacingMatch] },
+        ...modelSearchOptions(modelQ, makePrefix),
         attributes: ['make', 'model', 'favcount'],
-        order: [[exactMatch, 'DESC'], [spacingMatch, 'DESC'], ['favcount', 'DESC'], ['id', 'ASC']],
         limit: 15
       });
       let models = dbModels.map(c => c.toJSON());
@@ -204,16 +194,9 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
       })
       .slice(0, 5);
 
-    // Exact DB match
-    let exactCars = await db.car.findAll({
-      where: {
-        [Op.or]: [
-          { model: { [Op.iLike]: '%' + q + '%' } },
-          { make:  { [Op.iLike]: '%' + q + '%' } }
-        ]
-      },
+    const exactCars = await db.car.findAll({
+      ...modelSearchOptions(q),
       attributes: ['make', 'model', 'favcount'],
-      order: [['favcount', 'DESC']],
       limit: 15
     });
     let models = exactCars.map(c => c.toJSON());

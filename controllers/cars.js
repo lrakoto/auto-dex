@@ -17,7 +17,7 @@ const { photoCredit } = require('../lib/photos');
 const coolWall = require('../lib/coolWall');
 const rarity = require('../lib/rarity');
 const { getGallery, vote } = require('../lib/gallery');
-const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere } = require('../lib/catalog');
+const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
 const { buildTimeline } = require('../lib/timeline');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
@@ -69,16 +69,9 @@ router.get('/search', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.redirect('/');
   try {
-    const { Op } = require('sequelize');
     const results = await db.car.findAll({
-      where: {
-        [Op.or]: [
-          { model: { [Op.iLike]: '%' + q + '%' } },
-          { make: { [Op.iLike]: '%' + q + '%' } }
-        ]
-      },
-      limit: 48,
-      order: [['favcount', 'DESC']]
+      ...modelSearchOptions(q),
+      limit: 48
     });
     const cars = results.map(r => r.toJSON());
     res.render('cars/search', {
