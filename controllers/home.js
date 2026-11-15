@@ -12,6 +12,24 @@ async function getKnownMakes() {
   return makes.map(m => m.display);
 }
 
+function splitKnownMake(query, makes) {
+  const tokens = Array.from(query.matchAll(/\S+/g));
+  const words = tokens.map(([word]) => word.toLowerCase());
+  let matchedMake = null;
+  let matchedLength = 0;
+  for (const make of makes) {
+    const makeWords = make.toLowerCase().split(/\s+/);
+    if (makeWords.length > matchedLength && makeWords.every((word, index) => word === words[index])) {
+      matchedMake = make;
+      matchedLength = makeWords.length;
+    }
+  }
+  if (!matchedMake) return null;
+  // Slice the input so literal whitespace inside the model still matters.
+  const firstModelWord = tokens[matchedLength];
+  return { make: matchedMake, model: firstModelWord ? query.slice(firstModelWord.index) : '' };
+}
+
 // The fuzzy pass needs a pool of the most-favorited cars. Loading it from the
 // DB on every keystroke was wasteful (and the queries ordered by a column that
 // had no index), so cache the pools briefly. Suggestions tolerate staleness.
@@ -146,17 +164,14 @@ const suggestLimiter = rateLimit({
 });
 
 router.get('/suggest', suggestLimiter, async (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (q.length < 2) return res.json({ makes: [], models: [] });
+  const input = (req.query.q || '').trim();
+  if (input.length < 2) return res.json({ makes: [], models: [] });
   try {
     const KNOWN_MAKES = await getKnownMakes();
 
-    // Detect "Make ModelPrefix" pattern (e.g. "Ferrari F", "Honda Civ")
-    const makePrefix = KNOWN_MAKES.find(m =>
-      q.toLowerCase().startsWith(m.toLowerCase() + ' ')
-    );
-    if (makePrefix) {
-      const modelQ = q.slice(makePrefix.length + 1).trim();
+    const makeQuery = splitKnownMake(input, KNOWN_MAKES);
+    if (makeQuery?.model) {
+      const { make: makePrefix, model: modelQ } = makeQuery;
       const dbModels = await db.car.findAll({
         ...modelSearchOptions(modelQ, makePrefix),
         attributes: ['make', 'model', 'favcount'],
@@ -184,6 +199,7 @@ router.get('/suggest', suggestLimiter, async (req, res) => {
       return res.json({ makes: [], models: models.slice(0, 15) });
     }
 
+    const q = makeQuery?.make || input;
     // Makes: exact substring first, then fuzzy
     const makes = KNOWN_MAKES
       .filter(m => fuzzyScore(q, m) > 0.3 || m.toLowerCase().includes(q.toLowerCase()))
@@ -233,35 +249,34 @@ router.get('/search', async (req, res) => {
     const { Op } = require('sequelize');
     const KNOWN_MAKES = await getKnownMakes();
 
-    const makeMatch = KNOWN_MAKES.find(m => m.toLowerCase() === q.toLowerCase());
-    if (makeMatch) return res.redirect('/cars?selectmake=' + encodeURIComponent(makeMatch));
+    const makeQuery = splitKnownMake(q, KNOWN_MAKES);
+    if (makeQuery) {
+      const { make, model: modelQ } = makeQuery;
+      const makeUrl = '/cars?selectmake=' + encodeURIComponent(make);
+      if (!modelQ) return res.redirect(makeUrl);
 
-    for (const make of KNOWN_MAKES) {
-      if (q.toLowerCase().startsWith(make.toLowerCase() + ' ')) {
-        const modelQ = q.slice(make.length + 1).trim();
-        // Any case; an exact name beats a prefix, and a shorter prefix match
-        // beats a longer one ("civic" → Civic, not Civic Type R)
-        const { fn, col, literal } = db.Sequelize;
-        let match = await db.car.findOne({
-          where: { make, model: { [Op.iLike]: modelQ.replace(/[\\%_]/g, '\\$&') + '%' } },
-          order: [
-            [literal(`lower("car"."model") = ${db.sequelize.escape(modelQ.toLowerCase())}`), 'DESC'],
-            [fn('length', col('model')), 'ASC'],
-            ['favcount', 'DESC']
-          ]
+      // Any case; an exact name beats a prefix, and a shorter prefix match
+      // beats a longer one ("civic" → Civic, not Civic Type R)
+      const { fn, col, literal } = db.Sequelize;
+      let match = await db.car.findOne({
+        where: { make, model: { [Op.iLike]: modelQ.replace(/[\\%_]/g, '\\$&') + '%' } },
+        order: [
+          [literal(`lower("car"."model") = ${db.sequelize.escape(modelQ.toLowerCase())}`), 'DESC'],
+          [fn('length', col('model')), 'ASC'],
+          ['favcount', 'DESC']
+        ]
+      });
+      if (!match) {
+        // Open a spacing match only when the full name identifies one model of this make.
+        const spacingMatches = await db.car.findAll({
+          attributes: ['make', 'model'],
+          where: { make, [Op.and]: modelSpacingMatch(modelQ) },
+          limit: 2
         });
-        if (!match) {
-          // Open a spacing match only when the full name identifies one model of this make.
-          const spacingMatches = await db.car.findAll({
-            attributes: ['make', 'model'],
-            where: { make, [Op.and]: modelSpacingMatch(modelQ) },
-            limit: 2
-          });
-          if (spacingMatches.length === 1) [match] = spacingMatches;
-        }
-        if (match) return res.redirect('/cars/car?make=' + encodeURIComponent(match.make) + '&model=' + encodeURIComponent(match.model));
-        return res.redirect('/cars?selectmake=' + encodeURIComponent(make));
+        if (spacingMatches.length === 1) [match] = spacingMatches;
       }
+      if (match) return res.redirect('/cars/car?make=' + encodeURIComponent(match.make) + '&model=' + encodeURIComponent(match.model));
+      return res.redirect(makeUrl);
     }
 
     return res.redirect('/cars/search?q=' + encodeURIComponent(q));

@@ -247,6 +247,42 @@ describe('Catalog', function() {
         .expect(302).expect('Location', '/cars/car?make=Honda&model=Civic%20Type%20R');
     });
 
+    it('accepts extra spacing in a make and preserves the literal model lookup', async function() {
+      const rows = await db.car.bulkCreate([
+        { make: 'Signal', model: 'Works ZX  9Q', favcount: 100 },
+        { make: 'Signal Works', model: 'ZX  9Q', favcount: 1 },
+        { make: 'Signal Works', model: 'ZX 9Q', favcount: 50 }
+      ].map(row => ({ ...row, image: PLACEHOLDER_URL })));
+      const lookups = stubLookups({});
+      const getMakes = carquery.getMakes;
+      carquery.getMakes = async () => [{ display: 'Signal' }, { display: 'Signal Works' }];
+      try {
+        const q = 'SiGnAl  wOrKs\tZX  9Q';
+        await request(app).get('/search').query({ q }).expect(302)
+          .expect('Location', '/cars/car?make=Signal%20Works&model=ZX%20%209Q');
+        const suggestions = await request(app).get('/suggest').query({ q }).expect(200);
+        assert.deepEqual(suggestions.body.makes, []);
+        assert.deepEqual(suggestions.body.models.map(({ make, model }) => [make, model]), [
+          ['Signal Works', 'ZX  9Q'], ['Signal Works', 'ZX 9Q']
+        ]);
+
+        const makeOnly = 'Signal\tWorks';
+        await request(app).get('/search').query({ q: makeOnly }).expect(302)
+          .expect('Location', '/cars?selectmake=Signal%20Works');
+        const makeSuggestions = await request(app).get('/suggest').query({ q: makeOnly }).expect(200);
+        assert.equal(makeSuggestions.body.makes[0], 'Signal Works');
+
+        await request(app).get('/search').query({ q: 'Signal\tWorks\tZX   9Q' }).expect(302)
+          .expect('Location', '/cars?selectmake=Signal%20Works');
+        await request(app).get('/search').query({ q: 'SignalWorks' }).expect(302)
+          .expect('Location', '/cars/search?q=SignalWorks');
+      } finally {
+        carquery.getMakes = getMakes;
+        lookups.restore();
+        await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+      }
+    });
+
     it('keeps literal search matches and only opens unambiguous spacing matches within the make', async function() {
       const models = await db.car.bulkCreate([
         { make: 'Honda', model: 'Spacing A5', favcount: 0 },
