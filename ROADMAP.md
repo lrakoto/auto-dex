@@ -209,8 +209,11 @@ R14 on 2026-10-01 so they ship before R4.
   public garage handle and UTC date for up to 12 sightings. The feed uses
   the same ordering and limit as the public garage, and changes to garage
   visibility or sighting deletion take effect on the next request.
-- [ ] Community voting on recent spots with photos, plus badge and quiz
-  record activity from public garages.
+- [x] Spot of the Day voting at `/activity` for photos from the public feed's
+  recent sightings within the last seven UTC dates. Each signed-in account
+  can choose one sighting per day, move or withdraw its vote, and see the
+  current leader. The ballot resets at midnight UTC.
+- [ ] Badge and quiz record activity from public garages.
 
 ### R13 — Build log
 - [x] Modifications on garage cars (part, vendor, cost, date, photos) beside

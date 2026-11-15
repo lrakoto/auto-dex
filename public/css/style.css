@@ -2229,10 +2229,40 @@ textarea:focus-visible,
 .activity-garage, .activity-sighting time { color: #a1a1aa; font-size: 0.82rem; }
 .activity-garage { text-decoration: underline; text-underline-offset: 0.15em; }
 .activity-sighting time { margin-left: auto; white-space: nowrap; }
+.activity-contest {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  background: var(--glass-bg);
+  scroll-margin-top: 72px;
+}
+.activity-contest h2 { margin: 0 0 0.35rem; font-size: 1.25rem; }
+.activity-contest-note, .activity-candidate-count { color: #a1a1aa; font-size: 0.82rem; }
+.activity-contest-note { margin: 0 0 0.6rem; }
+.activity-candidates { margin: 0; padding: 0; list-style: none; }
+.activity-candidate {
+  display: grid;
+  grid-template-columns: clamp(4.5rem, 16vw, 8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+}
+.activity-candidate:first-child { border-top: 0; }
+.activity-candidate:last-child { padding-bottom: 0; }
+.activity-candidate-photo { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); }
+.activity-candidate h3 { margin: 0; font-size: 1rem; }
+.activity-candidate-count { margin: 0.2rem 0 0; font-variant-numeric: tabular-nums; }
+.activity-candidate-count strong { color: var(--text); }
+.activity-vote-form { margin: 0; }
+.activity-vote { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; color: var(--text); }
 
 @media (max-width: 520px) {
   .activity-sighting { column-gap: 0.75rem; }
   .activity-sighting time { flex-basis: 100%; margin: 0; }
+  .activity-candidate { grid-template-columns: 4.5rem minmax(0, 1fr); column-gap: 0.75rem; }
+  .activity-vote-form { grid-column: 2; }
 }
 
 /* ─── TIMELINE ─────────────────────────────────────────────────────────────── */

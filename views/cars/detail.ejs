@@ -355,6 +355,7 @@
           <label class="field-label" for="spotImage">Photo</label>
           <input type="file" class="form-control-file mb-2" id="spotImage" name="spotImage" accept="image/jpeg,image/png,image/webp">
           <input type="text" class="form-control mb-3" name="imageUrl" placeholder="…or paste a photo URL" autocomplete="off">
+          <% if (currentUser.garagePublic) { %><p class="small text-muted">Recent photos from your public garage may appear in <a href="/activity#spot-of-the-day">Spot of the Day</a>.</p><% } %>
           <label class="field-label" for="spotLocation">Where</label>
           <input type="text" class="form-control mb-3" id="spotLocation" name="location" maxlength="120" placeholder="e.g. Cars &amp; Coffee, Malibu">
           <label class="field-label" for="spotNotes">Notes</label>

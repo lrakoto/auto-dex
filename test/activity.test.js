@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
+const { PLACEHOLDER_URL } = require('../lib/constants');
+const { getCsrfToken } = require('./helpers');
 
 describe('Public sightings feed', function () {
   const knownUsers = [];
@@ -120,5 +122,121 @@ describe('Public sightings feed', function () {
     const deleted = await feed();
     assert.ok(!deleted.includes(modelMarker(models[11])));
     assert.ok(deleted.includes(modelMarker(models[10])));
+  });
+
+  describe('Spot of the Day', function () {
+    const dayMs = 86_400_000;
+    const ballotPath = '/activity#spot-of-the-day';
+    const photo = name => `https://images.example.test/activity-vote-${name}.jpg`;
+    const utcDay = date => date.toISOString().slice(0, 10);
+
+    function recentSpot(user, car, createdAt, imageUrl) {
+      return spot(user, car, 0, { createdAt, imageUrl });
+    }
+
+    async function signIn(user) {
+      const password = 'activity-vote-password';
+      await user.update({ password, emailVerified: true });
+      const agent = request.agent(app);
+      const _csrf = await getCsrfToken(agent);
+      await agent.post('/auth/login').type('form').send({ email: user.email, password, _csrf })
+        .expect(302).expect('Location', '/');
+      return { agent, _csrf: await getCsrfToken(agent) };
+    }
+
+    function postVote(agent, fields) {
+      return agent.post('/activity/vote').type('form').send(fields);
+    }
+
+    it('counts one current UTC vote per member and lets them switch or withdraw it', async function () {
+      const now = new Date();
+      const day = utcDay(now);
+      const midnight = Date.parse(day);
+      const yesterday = utcDay(new Date(midnight - dayMs));
+      const voter = await owner('voter', false);
+      const submitter = await owner('entrant', true);
+      const { agent, _csrf } = await signIn(voter);
+      const [firstCar, secondCar] = await cars('Vote First', 'Vote Second');
+      const first = await recentSpot(submitter, firstCar, new Date(midnight), photo('first'));
+      const second = await recentSpot(submitter, secondCar, new Date(midnight - 6 * dayMs), photo('second'));
+      await db.spot_vote.create({ userId: voter.id, spottingId: second.id, voteDay: yesterday });
+
+      const ballot = await agent.get('/activity').expect(200);
+      assert.match(ballot.text, /name="spottingId"/);
+      assert.ok(ballot.text.includes(`name="day" value="${day}"`));
+      assert.ok(ballot.text.includes(photo('first')) && ballot.text.includes(photo('second')));
+      assert.doesNotMatch(ballot.text, /Leading today/i);
+
+      const fields = { spottingId: first.id, action: 'vote', day, _csrf };
+      const submit = overrides => postVote(agent, { ...fields, ...overrides }).expect(302).expect('Location', ballotPath);
+      await postVote(agent, { ...fields, day: yesterday }).expect(409);
+      await postVote(agent, { ...fields, spottingId: 0 }).expect(400);
+      await postVote(agent, { ...fields, _csrf: undefined }).set('X-Requested-With', 'XMLHttpRequest').expect(403);
+      const guest = request.agent(app);
+      await postVote(guest, { ...fields, _csrf: await getCsrfToken(guest) }).expect(302).expect('Location', '/auth/login');
+
+      const today = { userId: voter.id, voteDay: day };
+      await Promise.all([submit({}), submit({})]);
+      assert.deepEqual((await db.spot_vote.findAll({ where: today })).map(vote => vote.spottingId), [first.id]);
+      const publicFeed = await feed();
+      assert.match(publicFeed, /Leading today/i);
+      assert.match(publicFeed, /\b1 vote\b/i);
+      assert.ok(!publicFeed.includes(voter.username) && !publicFeed.includes(voter.email));
+
+      await submit({ spottingId: second.id });
+      assert.deepEqual((await db.spot_vote.findAll({ where: today })).map(vote => vote.spottingId), [second.id]);
+      await submit({ spottingId: second.id, action: 'withdraw' });
+      assert.equal(await db.spot_vote.count({ where: today }), 0);
+      assert.equal(await db.spot_vote.count({ where: { userId: voter.id, voteDay: yesterday } }), 1);
+      assert.doesNotMatch(await feed(), /Leading today/i);
+    });
+
+    it('keeps nonpublic and ineligible photos out of the ballot and rejects direct votes for them', async function () {
+      const now = new Date();
+      const day = utcDay(now);
+      const midnight = Date.parse(day);
+      const voter = await owner('owns_candidate', true);
+      const submitter = await owner('can_hide', true);
+      const privateOwner = await owner('private_candidate', false);
+      const { agent, _csrf } = await signIn(voter);
+      const [validCar, ownedCar, privateCar, photoLessCar, retiredCar, oldCar, futureCar, placeholderCar] = await cars(
+        'Candidate', 'Own Candidate', 'Private Candidate', 'No Photo Candidate', 'Retired Candidate',
+        'Expired Candidate', 'Future Candidate', 'Placeholder Candidate'
+      );
+      const valid = await recentSpot(submitter, validCar, new Date(midnight), photo('visible'));
+      const excluded = await Promise.all([
+        recentSpot(voter, ownedCar, new Date(midnight), photo('own')),
+        recentSpot(privateOwner, privateCar, new Date(midnight), photo('private')),
+        recentSpot(submitter, photoLessCar, new Date(midnight), null),
+        recentSpot(submitter, retiredCar, new Date(midnight), 'https://images.unsplash.com/retired-activity.jpg'),
+        recentSpot(submitter, oldCar, new Date(midnight - 6 * dayMs - 1), photo('expired')),
+        recentSpot(submitter, futureCar, new Date(now.getTime() + dayMs), photo('future')),
+        recentSpot(submitter, placeholderCar, new Date(midnight), PLACEHOLDER_URL)
+      ]);
+      const response = await feed();
+      assert.ok(response.includes(photo('visible')));
+      for (const url of [photo('private'), 'retired-activity.jpg', photo('expired'), photo('future'), PLACEHOLDER_URL]) {
+        assert.ok(!response.includes(url), `activity feed exposed ${url}`);
+      }
+
+      const vote = spottingId => postVote(agent, { spottingId, day, action: 'vote', _csrf });
+      for (const { id } of excluded) await vote(id).expect(404);
+
+      // Twelve newer public sightings fill the feed, even without eligible photos.
+      const overflow = await recentSpot(submitter, validCar, new Date(midnight - dayMs), photo('overflow'));
+      await db.spotting.bulkCreate(Array.from({ length: 6 }, () => ({
+        userId: submitter.id, carId: validCar.id, createdAt: new Date(midnight)
+      })));
+      assert.ok(!(await feed()).includes(photo('overflow')));
+      await vote(overflow.id).expect(404);
+      assert.equal(await db.spot_vote.count({ where: { userId: voter.id, voteDay: day } }), 0);
+
+      await vote(valid.id).expect(302).expect('Location', ballotPath);
+      await submitter.update({ garagePublic: false });
+      const hidden = await feed();
+      assert.ok(!hidden.includes(photo('visible')) && !hidden.includes(submitter.username));
+      assert.doesNotMatch(hidden, /Leading today/i);
+      await vote(valid.id).expect(404);
+    });
   });
 });
