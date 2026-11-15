@@ -447,6 +447,11 @@ R14 on 2026-10-01 so they ship before R4.
   used uncompressed assets over this HTTP loopback. A physical-phone check
   of touch controls and timing remains open.
   [Helmet's explanation of Safari HTTP upgrades](https://helmet.js.org/).
+- **Private preview command.** Run `scripts/preview-car-glb.js` with a local,
+  self-contained GLB, a poster and the asset credit. The loopback viewer
+  uses the current lab controls and approved viewer version, and starts
+  independently of the catalog and database. The BMW model and poster
+  stay in local files. See [the setup instructions](README.md#local-3d-viewer-prototype).
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before

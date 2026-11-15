@@ -28,12 +28,14 @@ function element() {
   };
 }
 
-function loadDemo() {
+function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model of the Khronos Toy Car' } = {}) {
   const button = element(), stage = element(), poster = element(), status = element();
   const controls = element(), zoomIn = element(), zoomOut = element(), reset = element();
   const modules = [], models = [], timers = new Map();
   let registered = false, nextTimer = 0;
   stage.dataset.state = 'idle';
+  stage.dataset.modelUrl = src;
+  stage.dataset.modelAlt = modelAlt;
   controls.hidden = button.hidden = true;
   stage.appendChild = model => models.push(model);
   const nodes = {
@@ -69,6 +71,20 @@ function loadDemo() {
 }
 
 describe('Local 3D viewer in the browser', function() {
+  it('uses the configured model URL and alternate text after opt-in', function() {
+    const src = '/dev/3d/assets/private-model.glb';
+    const alt = 'Interactive 3D model of the private preview';
+    const demo = loadDemo({ modelUrl: src, modelAlt: alt });
+    assert.deepEqual(demo.models, []);
+    demo.click();
+    demo.installViewer();
+    assert.equal(demo.models[0].src, src);
+    assert.equal(demo.models[0].getAttribute('alt'), alt);
+    demo.models[0].emit('error');
+    demo.click();
+    assert.equal(demo.models[1].src, src + '?retry=1');
+  });
+
   it('repairs a failed model download with a new cache key and reuses the successful key on reopen', function() {
     const demo = loadDemo();
     assert.equal(demo.button.hidden, false);

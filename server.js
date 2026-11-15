@@ -30,21 +30,7 @@ app.set('trust proxy', 1); // Required for secure cookies behind a reverse proxy
 app.locals.cardPhoto = require('./lib/photos').cardPhoto;
 app.locals.photoBackground = require('./lib/photos').photoBackground;
 
-// Security headers (helmet). CSP is configured around the resources this app
-// actually loads: Bootstrap/Popper/jQuery from jsdelivr & code.jquery.com,
-// Inter from Google Fonts, car images from arbitrary https hosts.
-app.use(require('helmet')({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", 'https://code.jquery.com', 'https://cdn.jsdelivr.net'],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'https:', 'data:'],
-      connectSrc: ["'self'"]
-    }
-  }
-}));
+app.use(require('./config/security-headers'));
 
 app.use(require('morgan')(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(methodOverride('_method'));
