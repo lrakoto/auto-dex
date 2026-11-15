@@ -267,8 +267,9 @@ R14 on 2026-10-01 so they ship before R4.
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   The download listing says the interior and underside are absent. The
   artist's portfolio describes modeling an interior, so plan for an exterior
-  viewer and confirm the contents when inspecting the source mesh. This is the
-  leading option for the existing Mustang page. The preview shows the fastback
+  viewer and confirm the contents when inspecting the source mesh. The live
+  Mustang page currently shows 1981–2027. Confirm where the 1967 variant
+  belongs before linking the viewer. The preview shows the fastback
   roof sweep, rear roof louvers, and a recessed tail panel with three individually
   framed lamps per side. These match Ford's 1967 Fastback 2+2 references.
   The model has GT-style grille fog lamps and a personalized plate. Ford's
@@ -285,6 +286,33 @@ R14 on 2026-10-01 so they ship before R4.
   [Ford's 1967 sales brochure](https://ponynsnake.com/wp-content/uploads/2023/07/access-1967_Ford_Mustang_brochure_AR_96_212010_18065.pdf) ·
   [Ford's 1967 launch release, pp. 2–3 and 10](https://www.1967shelbyresearch.com/library/docs/files/1966-09-16%20Ford%20Press%20Release%20-%201967%20Mustang.pdf#page=2) ·
   [Ford brand licensing](https://www.fordbrandlicensing.com/).
+- **Volkswagen Golf reference scan.** The live
+  [Volkswagen Golf catalog entry](https://autodx.io/cars/car?make=Volkswagen&model=Golf)
+  includes 2004 in its year range. Spiicy lists a 2004 four-door Golf photoscan
+  under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) at 78,660
+  triangles. Its headlamps, grille, and side profile are consistent with the
+  fourth-generation Golf in Volkswagen's archive photos. The scan's exact
+  year, market, and trim remain unverified. The preview has gaps in the roof
+  and windshield and includes the pavement. Use it as reference geometry
+  for rebuilding surfaces and creating separate paint and glass materials.
+  Check scale, remaining coverage, and rights for any retained branding or
+  textures before public use.
+  [Original listing](https://sketchfab.com/3d-models/photoscanned-volkswagen-golf-c1b1133cdf2944d3a72a8f8e37eb5429) ·
+  [Volkswagen's archive photos](https://www.volkswagen-newsroom.com/en/images/albums/golf-4th-generation-1997-2003-2180) ·
+  [Volkswagen model history](https://www.volkswagen-newsroom.com/en/golf-4-19972003-19476).
+- **Chevrolet Caprice reference scan.** Marc Sawyer's 148,396-triangle cleanup
+  credits jtressle's 737,051-triangle photogrammetry and LiDAR scan. Both
+  listings use [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  Sawyer labels the car a 1969 Caprice coupe. The roofline and tail lamps
+  look consistent with Chevrolet's 1969 Custom Coupe. The previews show
+  weathered paint, a distorted grille in the original scan, and opaque glass
+  in the cleanup. The
+  [Chevrolet Caprice catalog entry](https://autodx.io/cars/car?make=Chevrolet&model=Caprice)
+  currently shows 1981–1996. Keep this as a reference until the year and
+  variant are verified and the catalog can place them accurately.
+  [Original scan](https://sketchfab.com/3d-models/old-chevy-caprice-c765fd12b7d841c9ae6f5ca245491e68) ·
+  [Cleaned mesh](https://sketchfab.com/3d-models/chevrolet-caprice-coupe-1969-a7970c3b6b364a699504d415ad656372) ·
+  [GM's 1969 model data](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf).
 - **Historical alternative.** Deutsches Museum publishes its reconstruction of
   Benz Patent-Motorwagen No. 1, inventory 4710, under
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The model
