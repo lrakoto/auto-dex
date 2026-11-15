@@ -273,14 +273,20 @@ R14 on 2026-10-01 so they ship before R4.
   measures 4,358 × 1,946 × 1,430 mm (length × overall width × height). The
   turned front tires set the model's width. BMW lists 4,380 mm long,
   1,932 mm across the mirrors, and 1,420 mm high.
-  The local GLB has 320,380 triangles and weighs 5,252,256 bytes with neutral
-  materials and no textures. The source uses Cycles shaders for paint and
-  glass, and Pan describes a simplified cabin. A local Chrome orbit check
-  shows that the right-front rim faces inward in this export. Correct its
-  orientation and start geometry reduction with the tires, rims, and wheel
-  bolts (141,856 triangles). Build browser-ready paint and glass, then test
-  the exterior on a real phone. Verify rights for the vehicle design, badges,
-  and any retained textures before public delivery.
+  The first neutral GLB has 320,380 triangles and weighs 5,252,256 bytes.
+  Its right-front rim faced inward. Reflecting that rim and its bolts across
+  a plane through the hub, perpendicular to the axle, made all four rims
+  face outward and preserved the repaired hub position.
+  Halving the triangles in the tires, rims, and wheel bolts reduced the
+  full export to 249,452 triangles (22% fewer) and 4,892,168 bytes (7% fewer).
+  The other meshes retained identical geometry, and the overall dimensions
+  shifted by less than 0.1 mm. Both versions rendered in a private Chrome
+  orbit check. The simplified wheels retained the spoke layout and outline,
+  with slightly coarser tread edges. The exports use neutral materials and
+  have no textures. The source uses Cycles shaders for paint and glass, and
+  Pan describes a simplified cabin. Build browser-ready paint and glass,
+  then test the exterior on a real phone. Verify rights for the vehicle
+  design, badges, and any retained textures before public delivery.
   [Blender's archived release](https://web.archive.org/web/20211226043144id_/https://www.blender.org/download/demo-files/) ·
   [Benchmark archive](https://download.blender.org/demo/test/BMW27_2.blend.zip) ·
   [Artist's portfolio](https://mikepan.com/bmw.html) ·
