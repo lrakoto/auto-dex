@@ -12,7 +12,7 @@ const wikimedia = require('../lib/wikimedia');
 const unsplash = require('../lib/unsplash');
 const images = require('../jobs/images');
 const quiz = require('../lib/quiz');
-const { extractCsrf } = require('./helpers');
+const { extractCsrf, extractQuizRoundId } = require('./helpers');
 
 const retired = 'https://images.unsplash.com/photo-retired?w=1080';
 const replacement = 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Retirement_car.jpg';
@@ -125,12 +125,13 @@ describe('Retiring inaccurate Unsplash photos', function() {
       const first = await player.get('/play').expect(200);
       const token = extractCsrf(first.text);
       const result = await player.post('/play/guess').type('form').set('X-Requested-With', 'XMLHttpRequest')
-        .send({ choice: rows[0].id, _csrf: token }).expect(200);
+        .send({ choice: rows[0].id, _csrf: token, roundId: extractQuizRoundId(first.text) }).expect(200);
       assert.equal(result.body.streak, 1);
       await rows[0].update({ image: retired });
       assert.equal(await quiz.roundView({ answer: rows[0].id, choices }), null);
       const refreshed = await player.get('/play').expect(200);
       assert.deepEqual(streaks, [0, 1, 1]);
+      assert.notEqual(extractQuizRoundId(refreshed.text), result.body.next.id);
       assert.ok(refreshed.text.includes(rows[1].image));
       assert.ok(!refreshed.text.includes(retired));
       assert.equal(rows[0].getDataValue('image'), retired);

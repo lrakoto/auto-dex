@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
@@ -5,10 +6,14 @@ const carquery = require('../config/carquery');
 const quiz = require('../lib/quiz');
 const { getBadges } = require('../lib/dex');
 const { getCarOfTheDay, clearDailyCache } = require('../lib/daily');
-const { getCsrfToken, createVerifiedUser } = require('./helpers');
+const { extractCsrf, extractQuizRoundId, createVerifiedUser } = require('./helpers');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 
 const photo = slug => `https://example.com/quiz/${slug}.jpg`;
+const quizForm = async (agent, path = '/play') => {
+  const { text } = await agent.get(path).expect(200);
+  return { _csrf: extractCsrf(text), roundId: extractQuizRoundId(text) };
+};
 
 describe("Who's That Car?", function() {
   let realGetModels, cars;
@@ -97,8 +102,8 @@ describe("Who's That Car?", function() {
     });
     after(function() { quiz.newRound = realNewRound; });
 
-    const guess = (agent, choice, token, ajax = true) => {
-      const req = agent.post('/play/guess').type('form').send({ choice, _csrf: token });
+    const guess = (agent, choice, fields, ajax = true) => {
+      const req = agent.post('/play/guess').type('form').send({ ...fields, choice });
       return ajax ? req.set('X-Requested-With', 'XMLHttpRequest') : req;
     };
 
@@ -113,8 +118,8 @@ describe("Who's That Car?", function() {
     });
 
     it('scores a right answer, saves the best streak, and brings the next car', async function() {
-      const token = await getCsrfToken(player, '/play');
-      const res = await guess(player, round.answer, token).expect(200);
+      const fields = await quizForm(player);
+      const res = await guess(player, round.answer, fields).expect(200);
       const b = res.body;
       if (!b.correct || b.streak !== 1 || b.best !== 1) throw new Error('scoring: ' + JSON.stringify(b));
       if (b.make !== 'Pagani' || b.model !== 'Zonda' || b.url !== '/cars/car?make=Pagani&model=Zonda') throw new Error('reveal wrong');
@@ -125,13 +130,13 @@ describe("Who's That Car?", function() {
     });
 
     it('a miss ends the streak but never lowers the saved best', async function() {
-      let token = await getCsrfToken(player, '/play');
-      await guess(player, round.answer, token).expect(200); // streak 2
+      let fields = await quizForm(player);
+      await guess(player, round.answer, fields).expect(200); // streak 2
       const recordDate = new Date('2026-01-01T12:00:00Z');
       await playerUser.update({ quizBestAt: recordDate });
       await Promise.all([quiz.saveBest(playerUser.id, 2), quiz.saveBest(playerUser.id, 1)]);
-      token = await getCsrfToken(player, '/play');
-      const res = await guess(player, byModel('F40').id, token).expect(200);
+      fields = await quizForm(player);
+      const res = await guess(player, byModel('F40').id, fields).expect(200);
       if (res.body.correct || res.body.streak !== 0 || res.body.best !== 2) throw new Error('miss: ' + JSON.stringify(res.body));
       if (res.body.answerId !== round.answer || res.body.choice !== byModel('F40').id) throw new Error('reveal ids wrong');
       await playerUser.reload();
@@ -139,23 +144,52 @@ describe("Who's That Car?", function() {
       if (playerUser.quizBestAt.getTime() !== recordDate.getTime()) throw new Error('equal or lower score retimed the record');
     });
 
-    it('turns away a guess from a stale tab', async function() {
-      const token = await getCsrfToken(player, '/play');
-      await guess(player, byModel('Utopia').id, token).expect(409);
+    it('turns away a guess outside the current choices', async function() {
+      const fields = await quizForm(player);
+      await guess(player, byModel('Utopia').id, fields).expect(409);
+    });
+
+    it('keeps the newer round and streak when a stale tab guesses a shared choice or skips', async function() {
+      const stub = quiz.newRound;
+      const nextAnswer = byModel('F40').id;
+      quiz.newRound = async state => ({ ...round, answer: state.streak ? nextAnswer : round.answer });
+      try {
+        const agent = request.agent(app);
+        const first = await quizForm(agent);
+        const stale = await quizForm(agent);
+        assert.equal(stale.roundId, first.roundId);
+
+        const played = await guess(agent, round.answer, first).expect(200);
+        const next = played.body.next;
+        assert.ok(next.id && next.id !== first.roundId);
+        assert.ok(next.choices.some(choice => choice.id === round.answer));
+        await guess(agent, nextAnswer, { _csrf: stale._csrf }).expect(409); // pre-deploy form
+        await guess(agent, round.answer, stale).expect(409);
+        await guess(agent, nextAnswer, stale, false).expect(302).expect('Location', '/play');
+        await agent.post('/play/skip').type('form').send(stale).expect(302).expect('Location', '/play');
+
+        const current = await agent.get('/play').expect(200);
+        assert.match(current.text, /id="play-streak">1</);
+        assert.equal(extractQuizRoundId(current.text), next.id);
+        const accepted = await guess(agent, nextAnswer, { _csrf: extractCsrf(current.text), roundId: next.id }).expect(200);
+        assert.equal(accepted.body.streak, 2);
+      } finally {
+        quiz.newRound = stub;
+      }
     });
 
     it('works without JavaScript', async function() {
       const agent = request.agent(app);
-      let token = await getCsrfToken(agent, '/play');
-      await guess(agent, round.answer, token, false).expect(302).expect('Location', '/play');
+      let fields = await quizForm(agent);
+      await guess(agent, round.answer, fields, false).expect(302).expect('Location', '/play');
       let page = await agent.get('/play').expect(200);
       if (!/class="play-last is-correct"/.test(page.text) || !page.text.includes('Pagani Zonda')) throw new Error('result banner missing');
       if (!/id="play-streak">1</.test(page.text)) throw new Error('streak not shown');
       page = await agent.get('/play').expect(200);
       if (page.text.includes('play-last')) throw new Error('result banner shown twice');
 
-      token = await getCsrfToken(agent, '/play');
-      await agent.post('/play/skip').type('form').send({ _csrf: token }).expect(302);
+      fields = await quizForm(agent);
+      await agent.post('/play/skip').type('form').send(fields).expect(302);
       page = await agent.get('/play').expect(200);
       if (!/id="play-streak">0</.test(page.text)) throw new Error('skip should end the streak');
     });
@@ -220,9 +254,9 @@ describe("Who's That Car?", function() {
         if (!page.text.includes('<input type="hidden" name="type" value="motorcycle">')) throw new Error('type not carried in the forms');
         if (!page.text.includes(photo('monster'))) throw new Error('photo missing');
 
-        const token = await getCsrfToken(agent, '/play?type=motorcycle');
+        const fields = { _csrf: extractCsrf(page.text), roundId: extractQuizRoundId(page.text) };
         const res = await agent.post('/play/guess').type('form').set('X-Requested-With', 'XMLHttpRequest')
-          .send({ choice: bikes[0].id, type: 'motorcycle', _csrf: token }).expect(200);
+          .send({ ...fields, choice: bikes[0].id, type: 'motorcycle' }).expect(200);
         if (!res.body.correct || res.body.streak !== 1 || res.body.model !== 'Monster') throw new Error('scoring: ' + JSON.stringify(res.body));
 
         const carPage = await agent.get('/play').expect(200);
@@ -231,8 +265,9 @@ describe("Who's That Car?", function() {
         if (user.quizBest !== 0) throw new Error('motorcycle streak saved as the car best');
 
         // Without JS, the answer comes back to the motorcycle round
-        const token2 = await getCsrfToken(agent, '/play?type=motorcycle');
-        await agent.post('/play/guess').type('form').send({ choice: bikes[0].id, type: 'motorcycle', _csrf: token2 })
+        const later = await quizForm(agent, '/play?type=motorcycle');
+        await agent.post('/play/guess').type('form')
+          .send({ ...later, choice: bikes[0].id, type: 'motorcycle' })
           .expect(302).expect('Location', '/play?type=motorcycle');
       } finally {
         quiz.newRound = realNewRound;

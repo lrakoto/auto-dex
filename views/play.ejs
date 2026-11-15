@@ -43,6 +43,7 @@
           <form method="POST" action="/play/guess" id="play-form" class="play-choices" aria-label="Which <%= noun.toLowerCase() %> is this?">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="type" value="<%= type %>">
+            <input type="hidden" name="roundId" value="<%= round.id %>">
             <% round.choices.forEach((c, i) => { %>
               <button type="submit" name="choice" value="<%= c.id %>" class="play-choice">
                 <span class="play-key" aria-hidden="true"><%= i + 1 %></span>
@@ -66,6 +67,7 @@
             <form method="POST" action="/play/skip" class="play-skip-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <input type="hidden" name="type" value="<%= type %>">
+              <input type="hidden" name="roundId" value="<%= round.id %>">
               <button type="submit" class="play-skip">Skip (ends your streak)</button>
             </form>
             <span class="play-hint">Keys 1–4 to answer · Enter for the next <%= noun.toLowerCase() %></span>
