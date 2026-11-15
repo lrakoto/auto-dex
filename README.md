@@ -186,6 +186,20 @@ The catalog link is exercised by a fictional Toy Car fixture in the test
 database. Run `npm test -- --grep 'exact local preview car'` from a checkout
 with the test database configured.
 
+To inspect an exported model on disk, run:
+
+```bash
+node scripts/inspect-car-gltf.js dev-assets/car-3d/car-only-v1/ToyCar.gltf
+```
+
+The report shows triangle count, world-axis bounds in metres, PNG/JPEG
+image dimensions and bytes, and the combined on-disk size of the glTF or
+GLB and its dependencies. Use a static triangle export with uncompressed
+geometry and local files inside the model folder or embedded GLB data.
+For a real vehicle, confirm its orientation and compare the exported mesh
+with the exact variant's reference dimensions. Measure wheelbase between
+the axle centres in the source editor. See the [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units).
+
 ### Tests
 
 Tests run against a **separate `autodex_test` database** and build the schema
