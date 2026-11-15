@@ -7,14 +7,11 @@ const { execFileSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
 const { brotliCompressSync, constants } = require('node:zlib');
-const { assetRoot, brotliAssets } = require('../config/car-3d');
+const { assetRoot, brotliAssets, viewer } = require('../config/car-3d');
 const trimToyCar = require('./trim-toy-car');
 
 const revision = '8f492390ddc7a2ae221a1369ef560589cf8c70fb';
 const sample = `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/${revision}/Models/ToyCar/`;
-// Later releases eagerly initialize a WebAssembly decoder this sample never uses.
-const viewer = 'https://registry.npmjs.org/@google/model-viewer/-/model-viewer-4.0.0.tgz';
-const viewerSha512 = 'hf4mixP178gGtvWQq97a0uULr7k98BwJGRU3lvt12XnurOdLmZA/RPdW4tPsINNNQxZvmvQsjud4lZWre6WGNw==';
 const sampleFiles = ['ToyCar.gltf', 'ToyCar.bin', 'ToyCar_normal.png', 'ToyCar_emissive.png',
   'ToyCar_basecolor.png', 'ToyCar_occlusion_roughness_metallic.png', 'ToyCar_clearcoat.png'];
 
@@ -43,8 +40,8 @@ async function installAssets(files) {
 async function main() {
   const staging = await fs.mkdtemp(path.join(os.tmpdir(), 'autodex-3d-'));
   try {
-    const bytes = await fetchBytes(viewer);
-    if (createHash('sha512').update(bytes).digest('base64') !== viewerSha512) {
+    const bytes = await fetchBytes(viewer.packageUrl);
+    if (createHash('sha512').update(bytes).digest('base64') !== viewer.packageSha512) {
       throw new Error('Pinned model-viewer package failed its integrity check');
     }
     const archive = path.join(staging, 'viewer.tgz');
@@ -54,6 +51,9 @@ async function main() {
       ['viewer.min.js', execFileSync('tar', ['-xOf', archive, 'package/dist/model-viewer.min.js'], { maxBuffer: 2 * 1024 * 1024 })],
       ['VIEWER-LICENSE.txt', execFileSync('tar', ['-xOf', archive, 'package/LICENSE'])]
     ]);
+    if (createHash('sha256').update(files.get('viewer.min.js')).digest('hex') !== viewer.scriptSha256) {
+      throw new Error('Pinned model-viewer script failed its integrity check');
+    }
     await Promise.all([
       ...sampleFiles.map(async name => files.set(name, await fetchBytes(`${sample}glTF/${name}`))),
       fetchBytes(`${sample}screenshot/screenshot.jpg`).then(poster => files.set('poster.jpg', poster)),

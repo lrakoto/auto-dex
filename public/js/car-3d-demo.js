@@ -12,7 +12,10 @@
   const reset = document.getElementById('car-3d-reset');
   if (!button || !status || !stage || !poster || !controls || !zoomIn || !zoomOut || !reset) return;
 
-  const assets = '/dev/3d/assets/';
+  const { modelUrl, modelAlt } = stage.dataset;
+  if (!modelUrl || !modelAlt) return;
+
+  const viewerUrl = '/dev/3d/assets/viewer.min.js';
   const timeoutMs = 20000;
   const defaultOrbit = '35deg 72deg auto';
   const zoomSteps = ['auto', '24deg', '18deg', '12deg'];
@@ -68,7 +71,7 @@
 
     const model = document.createElement('model-viewer');
     attempt.model = model;
-    model.setAttribute('alt', 'Interactive 3D model of the Khronos Toy Car');
+    model.setAttribute('alt', modelAlt);
     model.setAttribute('aria-describedby', 'car-3d-instructions');
     model.setAttribute('aria-hidden', 'true');
     model.setAttribute('camera-controls', '');
@@ -94,7 +97,7 @@
     }, { once: true });
     stage.appendChild(model);
     const suffix = modelRetry ? '?retry=' + modelRetry : '';
-    model.setAttribute('src', assets + 'ToyCar.gltf' + suffix);
+    model.setAttribute('src', modelUrl + suffix);
   }
 
   function start() {
@@ -120,7 +123,7 @@
     // Reuse the module URL after cancellation so a pending import is evaluated
     // only once. Change the URL only after an error or timeout.
     const suffix = moduleAttempt > 1 ? '?retry=' + moduleAttempt : '';
-    script.src = assets + 'viewer.min.js' + suffix;
+    script.src = viewerUrl + suffix;
     script.addEventListener('load', () => showModel(attempt), { once: true });
     script.addEventListener('error', () => {
       if (window.customElements.get('model-viewer')) showModel(attempt);

@@ -3,18 +3,6 @@ const path = require('node:path');
 const express = require('express');
 const demo = require('../config/car-3d');
 
-const assets = new Map([
-  ['viewer.min.js', 'text/javascript'],
-  ['ToyCar.gltf', 'model/gltf+json'],
-  ['ToyCar.bin', 'application/octet-stream'],
-  ['ToyCar_normal.png', 'image/png'],
-  ['ToyCar_emissive.png', 'image/png'],
-  ['ToyCar_basecolor.png', 'image/png'],
-  ['ToyCar_occlusion_roughness_metallic.png', 'image/png'],
-  ['ToyCar_clearcoat.png', 'image/png'],
-  ['poster.jpg', 'image/jpeg']
-]);
-
 async function hasAsset(root, name) {
   try {
     const info = await fs.lstat(path.join(root, name));
@@ -27,11 +15,16 @@ async function hasAsset(root, name) {
 
 module.exports = function registerDevCar3d(app, {
   env = process.env,
-  assetRoot = demo.assetRoot
+  assetRoot = demo.assetRoot,
+  scene = demo.scene,
+  assets = demo.assets,
+  brotliAssets = demo.brotliAssets
 } = {}) {
   if (!demo.isEnabled(env)) return;
 
   const root = path.resolve(assetRoot);
+  const modelUrl = demo.labPath + '/assets/' + encodeURIComponent(scene.modelFile);
+  const posterUrl = demo.labPath + '/assets/' + encodeURIComponent(scene.posterFile);
   const router = express.Router({ caseSensitive: true });
   router.use((req, res, next) => {
     res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
@@ -46,7 +39,7 @@ module.exports = function registerDevCar3d(app, {
         .filter(directive => directive.trim() !== 'upgrade-insecure-requests').join(';'));
     }
     const present = await Promise.all(Array.from(assets.keys(), name => hasAsset(root, name)));
-    res.render('dev-car-3d', { layout: false, assetsReady: present.every(Boolean) });
+    res.render('dev-car-3d', { layout: false, assetsReady: present.every(Boolean), scene, modelUrl, posterUrl });
   });
 
   router.get('/assets/:name', async (req, res, next) => {
@@ -55,7 +48,7 @@ module.exports = function registerDevCar3d(app, {
 
     let file = name;
     const options = { root, dotfiles: 'deny', cacheControl: false };
-    if (demo.brotliAssets.has(name)) {
+    if (brotliAssets.has(name)) {
       res.vary('Accept-Encoding');
       const sidecar = `${name}.br`;
       const available = await hasAsset(root, sidecar) ? ['br', 'identity'] : ['identity'];

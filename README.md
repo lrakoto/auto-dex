@@ -186,6 +186,21 @@ The catalog link is exercised by a fictional Toy Car fixture in the test
 database. Run `npm test -- --grep 'exact local preview car'` from a checkout
 with the test database configured.
 
+For a private check of a local export, run the setup command above once, then:
+
+```bash
+node scripts/preview-car-glb.js /path/to/model.glb /path/to/poster.png \
+  '2011 BMW 1 Series M Coupé' 'Mike Pan · Blender BMW27_2 benchmark archive'
+```
+
+Use a self-contained GLB 2.0 with uncompressed geometry and embedded PNG or
+JPEG textures. Keep the GLB and the PNG or JPEG poster outside the repository.
+The command prints a loopback URL and
+uses the same poster-first controls as the Toy Car lab without starting the
+AutoDex app or database. It prepares lossless Brotli copies for browsers
+that accept them. Press Ctrl+C to stop the preview and remove its temporary
+serving files. The URL is local to the computer running the command.
+
 To inspect an exported model on disk, run:
 
 ```bash

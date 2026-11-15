@@ -10,20 +10,24 @@
 </head>
 <body>
   <header class="lab-masthead">
-    <a href="/" class="lab-brand">Auto<span>Dex</span></a>
+    <% if (scene.homeHref) { %>
+      <a href="<%= scene.homeHref %>" class="lab-brand">Auto<span>Dex</span></a>
+    <% } else { %>
+      <span class="lab-brand">Auto<span>Dex</span></span>
+    <% } %>
     <span class="lab-tag">Local preview</span>
   </header>
   <main id="car-3d-demo" class="lab" aria-labelledby="lab-title">
     <div class="lab-intro">
       <p class="lab-kicker">AutoDex Lab / 01</p>
       <h1 id="lab-title">3D Viewer Lab</h1>
-      <p>Explore a sample model from different angles. This toy car is a demonstration asset.</p>
+      <p><%= scene.intro %></p>
     </div>
     <section class="lab-card" aria-labelledby="lab-model">
       <div class="lab-toolbar">
         <div>
-          <p class="lab-kicker">Sample model</p>
-          <h2 id="lab-model">Khronos Toy Car</h2>
+          <p class="lab-kicker"><%= scene.category %></p>
+          <h2 id="lab-model"><%= scene.name %></h2>
         </div>
         <% if (assetsReady) { %>
           <div class="lab-actions">
@@ -34,8 +38,8 @@
       </div>
       <% if (assetsReady) { %>
         <figure class="lab-figure">
-          <div id="car-3d-stage" class="lab-stage" data-state="idle">
-            <img id="car-3d-poster" class="lab-poster" src="/dev/3d/assets/poster.jpg" alt="Studio render of the Khronos toy car from the front and side">
+          <div id="car-3d-stage" class="lab-stage" data-state="idle" data-model-url="<%= modelUrl %>" data-model-alt="<%= scene.modelAlt %>">
+            <img id="car-3d-poster" class="lab-poster" src="<%= posterUrl %>" alt="<%= scene.posterAlt %>">
           </div>
           <div id="car-3d-controls" class="lab-camera-controls" role="group" aria-label="3D camera controls" hidden>
             <button id="car-3d-zoom-in" type="button" aria-controls="car-3d-stage">Zoom in</button>
@@ -54,7 +58,7 @@
         </div>
       <% } %>
       <div class="lab-credit">
-        <p><a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/8f492390ddc7a2ae221a1369ef560589cf8c70fb/Models/ToyCar">Toy Car by Guido Odendahl and Eric Chadwick</a> · CC0 1.0. Poster from the original scene; the interactive model omits the fabric backdrop.</p>
+        <p><% if (scene.creditUrl) { %><a href="<%= scene.creditUrl %>"><%= scene.creditLabel %></a><% } else { %><%= scene.creditLabel %><% } %><% if (scene.creditNote) { %> · <%= scene.creditNote %><% } %></p>
       </div>
     </section>
   </main>
