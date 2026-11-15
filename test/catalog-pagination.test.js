@@ -46,6 +46,37 @@ describe('Catalog pagination', function() {
     assert.match(res.text, /href="\/cars\/explore\?decade=1990&amp;make=Volvo&amp;sort=az&amp;page=1"/);
   });
 
+  it('pages through tied Explore results once in the same order for both year sorts', async function() {
+    const make = 'Stable Paging Trucks';
+    const inserts = Array.from({ length: 25 }, (_, index) => ({
+      make,
+      model: `Truck ${String(25 - index).padStart(2, '0')}`,
+      image: PLACEHOLDER_URL,
+      favcount: 0,
+      vehicle_type: 'commercial',
+      model_years: [1990],
+      year_min: 1990,
+      year_max: 1990
+    }));
+    const rows = await db.car.bulkCreate(inserts);
+    try {
+      const ordered = rows.sort((a, b) => a.id - b.id).map(row => row.model);
+      const expected = [ordered.slice(0, 12), ordered.slice(12, 24), ordered.slice(24)];
+      for (const sort of ['newest', 'oldest']) {
+        const url = `/cars/explore?type=commercial&make=${encodeURIComponent(make)}&sort=${sort}`;
+        const pages = await Promise.all([
+          request(app).get(url).expect(200),
+          request(app).get(`${url}&page=2&partial=1`).expect(200),
+          request(app).get(`${url}&page=3`).expect(200)
+        ]);
+        const actual = pages.map(({ text }) => Array.from(text.matchAll(/class="card-model">([^<]+)/g), match => match[1]));
+        assert.deepEqual(actual, expected, sort);
+      }
+    } finally {
+      await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+    }
+  });
+
   it('includes catalog-only manufacturers in Explore without weakening make and country filters', async function() {
     const make = 'Catalog Hauler Works';
     const model = 'Catalog Hauler Fixture';
