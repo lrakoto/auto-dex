@@ -139,7 +139,7 @@ describe('Fuel log', function() {
       if (!res.text.includes('Fuel Log')) throw new Error('page should still render without EPA data');
     });
 
-    it('only compares measured MPG with an EPA estimate for the garage car’s model year', async function() {
+    it('only compares measured MPG with an EPA MPG estimate for the garage car’s model year', async function() {
       const logs = await db.fuel_log.bulkCreate([
         { userCarId: myCar.id, date: '2026-09-01', odometer: 10000, gallons: 10 },
         { userCarId: myCar.id, date: '2026-09-10', odometer: 10300, gallons: 10 }
@@ -147,7 +147,7 @@ describe('Fuel log', function() {
       const fuelSite = 'https://www.fueleconomy.gov/ws/rest/vehicle/';
       const cacheKeys = new Set();
       const menus = [];
-      let sameYearAvailable = false;
+      let sameYearSpecs = null;
       async function clearFixtures() {
         cacheClear();
         if (!cacheKeys.size) return;
@@ -163,16 +163,16 @@ describe('Fuel log', function() {
         if (params) menus.push(params);
         if (url.endsWith('/menu/options')) {
           if (params.year === 2014 && params.model === 'Prius') return { data: { menuItem: { value: 'garage-prius-2014' } } };
-          if (sameYearAvailable && params.year === 2015 && params.model === 'Prius Two') {
+          if (sameYearSpecs && params.year === 2015 && params.model === 'Prius Two') {
             return { data: { menuItem: { value: 'garage-prius-2015' } } };
           }
           return { data: null };
         }
         if (url.endsWith('/menu/model')) {
-          return { data: sameYearAvailable && params.year === 2015 ? { menuItem: { value: 'Prius Two' } } : null };
+          return { data: sameYearSpecs && params.year === 2015 ? { menuItem: { value: 'Prius Two' } } : null };
         }
-        if (url.endsWith('/garage-prius-2014')) return { data: { year: 2014, comb08: 48 } };
-        if (url.endsWith('/garage-prius-2015')) return { data: { year: '2015', comb08: 50 } };
+        if (url.endsWith('/garage-prius-2014')) return { data: { year: 2014, fuelType1: 'Regular Gasoline', comb08: 48 } };
+        if (url.endsWith('/garage-prius-2015')) return { data: sameYearSpecs };
         throw new Error('unexpected EPA record');
       };
 
@@ -185,11 +185,18 @@ describe('Fuel log', function() {
 
         await clearFixtures();
         menus.length = 0;
-        sameYearAvailable = true;
+        sameYearSpecs = { year: '2015', fuelType1: 'Regular Gasoline', comb08: 50 };
         const exact = await alice.get(url).expect(200);
         assert.match(exact.text, /30\.0 mpg avg \(EPA estimate: 50 mpg\)/);
         assert.deepEqual([...new Set(menus.map(({ year }) => year))], [2015]);
         assert.ok(menus.some(({ model }) => model === 'Prius Two'), 'same-year trim fallback was skipped');
+
+        await clearFixtures();
+        sameYearSpecs = { year: '2015', fuelType1: 'Electricity', comb08: 130 };
+        const electric = await alice.get(url).expect(200);
+        assert.ok(cacheKeys.has(fuelSite + 'garage-prius-2015'), 'same-year electric rating was not fetched');
+        assert.match(electric.text, /30\.0 mpg avg/);
+        assert.doesNotMatch(electric.text, /EPA (?:estimate:|rates it at)/, 'Garage showed an MPGe rating with measured MPG');
       } finally {
         await clearFixtures();
         await db.fuel_log.destroy({ where: { id: logs.map(log => log.id) } });

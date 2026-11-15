@@ -37,6 +37,25 @@ describe('FuelEconomy.gov running-cost specs', function() {
       if (specs.ghgScore !== 7) throw new Error('ghgScore wrong: ' + specs.ghgScore);
     });
 
+    it('uses the EPA primary fuel to label city, highway and combined ratings', async function() {
+      const records = [
+        [{ fuelType1: 'Electricity' }, 'MPGe'],
+        [{ fuelType1: 'Hydrogen' }, 'MPGe'],
+        [{ fuelType1: 'Natural Gas' }, 'MPGe'],
+        [{ fuelType: 'CNG' }, 'MPGe'],
+        [{ fuelType1: 'Regular Gasoline' }, 'MPG'],
+        [{ fuelType1: 'Regular Gasoline', fuelType2: 'Electricity', fuelType: 'Regular Gas and Electricity' }, 'MPG']
+      ];
+      for (const [index, [fuel, unit]] of records.entries()) {
+        axios.get = async url => url.includes('/menu/options')
+          ? { data: { menuItem: { value: `efficiency-unit-${index}` } } }
+          : { data: { ...fuel, city08: 45, highway08: 50, comb08: 47, cityA08: 100, highwayA08: 95, combA08: 98 } };
+        const specs = await carinfo.getFuelSpecs('Fixture', `Efficiency unit ${index}`, 2024);
+        assert.equal(specs.efficiencyUnit, unit, JSON.stringify(fuel));
+        assert.deepEqual([specs.cityMpg, specs.hwyMpg, specs.combMpg], [45, 50, 47]);
+      }
+    });
+
     it('picks a drivetrain/trim variant only when it starts with every word of the model', function() {
       const names = ['Ascent', 'Outback Wilderness AWD', 'Outback AWD', 'CX-50 4WD', 'CX-5 4WD', 'F150 Pickup 2WD', 'F150 Pickup 4WD', 'Civic', 'Civic Type R'];
       assert.equal(carinfo.fuelVariant(names, 'Outback'), 'Outback AWD', 'fewest extra words');
@@ -142,10 +161,13 @@ describe('FuelEconomy.gov running-cost specs', function() {
       carinfo.getFuelSpecs = async (make, model) => {
         if (fixtureSpecs) return fixtureSpecs;
         if (make === 'Honda' && model === 'Civic') {
-          return { year: 2024, annualFuelCost: 1500, fiveYearSavings: 2250, co2: 250, feScore: 7, ghgScore: 7 };
+          return { year: 2024, efficiencyUnit: 'MPG', cityMpg: 32, hwyMpg: 42, annualFuelCost: 1500, fiveYearSavings: 2250, co2: 250, feScore: 7, ghgScore: 7 };
         }
         if (make === 'Ford' && model === 'F-150') {
           return { year: 2024, annualFuelCost: 3000, fiveYearSavings: -1800, co2: 450, feScore: 3, ghgScore: 3 };
+        }
+        if (make === 'Tesla' && model === 'Model 3') {
+          return { year: 2026, fuel: 'Electricity', efficiencyUnit: 'MPGe', cityMpg: 120, hwyMpg: 107 };
         }
         return null;
       };
@@ -181,6 +203,21 @@ describe('FuelEconomy.gov running-cost specs', function() {
       if (!res.text.includes('Spend $1,800')) throw new Error('overspend missing: ' + res.text.includes('5-Yr'));
     });
 
+    it('labels electric and gasoline efficiency on the detail and comparison pages', async function() {
+      await db.car.findOrCreate({
+        where: { make: 'Tesla', model: 'Model 3' },
+        defaults: { image: PLACEHOLDER_URL, favcount: 0, updated_img: false, year_max: 2026 }
+      });
+      const electric = await request(app).get('/cars/car?make=Tesla&model=Model%203').expect(200);
+      assert.match(electric.text, /class="spec-label">Fuel economy \(city \/ hwy\)<\/span><span class="spec-value">120 \/ 107 MPGe<\/span>/, 'electric detail rating');
+      const gasoline = await request(app).get('/cars/car?make=Honda&model=Civic').expect(200);
+      assert.match(gasoline.text, /class="spec-label">Fuel economy \(city \/ hwy\)<\/span><span class="spec-value">32 \/ 42 MPG<\/span>/, 'gasoline detail rating');
+      const comparison = await request(app)
+        .get('/cars/compare?c=Tesla%7CModel%203&c=Honda%7CCivic')
+        .expect(200);
+      assert.match(comparison.text, /<th scope="row">Fuel economy \(city \/ hwy\)<\/th>\s*<td>120 \/ 107 MPGe<\/td><td>32 \/ 42 MPG<\/td>/, 'mixed comparison ratings');
+    });
+
     it('adds fuel cost, savings, CO2 and EPA score rows to the compare table', async function() {
       const res = await request(app)
         .get('/cars/compare?c=Honda|Civic&c=Ford|F-150')
@@ -213,6 +250,14 @@ describe('FuelEconomy.gov running-cost specs', function() {
         for (const text of ['Annual Fuel Cost', '5-Yr vs Avg New Vehicle', 'Tailpipe CO₂', 'EPA Fuel Economy Score', 'EPA GHG Score', '15,000 miles/year']) {
           assert.ok(!res.text.includes(text), `unavailable ${text} shown on ${url}`);
         }
+      }
+    });
+
+    it('omits city and highway ratings when the highway value is missing', async function() {
+      fixtureSpecs = { year: 2024, efficiencyUnit: 'MPG', cityMpg: 30 };
+      for (const url of pages) {
+        const res = await request(app).get(url).expect(200);
+        assert.doesNotMatch(res.text, /Fuel economy \(city \/ hwy\)|30 \/ undefined/, `partial fuel economy on ${url}`);
       }
     });
 

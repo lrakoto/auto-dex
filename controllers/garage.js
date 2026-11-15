@@ -291,7 +291,7 @@ router.get('/car/:id', async (req, res) => {
       totalCost,
       fuelLogs: fuelLogs.map(l => l.toJSON()),
       fuelStats: fuelStats(fuelLogs),
-      epaCombMpg: epaSpecs?.combMpg ?? null,
+      epaCombMpg: epaSpecs?.efficiencyUnit === 'MPG' ? (epaSpecs.combMpg ?? null) : null,
       buildEntries: buildEntries.map(b => b.toJSON()),
       buildTotal: buildEntries.reduce((sum, b) => sum + (b.cost != null ? Number(b.cost) : 0), 0),
       today: new Date().toISOString().slice(0, 10),
