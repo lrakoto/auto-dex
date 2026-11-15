@@ -109,6 +109,27 @@ describe('Local 3D viewer lab', function () {
     assert.equal(res.headers['set-cookie'], undefined);
   });
 
+  it('keeps HTTP asset URLs usable in WebKit only on the opted-in lab document', async function () {
+    const web = labApp(enabled);
+    web.set('trust proxy', 1);
+    web.get('/unrelated', (_req, res) => res.sendStatus(200));
+    const app = request(web);
+    const header = 'content-security-policy';
+    const baseline = (await app.get('/unrelated').expect(200)).headers[header];
+    assert.match(baseline, /(?:^|;)upgrade-insecure-requests(?:;|$)/);
+    const localPolicy = baseline.split(';').filter(directive => directive !== 'upgrade-insecure-requests').join(';');
+
+    for (const url of ['/dev/3d', '/dev/3d/']) {
+      await app.get(url).expect(200).expect(header, localPolicy);
+    }
+    await app.get('/dev/3d').set('X-Forwarded-Proto', 'https').expect(200).expect(header, baseline);
+    await fs.writeFile(path.join(assets, 'poster.jpg'), 'poster');
+    await app.get('/dev/3d/assets/poster.jpg').expect(200).expect(header, baseline);
+    const production = labApp({ ...enabled, NODE_ENV: 'production' });
+    production.use((_req, res) => res.sendStatus(404));
+    await request(production).get('/dev/3d').expect(404).expect(header, baseline);
+  });
+
   it('serves only listed regular files with explicit types and no reusable cache', async function () {
     await fs.writeFile(path.join(assets, 'ToyCar.gltf'), '{"asset":{"version":"2.0"}}');
     await fs.writeFile(path.join(assets, 'private.txt'), 'not public');

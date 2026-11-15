@@ -437,6 +437,16 @@ R14 on 2026-10-01 so they ship before R4.
   and Reset restored the initial orbit and zoom. A physical handset was
   unavailable. Verify loading, touch, and fallback on a real phone before
   setting the mobile performance budget.
+- **Desktop WebKit check (2026-11-15).** An in-memory WKWebView on macOS
+  26.6.2 opened the HTTP fixture but stalled before the poster or scripts
+  loaded. Omitting `upgrade-insecure-requests` on the lab document let the
+  same fixture render the painted BMW at 1000 × 700 and 390 × 844 CSS px.
+  The poster loaded before opt-in. Both checks captured the WebGL scene from
+  two angles and verified Zoom In, Reset, and return to the poster through the
+  lab's button handlers. The orbit was moved through the viewer API. WebKit
+  used uncompressed assets over this HTTP loopback. A physical-phone check
+  of touch controls and timing remains open.
+  [Helmet's explanation of Safari HTTP upgrades](https://helmet.js.org/).
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before

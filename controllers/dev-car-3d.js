@@ -39,6 +39,12 @@ module.exports = function registerDevCar3d(app, {
   });
 
   router.get('/', async (req, res) => {
+    const policy = res.get('Content-Security-Policy');
+    if (!req.secure && typeof policy === 'string') {
+      // WebKit otherwise upgrades HTTP lab subresources before the poster can load.
+      res.set('Content-Security-Policy', policy.split(';')
+        .filter(directive => directive.trim() !== 'upgrade-insecure-requests').join(';'));
+    }
     const present = await Promise.all(Array.from(assets.keys(), name => hasAsset(root, name)));
     res.render('dev-car-3d', { layout: false, assetsReady: present.every(Boolean) });
   });
