@@ -6,6 +6,7 @@
 </section>
 
 <div class="container pb-5 activity">
+  <% const records = typeof quizRecords !== 'undefined' ? quizRecords : []; %>
   <% if (typeof candidates !== 'undefined' && candidates.length) { %>
     <section id="spot-of-the-day" class="activity-contest" aria-labelledby="activity-contest-heading">
       <h2 id="activity-contest-heading">Spot of the Day</h2>
@@ -52,11 +53,35 @@
         </li>
       <% }) %>
     </ol>
+  <% } else if (records.length) { %>
+    <p id="activity-sightings-empty" class="activity-sightings-empty">No public sightings yet.</p>
   <% } else { %>
     <div id="activity-empty" class="empty-state empty-state--results">
       <h2>No public sightings yet</h2>
       <p>Recent spots will appear here when members share them in their public garages.</p>
       <a class="btn btn-outline-secondary mt-3" href="/cars/explore">Explore cars</a>
     </div>
+  <% } %>
+  <% if (records.length) { %>
+    <section id="quiz-records" class="activity-quiz" aria-labelledby="quiz-records-heading">
+      <div class="activity-quiz-heading">
+        <div>
+          <h2 id="quiz-records-heading">Recent quiz records</h2>
+          <p>Personal best streaks in the car photo quiz.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm activity-quiz-play" href="/play">Play the car quiz</a>
+      </div>
+      <ol class="activity-feed" role="list" aria-labelledby="quiz-records-heading">
+        <% records.forEach(record => { %>
+          <li class="activity-quiz-record">
+            <div class="activity-details">
+              <a class="activity-garage" href="<%= record.garageUrl %>"><%= record.garageName %></a>
+              <p class="activity-quiz-score"><strong><%= record.best %> in a row</strong></p>
+            </div>
+            <time datetime="<%= record.dateIso %>"><%= record.dateLabel %></time>
+          </li>
+        <% }) %>
+      </ol>
+    </section>
   <% } %>
 </div>
