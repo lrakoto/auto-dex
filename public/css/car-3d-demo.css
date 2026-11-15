@@ -94,7 +94,6 @@ h2 { margin-top: 0.2rem; font-size: clamp(1.25rem, 3vw, 1.6rem); }
   cursor: pointer;
 }
 .lab-actions button:hover { background: #dce5ff; }
-.lab-actions button[aria-disabled="true"] { background: #374566; color: var(--ink); cursor: wait; }
 .lab-actions p, .lab-caption p, .lab-credit p { margin: 0; color: var(--muted); font-size: 0.875rem; }
 .lab-actions p:not(:empty) { margin-top: 0.2rem; }
 .lab-figure { margin: 0; }

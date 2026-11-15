@@ -59,9 +59,9 @@ function loadDemo() {
     clearTimeout(id) { timers.delete(id); }
   }, { filename: scriptPath });
   return {
-    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset,
+    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset, timers,
     click: () => button.emit('click'),
-    installViewer() { registered = true; modules[0].emit('load'); },
+    installViewer(module = modules[0]) { registered = true; module.emit('load'); },
     expireTimers() {
       for (const [id, callback] of timers) { timers.delete(id); callback(); }
     }
@@ -101,6 +101,83 @@ describe('Local 3D viewer in the browser', function() {
     assert.equal(reopened.src, retry.src);
     assert.equal(demo.modules.length, 1);
     reopened.emit('load');
+    assert.equal(demo.stage.dataset.state, 'ready');
+  });
+
+  it('returns to the poster when canceled before the viewer module loads', function() {
+    const demo = loadDemo();
+    demo.click();
+    const [canceledModule] = demo.modules;
+    const [canceledTimeout] = demo.timers.values();
+    assert.equal(demo.button.textContent, 'Cancel 3D load');
+    assert.notEqual(demo.button.getAttribute('aria-disabled'), 'true');
+
+    demo.click();
+    assert.equal(canceledModule.removed, true);
+    assert.equal(demo.timers.size, 0);
+    assert.equal(demo.stage.dataset.state, 'idle');
+    assert.equal(demo.button.textContent, 'Load 3D model');
+    assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.controls.hidden, true);
+    canceledTimeout();
+    assert.equal(demo.stage.dataset.state, 'idle');
+
+    demo.click();
+    const retryModule = demo.modules[1];
+    assert.equal(retryModule.src, canceledModule.src);
+    demo.installViewer(canceledModule);
+    canceledModule.emit('error');
+    assert.equal(demo.stage.dataset.state, 'loading');
+    assert.deepEqual(demo.models, []);
+
+    retryModule.emit('load');
+    demo.models[0].emit('load');
+    assert.equal(demo.stage.dataset.state, 'ready');
+    assert.equal(demo.poster.hidden, true);
+  });
+
+  it('ignores canceled model events while a new load is pending', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.installViewer();
+    const [canceledModel] = demo.models;
+    const [canceledTimeout] = demo.timers.values();
+
+    demo.click();
+    assert.equal(canceledModel.removed, true);
+    assert.equal(demo.timers.size, 0);
+    assert.equal(demo.stage.dataset.state, 'idle');
+    assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.controls.hidden, true);
+
+    demo.click();
+    assert.equal(demo.models[1].src, canceledModel.src);
+    canceledModel.emit('load');
+    canceledModel.emit('error');
+    canceledTimeout();
+    assert.equal(demo.stage.dataset.state, 'loading');
+    assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.controls.hidden, true);
+
+    demo.models[1].emit('load');
+    assert.equal(demo.stage.dataset.state, 'ready');
+    assert.equal(demo.poster.hidden, true);
+    assert.equal(demo.controls.hidden, false);
+    assert.equal(demo.modules.length, 1);
+  });
+
+  it('changes the module URL after an actual module load failure', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.modules[0].emit('error');
+    assert.equal(demo.stage.dataset.state, 'error');
+    assert.equal(demo.poster.hidden, false);
+
+    demo.click();
+    const retryModule = demo.modules[1];
+    assert.equal(retryModule.src, '/dev/3d/assets/viewer.min.js?retry=2');
+    demo.installViewer(retryModule);
+    demo.models[0].emit('load');
     assert.equal(demo.stage.dataset.state, 'ready');
   });
 
