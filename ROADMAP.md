@@ -282,15 +282,24 @@ R14 on 2026-10-01 so they ship before R4.
   The other meshes retained identical geometry, and the overall dimensions
   shifted by less than 0.1 mm. Both versions rendered in a private Chrome
   orbit check. The simplified wheels retained the spoke layout and outline,
-  with slightly coarser tread edges. The exports use neutral materials and
-  have no textures. The source uses Cycles shaders for paint and glass, and
-  Pan describes a simplified cabin. Build browser-ready paint and glass,
-  then test the exterior on a real phone. Verify rights for the vehicle
-  design, badges, and any retained textures before public delivery.
+  with slightly coarser tread edges.
+  The local painted export replaces the Cycles shading with glTF materials
+  for clear-coated orange paint, transparent glazing, lamp housings and
+  lenses, alloy wheels, and dark trim. The orange is an approximation of BMW's Valencia
+  Orange Metallic. It uses no texture images and retains the same geometry
+  and transforms. Materials and credits add 3,408 bytes for a total of
+  4,895,576 bytes. Khronos's validator reported zero errors and warnings.
+  A private Chrome fixture with AutoDex's CSP rendered one same-origin GLB
+  at desktop and 390 px viewport widths. The second headlamp treatment made
+  both circular optics easier to see head-on. Some off-angle glare remains,
+  and the glazing shows the simplified cabin. Measure load time and orbit
+  interaction on a real phone. Verify rights for the vehicle design, badges,
+  and any retained textures before public delivery.
   [Blender's archived release](https://web.archive.org/web/20211226043144id_/https://www.blender.org/download/demo-files/) ·
   [Benchmark archive](https://download.blender.org/demo/test/BMW27_2.blend.zip) ·
   [Artist's portfolio](https://mikepan.com/bmw.html) ·
   [Artist's BlendSwap release](https://blendswap.com/blend/4066) ·
+  [BMW's paint and wheel catalog](https://www.press.bmwgroup.com/south-africa/article/attachment/T0129290EN/195299) ·
   [BMW factory dimensions](https://www.press.bmwgroup.com/united-kingdom/article/attachment/T0110413EN_GB/159995).
 - **1967 Ford Mustang Fastback.** Mark Peters publishes a 505,332-triangle
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
