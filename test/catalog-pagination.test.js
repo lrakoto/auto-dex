@@ -46,6 +46,46 @@ describe('Catalog pagination', function() {
     assert.match(res.text, /href="\/cars\/explore\?decade=1990&amp;make=Volvo&amp;sort=az&amp;page=1"/);
   });
 
+  it('recovers from stale catalog pages without losing filters', async function() {
+    const commercial = await db.car.create({
+      make: 'Volvo', model: 'Stale Page Truck Fixture', image: PLACEHOLDER_URL, favcount: 0,
+      vehicle_type: 'commercial', model_years: [1990], year_min: 1990, year_max: 1990
+    });
+    try {
+      const browse = '/cars?selectmake=Volvo&year=1990';
+      const cases = [
+        { url: browse, model: models[0] },
+        { url: browse, model: models[0], partial: true },
+        { url: '/cars?selectmake=Volvo&type=commercial&year=1990', model: commercial.model },
+        { url: '/cars/explore?make=Volvo&decade=1990&sort=az', model: models[0], partial: true }
+      ];
+      for (const { url, model, partial } of cases) {
+        const staleUrl = url + '&page=99' + (partial ? '&partial=1' : '');
+        const stale = await request(app).get(staleUrl).expect(200);
+        assert.match(stale.text, /No vehicles on this page/, staleUrl);
+        assert.doesNotMatch(stale.text, /class="pagination-wrap"|class="card-model"/, staleUrl);
+        if (partial) {
+          assert.match(stale.text, /id="cars-row"/, staleUrl);
+          assert.doesNotMatch(stale.text, /<html\b/i, staleUrl);
+        }
+
+        const href = stale.text.match(/href="([^"]+)"[^>]*>Back to first page<\/a>/)?.[1];
+        assert.ok(href, staleUrl);
+        const destination = new URL(href.replaceAll('&amp;', '&'), 'http://autodex.test');
+        const original = new URL(url, 'http://autodex.test');
+        assert.equal(destination.pathname, original.pathname, staleUrl);
+        assert.equal(destination.searchParams.get('page') ?? '1', '1', staleUrl);
+        destination.searchParams.delete('page');
+        assert.deepEqual(Object.fromEntries(destination.searchParams), Object.fromEntries(original.searchParams), staleUrl);
+
+        const recovered = await request(app).get(href.replaceAll('&amp;', '&')).expect(200);
+        assert.ok(recovered.text.includes(`class="card-model">${model}</span>`), staleUrl);
+      }
+    } finally {
+      await db.car.destroy({ where: { id: commercial.id } });
+    }
+  });
+
   it('pages through tied Explore results once in the same order for both year sorts', async function() {
     const make = 'Stable Paging Trucks';
     const inserts = Array.from({ length: 25 }, (_, index) => ({
