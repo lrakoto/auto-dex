@@ -143,6 +143,46 @@ describe('Catalog', function() {
         .expect(301).expect('Location', '/cars?selectmake=Mazda&year=1990');
     });
 
+    it('keeps an exact stored commercial make on its detail, listing, and timeline links', async function() {
+      const fixtures = await db.car.bulkCreate([
+        { make: 'RIVIAN', model: 'EDV', vehicle_type: 'commercial' },
+        { make: 'Rivian', model: 'R1T', vehicle_type: 'car' }
+      ].map(row => ({
+        ...row, image: PLACEHOLDER_URL, favcount: 0, model_years: [2023], year_min: 2023, year_max: 2023
+      })));
+      const getComplaints = nhtsa.getComplaints;
+      nhtsa.getComplaints = async () => null;
+      try {
+        const detail = await request(app).get('/cars/car?make=RIVIAN&model=EDV').expect(200);
+        const breadcrumb = detail.text.match(/href="([^"]+)" class="btn btn-outline-secondary btn-sm">&larr; RIVIAN<\/a>/)?.[1];
+        assert.equal(breadcrumb, '/cars?selectmake=RIVIAN&amp;type=commercial');
+        const listingPath = breadcrumb.replace('&amp;', '&');
+        const listing = await request(app).get(listingPath).expect(200);
+        assert.match(listing.text, /class="card-model">EDV<\/span>/);
+        assert.match(listing.text, /rel="canonical" href="[^"]*\/cars\?selectmake=RIVIAN&amp;type=commercial"/);
+        assert.match(listing.text, /name="selectmake" value="RIVIAN"/);
+        assert.match(listing.text, /name="type" value="commercial"/);
+        const filtered = await request(app).get(`${listingPath}&year=2023`).expect(200);
+        assert.match(filtered.text, /<option value="2023" selected>/);
+        assert.match(filtered.text, /class="card-model">EDV<\/span>/);
+
+        const timeline = detail.text.match(/href="([^"]+)" class="browse-link">Timeline<\/a>/)?.[1];
+        assert.equal(timeline, '/cars/timeline?make=RIVIAN&amp;type=commercial');
+        const chart = await request(app).get(timeline.replace('&amp;', '&')).expect(200);
+        assert.match(chart.text, /class="timeline-label" title="EDV">EDV<\/span>/);
+        assert.match(chart.text, /rel="canonical" href="[^"]*\/cars\/timeline\?make=RIVIAN&amp;type=commercial"/);
+
+        await request(app).get('/cars?selectmake=riViAn&type=commercial&year=2023').expect(301)
+          .expect('Location', '/cars?selectmake=Rivian&type=commercial&year=2023');
+        const curated = await request(app).get('/cars?selectmake=Rivian').expect(200);
+        assert.match(curated.text, /class="card-model">R1T<\/span>/);
+        assert.doesNotMatch(curated.text, /class="card-model">EDV<\/span>/);
+      } finally {
+        nhtsa.getComplaints = getComplaints;
+        await db.car.destroy({ where: { id: fixtures.map(row => row.id) } });
+      }
+    });
+
     it('serves models NHTSA lists that have no row yet', async function() {
       await request(app).get('/cars/car?make=Mazda&model=CX-90').expect(200);
     });

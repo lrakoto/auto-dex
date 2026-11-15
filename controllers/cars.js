@@ -251,8 +251,8 @@ router.get('/', async (req, res) => {
   const wantedType = TYPE_KEYS.includes(req.query.type) ? req.query.type : null;
   try {
     const { Op, fn, col } = require('sequelize');
-    // Unknown makes 404 before anything asks NHTSA about them; other
-    // spellings ("skoda", "TOYOTA") redirect to the catalog's
+    // Unknown makes 404 before any NHTSA lookups. Aliases redirect to the
+    // resolved make, while exact catalog links keep their stored spelling.
     const make = await lookupMake(requested);
     if (!make) return notFound(res);
     if (make !== requested) {
