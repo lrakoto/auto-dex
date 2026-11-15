@@ -249,8 +249,8 @@ router.get('/search', async (req, res) => {
         const modelQ = q.slice(make.length + 1).trim();
         // Any case; an exact name beats a prefix, and a shorter prefix match
         // beats a longer one ("civic" → Civic, not Civic Type R)
-        const { fn, col, literal } = db.Sequelize;
-        const match = await db.car.findOne({
+        const { fn, col, literal, where } = db.Sequelize;
+        let match = await db.car.findOne({
           where: { make, model: { [Op.iLike]: modelQ.replace(/[\\%_]/g, '\\$&') + '%' } },
           order: [
             [literal(`lower("car"."model") = ${db.sequelize.escape(modelQ.toLowerCase())}`), 'DESC'],
@@ -258,6 +258,16 @@ router.get('/search', async (req, res) => {
             ['favcount', 'DESC']
           ]
         });
+        if (!match) {
+          // Open a spacing match only when the full name identifies one model of this make.
+          const withoutSpaces = value => fn('lower', fn('regexp_replace', value, '[[:space:]]+', '', 'g'));
+          const spacingMatches = await db.car.findAll({
+            attributes: ['make', 'model'],
+            where: { make, [Op.and]: where(withoutSpaces(col('model')), withoutSpaces(modelQ)) },
+            limit: 2
+          });
+          if (spacingMatches.length === 1) [match] = spacingMatches;
+        }
         if (match) return res.redirect('/cars/car?make=' + encodeURIComponent(match.make) + '&model=' + encodeURIComponent(match.model));
         return res.redirect('/cars?selectmake=' + encodeURIComponent(make));
       }
