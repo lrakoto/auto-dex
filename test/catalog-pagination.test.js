@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const request = require('supertest');
+const ejs = require('ejs');
 const app = require('../server');
 const db = require('../models');
 const carquery = require('../config/carquery');
@@ -33,17 +34,55 @@ describe('Catalog pagination', function() {
     assert.doesNotMatch(html, /id="nav-search-btn"/);
   }
 
+  function assertPager(html, baseUrl, page, totalPages, numbers = [1, 2]) {
+    const pager = html.match(/<nav\b[^>]*class="pagination-wrap"[^>]*>[\s\S]*?<\/nav>/)?.[0];
+    assert.ok(pager, 'missing pagination landmark');
+    assert.match(pager, /^<nav\b[^>]*aria-label="Catalog pages"/);
+    const links = Array.from(pager.matchAll(/<a\b[^>]*>/g), ([tag]) => tag);
+    assert.equal(links.filter(link => link.includes('aria-current="page"')).length, 1);
+
+    function assertLink(label, number, current = false) {
+      const link = links.find(tag => tag.includes('aria-label="' + label + '"'));
+      assert.ok(link, 'missing ' + label);
+      assert.ok(link.includes('href="' + baseUrl + number + '"'), 'wrong URL for ' + label);
+      assert.match(link, /\bdata-no-transition\b/);
+      assert.equal(link.includes('aria-current="page"'), current, label);
+      if (current) assert.match(link, /\bclass="pg-btn active"/);
+    }
+
+    for (const number of numbers) assertLink('Page ' + number, number, number === page);
+    if (page > 1) assertLink('Previous page', page - 1);
+    else assert.ok(!links.some(link => link.includes('aria-label="Previous page"')));
+    if (page < totalPages) assertLink('Next page', page + 1);
+    else assert.ok(!links.some(link => link.includes('aria-label="Next page"')));
+
+    const disabled = Array.from(pager.matchAll(/<span\b[^>]*class="pg-btn disabled"[^>]*>/g), ([tag]) => tag);
+    assert.equal(disabled.length, Number(page === 1) + Number(page === totalPages));
+    for (const tag of disabled) assert.match(tag, /\baria-hidden="true"/);
+  }
+
   it('returns only the requested browse grid for a fragment request', async function() {
     const res = await request(app).get('/cars?selectmake=Volvo&page=2&partial=1').expect(200);
     assertFragment(res.text);
-    assert.match(res.text, /href="\/cars\?selectmake=Volvo&amp;page=1"/);
+    assertPager(res.text, '/cars?selectmake=Volvo&amp;page=', 2, 2);
   });
 
   it('returns only the Explore grid and preserves its filters in page links', async function() {
     const res = await request(app)
       .get('/cars/explore?make=Volvo&decade=1990&sort=az&page=2&partial=1').expect(200);
     assertFragment(res.text);
-    assert.match(res.text, /href="\/cars\/explore\?decade=1990&amp;make=Volvo&amp;sort=az&amp;page=1"/);
+    assertPager(res.text, '/cars/explore?decade=1990&amp;make=Volvo&amp;sort=az&amp;page=', 2, 2);
+  });
+
+  it('keeps ellipses decorative and labels distant page links', async function() {
+    const baseUrl = '/cars/explore?page=';
+    const pager = await ejs.renderFile(require.resolve('../views/partials/pagination.ejs'), {
+      page: 10, totalPages: 20, baseUrl
+    });
+    assertPager(pager, baseUrl, 10, 20, [1, 8, 9, 10, 11, 12, 20]);
+    const ellipses = Array.from(pager.matchAll(/<span\b[^>]*class="pg-ellipsis"[^>]*>/g), ([tag]) => tag);
+    assert.equal(ellipses.length, 2);
+    for (const tag of ellipses) assert.match(tag, /\baria-hidden="true"/);
   });
 
   it('recovers from stale catalog pages without losing filters', async function() {
@@ -155,7 +194,7 @@ describe('Catalog pagination', function() {
       assert.equal((res.text.match(/id="nav-search-btn"/g) || []).length, 1);
       assert.ok(res.text.includes(present));
       assert.ok(!res.text.includes(absent));
-      assert.ok(res.text.includes(`class="pg-btn active" data-no-transition>${page}</a>`));
+      assertPager(res.text, '/cars?selectmake=Volvo&amp;page=', page, 2);
     }
   });
 
