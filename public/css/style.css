@@ -1674,7 +1674,14 @@ textarea:focus-visible,
   gap: 1rem 2rem;
   margin-top: 1.25rem;
 }
-.year-filter { display: flex; align-items: center; gap: 0.6rem; margin: 0; }
+.year-filter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
 .year-filter label,
 .field-label,
 .section-label {

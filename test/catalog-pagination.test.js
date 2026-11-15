@@ -85,6 +85,74 @@ describe('Catalog pagination', function() {
     for (const tag of ellipses) assert.match(tag, /\baria-hidden="true"/);
   });
 
+  function assertFilterForm(html, className, action, label) {
+    const forms = Array.from(html.matchAll(/<form\b[^>]*>[\s\S]*?<\/form>/g), ([form]) => form);
+    const form = forms.find(entry => entry.slice(0, entry.indexOf('>')).includes('class="' + className + '"'));
+    assert.ok(form, 'missing ' + className + ' form');
+    const opening = form.slice(0, form.indexOf('>'));
+    assert.ok(opening.includes('action="' + action + '"'));
+    assert.match(opening, /\bmethod="get"/i);
+    assert.doesNotMatch(form, /<noscript\b|\bauto-submit\b|\bname="(?:page|partial)"/i);
+    const button = form.match(/<button\b[^>]*\btype="submit"[^>]*>\s*[^<]+\s*<\/button>/)?.[0];
+    assert.ok(button, 'missing submit button');
+    assert.doesNotMatch(button, /^<button\b[^>]*\bhidden\b/);
+    assert.equal(button.slice(button.indexOf('>') + 1, button.lastIndexOf('<')).trim(), label);
+    return form;
+  }
+
+  it('applies Explore filters together and starts at the first page', async function() {
+    const filters = '/cars/explore?type=all&decade=1990&country=Sweden&make=Volvo';
+    const pageTwo = await request(app).get(filters + '&sort=az&page=2').expect(200);
+    assert.match(pageTwo.text, /class="card-model">Pagination Fixture 13<\/span>/);
+    const form = assertFilterForm(pageTwo.text, 'explore-filters', '/cars/explore', 'Apply filters');
+    for (const value of ['all', '1990', 'Sweden', 'Volvo', 'az']) {
+      assert.ok(form.includes('value="' + value + '" selected'), value);
+    }
+    assert.match(form, /<input\b(?=[^>]*\bname="photos")(?=[^>]*\bvalue="1")[^>]*>/);
+
+    const submitted = filters + '&sort=newest';
+    const first = await request(app).get(submitted).expect(200);
+    const appliedForm = assertFilterForm(first.text, 'explore-filters', '/cars/explore', 'Apply filters');
+    for (const value of ['all', '1990', 'Sweden', 'Volvo', 'newest']) {
+      assert.ok(appliedForm.includes('value="' + value + '" selected'), value);
+    }
+    assert.match(first.text, /class="card-model">Pagination Fixture 01<\/span>/);
+    assert.doesNotMatch(first.text, /class="card-model">Pagination Fixture 13<\/span>/);
+    assertPager(first.text, submitted.replaceAll('&', '&amp;') + '&amp;page=', 1, 2);
+  });
+
+  it('applies the model year while keeping the manufacturer and vehicle type', async function() {
+    const make = 'Year Filter Works';
+    const rows = await db.car.bulkCreate(Array.from({ length: 13 }, (_, index) => ({
+      make,
+      model: 'Year Filter Truck ' + String(index + 1).padStart(2, '0'),
+      image: PLACEHOLDER_URL,
+      favcount: 0,
+      vehicle_type: 'commercial',
+      model_years: index === 12 ? [1990, 1991] : [1990],
+      year_min: 1990,
+      year_max: index === 12 ? 1991 : 1990
+    })));
+    try {
+      const browse = '/cars?selectmake=' + encodeURIComponent(make) + '&type=commercial';
+      const pageTwo = await request(app).get(browse + '&year=1990&page=2').expect(200);
+      const form = assertFilterForm(pageTwo.text, 'year-filter', '/cars', 'Apply year');
+      assert.match(form, /<input\b(?=[^>]*\btype="hidden")(?=[^>]*\bname="selectmake")(?=[^>]*\bvalue="Year Filter Works")[^>]*>/);
+      assert.match(form, /<input\b(?=[^>]*\btype="hidden")(?=[^>]*\bname="type")(?=[^>]*\bvalue="commercial")[^>]*>/);
+      assert.match(form, /<select\b[^>]*\bname="year"/);
+      assert.match(form, /<option value="1990" selected>/);
+      assertPager(pageTwo.text, browse.replaceAll('&', '&amp;') + '&amp;year=1990&amp;page=', 2, 2);
+
+      const first = await request(app).get(browse + '&year=1991').expect(200);
+      const appliedForm = assertFilterForm(first.text, 'year-filter', '/cars', 'Apply year');
+      assert.match(appliedForm, /<option value="1991" selected>/);
+      assert.match(first.text, /class="card-model">Year Filter Truck 13<\/span>/);
+      assert.doesNotMatch(first.text, /class="card-model">Year Filter Truck 01<\/span>|class="pagination-wrap"/);
+    } finally {
+      await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+    }
+  });
+
   it('recovers from stale catalog pages without losing filters', async function() {
     const commercial = await db.car.create({
       make: 'Volvo', model: 'Stale Page Truck Fixture', image: PLACEHOLDER_URL, favcount: 0,

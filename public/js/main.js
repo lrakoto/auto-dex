@@ -960,17 +960,6 @@
 
 
   /* ═══════════════════════════════════════════════════════════════
-     AUTO-SUBMIT SELECTS (browse page year filter)
-  ═══════════════════════════════════════════════════════════════ */
-
-  document.addEventListener('change', function (e) {
-    if (e.target.classList && e.target.classList.contains('auto-submit') && e.target.form) {
-      e.target.form.submit();
-    }
-  });
-
-
-  /* ═══════════════════════════════════════════════════════════════
      HERO WORD REVEAL
   ═══════════════════════════════════════════════════════════════ */
 

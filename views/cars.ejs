@@ -25,13 +25,13 @@
               <input type="hidden" name="selectmake" value="<%= search %>">
               <% if (type !== 'car') { %><input type="hidden" name="type" value="<%= type %>"><% } %>
               <label for="yearFilter">Model year</label>
-              <select id="yearFilter" name="year" class="form-control form-control-sm auto-submit">
+              <select id="yearFilter" name="year" class="form-control form-control-sm">
                 <option value="">All years</option>
                 <% yearOptions.forEach(y => { %>
                   <option value="<%= y %>" <%= year === y ? 'selected' : '' %>><%= y %></option>
                 <% }) %>
               </select>
-              <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button></noscript>
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Apply year</button>
             </form>
             <a class="browse-link" href="/cars/timeline?make=<%= encodeURIComponent(search) %><%= typeParam %>">Timeline &rarr;</a>
           <% } %>
