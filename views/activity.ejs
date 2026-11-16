@@ -7,38 +7,49 @@
 
 <div class="container pb-5 activity">
   <% const records = typeof quizRecords !== 'undefined' ? quizRecords : []; %>
-  <% if (typeof candidates !== 'undefined' && candidates.length) { %>
+  <% if (candidates.length || unavailableVoteToken) { %>
     <section id="spot-of-the-day" class="activity-contest" aria-labelledby="activity-contest-heading">
       <h2 id="activity-contest-heading">Spot of the Day</h2>
-      <p class="activity-contest-note">Choose one photo per day. Voting resets at midnight UTC.</p>
-      <% if (!currentUser) { %>
-        <a class="btn btn-outline-secondary btn-sm activity-vote" href="/auth/login?returnTo=%2Factivity%23spot-of-the-day">Log in to vote</a>
+      <% if (unavailableVoteToken) { %>
+        <p class="activity-contest-note">Your vote is for a photo that’s currently unavailable.</p>
+        <form method="POST" action="/activity/vote" class="activity-vote-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="day" value="<%= voteDay %>">
+          <input type="hidden" name="withdrawalToken" value="<%= unavailableVoteToken %>">
+          <button type="submit" name="action" value="withdraw-unavailable" class="btn btn-outline-secondary btn-sm activity-vote">Withdraw your vote</button>
+        </form>
       <% } %>
-      <ul class="activity-candidates" role="list">
-        <% candidates.forEach(candidate => { %>
-          <% const vehicle = candidate.make + ' ' + candidate.model; %>
-          <li class="activity-candidate">
-            <img class="activity-candidate-photo" src="<%= candidate.imageUrl %>" alt="<%= vehicle %> sighting" width="128" height="96" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-            <div class="activity-details">
-              <h3><a href="<%= candidate.carUrl %>"><%= vehicle %></a></h3>
-              <a class="activity-garage" href="<%= candidate.garageUrl %>"><%= candidate.garageName %></a>
-              <p class="activity-candidate-count"><%= candidate.votes %> <%= candidate.votes === 1 ? 'vote' : 'votes' %><% if (candidate.isLeading) { %> · <strong>Leading today</strong><% } %></p>
-              <% if (currentUser && !candidate.canVote && !candidate.isMine) { %>
-                <p class="activity-candidate-count">Your sighting</p>
+      <% if (candidates.length) { %>
+        <p class="activity-contest-note">Choose one photo per day. Voting resets at midnight UTC.</p>
+        <% if (!currentUser) { %>
+          <a class="btn btn-outline-secondary btn-sm activity-vote" href="/auth/login?returnTo=%2Factivity%23spot-of-the-day">Log in to vote</a>
+        <% } %>
+        <ul class="activity-candidates" role="list">
+          <% candidates.forEach(candidate => { %>
+            <% const vehicle = candidate.make + ' ' + candidate.model; %>
+            <li class="activity-candidate">
+              <img class="activity-candidate-photo" src="<%= candidate.imageUrl %>" alt="<%= vehicle %> sighting" width="128" height="96" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+              <div class="activity-details">
+                <h3><a href="<%= candidate.carUrl %>"><%= vehicle %></a></h3>
+                <a class="activity-garage" href="<%= candidate.garageUrl %>"><%= candidate.garageName %></a>
+                <p class="activity-candidate-count"><%= candidate.votes %> <%= candidate.votes === 1 ? 'vote' : 'votes' %><% if (candidate.isLeading) { %> · <strong>Leading today</strong><% } %></p>
+                <% if (currentUser && !candidate.canVote && !candidate.isMine) { %>
+                  <p class="activity-candidate-count">Your sighting</p>
+                <% } %>
+              </div>
+              <% if (currentUser && (candidate.canVote || candidate.isMine)) { %>
+                <% const label = candidate.isMine ? 'Withdraw vote' : hasVote ? 'Move vote' : 'Vote'; %>
+                <form method="POST" action="/activity/vote" class="activity-vote-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="spottingId" value="<%= candidate.id %>">
+                  <input type="hidden" name="day" value="<%= voteDay %>">
+                  <button type="submit" name="action" value="<%= candidate.isMine ? 'withdraw' : 'vote' %>" class="btn btn-outline-secondary btn-sm activity-vote" aria-label="<%= label %> for <%= vehicle %>"><%= label %></button>
+                </form>
               <% } %>
-            </div>
-            <% if (currentUser && (candidate.canVote || candidate.isMine)) { %>
-              <% const label = candidate.isMine ? 'Withdraw vote' : hasVote ? 'Move vote' : 'Vote'; %>
-              <form method="POST" action="/activity/vote" class="activity-vote-form">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="spottingId" value="<%= candidate.id %>">
-                <input type="hidden" name="day" value="<%= voteDay %>">
-                <button type="submit" name="action" value="<%= candidate.isMine ? 'withdraw' : 'vote' %>" class="btn btn-outline-secondary btn-sm activity-vote" aria-label="<%= label %> for <%= vehicle %>"><%= label %></button>
-              </form>
-            <% } %>
-          </li>
-        <% }) %>
-      </ul>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
     </section>
   <% } %>
   <% if (spots.length) { %>
