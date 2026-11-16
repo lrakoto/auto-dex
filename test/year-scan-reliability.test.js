@@ -11,6 +11,18 @@ describe('Complete model-year scans', function() {
   const row = (make, model) => ({ Make_Name: make, Model_Name: model });
   const yearOf = url => Number(url.match(/modelyear\/(\d+)/)[1]);
   const fields = car => [car.model_years, car.year_min, car.year_max, car.years_checked];
+  const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
+  const mustangIIIdentity = { make: 'Ford', model: 'Mustang II' };
+
+  async function unseededSupplements() {
+    const identities = [xDriveIdentity, mustangIIIdentity];
+    const counts = await Promise.all(identities.map(where => db.car.count({ where })));
+    return identities.filter((_identity, index) => counts[index] === 0);
+  }
+
+  async function removeTestSupplements(identities) {
+    if (identities.length) await db.car.destroy({ where: { [db.Sequelize.Op.or]: identities } });
+  }
 
   beforeEach(function() {
     realGet = axios.get;
@@ -103,7 +115,7 @@ describe('Complete model-year scans', function() {
     const stale528xi = { model_years: [2008, 2012, 2013], year_min: 2008, year_max: 2013 };
     const verified528xi = [[2008], 2008, 2008, true];
     const verifiedXDrive = [[2009, 2010, 2012, 2013, 2014, 2015, 2016], 2009, 2016, true];
-    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
+    const unseeded = await unseededSupplements();
     const metadata = { favcount: 7, updated_img: true, image: 'https://example.com/e31.jpg', vehicle_type: 'car' };
     const requests = [];
     let models = new Map([
@@ -132,7 +144,6 @@ describe('Complete model-year scans', function() {
       await scanYears({ maxMakes: 0 });
       const xDrive = await db.car.findOne({ where: xDriveIdentity });
       assert.ok(xDrive);
-      ids.push(xDrive.id);
       assert.deepEqual(requests, []);
       assert.deepEqual(fields(await historical.reload()), verified);
       assert.deepEqual(fields(await modern.reload()), modernYears);
@@ -169,20 +180,16 @@ describe('Complete model-year scans', function() {
       assert.equal(await db.car.count({ where: catalogWhere }), initialCount + 1);
     } finally {
       if (ids.length) await db.car.destroy({ where: { id: ids } });
+      await removeTestSupplements(unseeded);
     }
   });
 
-  it('adds the earlier Ford Mustang years without replacing saved years or completing a pending scan', async function() {
-    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
-    const existingXDrive = await db.car.findOne({ where: xDriveIdentity });
+  it('adds earlier Mustang years and seeds Mustang II as a distinct model before scanning', async function() {
+    const unseeded = await unseededSupplements();
     const earlyYears = [1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1979, 1980];
     const secondGeneration = [1974, 1975, 1976, 1977, 1978];
-    const [mustang, mustangII] = await db.car.bulkCreate([
-      { make: 'Ford', model: 'Mustang', image: PLACEHOLDER_URL, years_checked: false,
-        model_years: [1979, 1981, 2024], year_min: 1979, year_max: 2024 },
-      { make: 'Ford', model: 'Mustang II', image: PLACEHOLDER_URL, years_checked: true,
-        model_years: secondGeneration, year_min: 1974, year_max: 1978 }
-    ]);
+    const mustang = await db.car.create({ make: 'Ford', model: 'Mustang', image: PLACEHOLDER_URL, years_checked: false,
+      model_years: [1979, 1981, 2024], year_min: 1979, year_max: 2024 });
     const requests = [];
     let models = new Map([['Mustang', [1981, 2024, 2026]]]);
     nhtsa.getModelYears = async make => {
@@ -191,24 +198,36 @@ describe('Complete model-year scans', function() {
     };
 
     try {
+      assert.equal(await db.car.findOne({ where: mustangIIIdentity }), null);
       await scanYears({ maxMakes: 0 });
+      const mustangII = await db.car.findOne({ where: mustangIIIdentity });
+      assert.ok(mustangII);
       assert.deepEqual(requests, []);
       assert.deepEqual(fields(await mustang.reload()), [[...earlyYears, 1981, 2024], 1965, 2024, false]);
+      assert.deepEqual(fields(mustangII), [secondGeneration, 1974, 1978, true]);
+      assert.equal(mustangII.vehicle_type, 'car');
+      assert.equal(mustangII.image, PLACEHOLDER_URL);
+
+      const metadata = { favcount: 3, updated_img: true, image: 'https://example.com/mustang-ii.jpg' };
+      await mustangII.update({ ...metadata, model_years: [1976], year_min: 1976, year_max: 1976 });
+      await scanYears({ maxMakes: 0 });
+      assert.deepEqual(requests, []);
       assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
+      for (const [key, value] of Object.entries(metadata)) assert.equal(mustangII[key], value);
 
       const refreshed = [[...earlyYears, 1981, 2024, 2026], 1965, 2026, true];
       await scanMake('Ford');
       assert.deepEqual(fields(await mustang.reload()), refreshed);
       assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
 
-      models = new Map([['Mustang II', secondGeneration]]);
+      models = new Map([['Mustang II', [1976]]]);
       await scanMake('Ford');
       assert.deepEqual(requests, ['Ford', 'Ford']);
       assert.deepEqual(fields(await mustang.reload()), refreshed);
       assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
     } finally {
-      await db.car.destroy({ where: { id: [mustang.id, mustangII.id] } });
-      if (!existingXDrive) await db.car.destroy({ where: xDriveIdentity });
+      await db.car.destroy({ where: { id: mustang.id } });
+      await removeTestSupplements(unseeded);
     }
   });
 
@@ -216,8 +235,7 @@ describe('Complete model-year scans', function() {
     const failedMake = 'Year Scan A Fixture', goodMake = 'Year Scan B Fixture';
     const failed = await db.car.create({ make: failedMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
     const good = await db.car.create({ make: goodMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
-    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
-    const existingXDrive = await db.car.findOne({ where: xDriveIdentity });
+    const unseeded = await unseededSupplements();
     db.car.findAll = options => realFindAll.call(db.car, options?.group?.includes('make') ? {
       ...options, where: { ...options.where, make: [failedMake, goodMake] }
     } : options);
@@ -239,7 +257,7 @@ describe('Complete model-year scans', function() {
       assert.deepEqual(requested, [failedMake]);
       assert.equal((await failed.reload()).years_checked, true);
     } finally {
-      if (!existingXDrive) await db.car.destroy({ where: xDriveIdentity });
+      await removeTestSupplements(unseeded);
     }
   });
 });

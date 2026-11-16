@@ -2,6 +2,7 @@ const path = require('path');
 const ejs = require('ejs');
 const db = require('../models');
 const cache = require('../lib/cache');
+const carinfo = require('../lib/carinfo');
 const wikimedia = require('../lib/wikimedia');
 const unsplash = require('../lib/unsplash');
 const { photoCredit, cardPhoto } = require('../lib/photos');
@@ -134,10 +135,15 @@ describe('Wikipedia photos (R2)', function() {
       if (photo.creditUrl !== 'https://commons.wikimedia.org/wiki/File:2025_Honda_Pilot.jpg') throw new Error(photo.creditUrl);
     });
 
+    const mustangII = {
+      make: 'Ford', model: 'Mustang II', title: 'Ford Mustang (second generation)',
+      file: 'Ford_Mustang_II_-_Flickr_-_Alexandre_Pr%C3%A9vot_%285%29.jpg'
+    };
     const aliasCases = [
       { make: 'Toyota', model: 'GR86', title: 'Toyota 86', file: '2022_Toyota_GR86_Premium.jpg' },
       { make: 'MG', model: 'MG3', title: 'MG3 (automobile)', file: 'MG_3_2024.jpg' },
-      { make: 'MG', model: 'MG4', title: 'MG4 EV', file: 'MG4_Electric.jpg' }
+      { make: 'MG', model: 'MG4', title: 'MG4 EV', file: 'MG4_Electric.jpg' },
+      mustangII
     ];
     const aliasSummary = ({ title, file }) => ({
       type: 'standard', title, description: 'Motor vehicle', extract: 'A production car.',
@@ -154,7 +160,7 @@ describe('Wikipedia photos (R2)', function() {
       for (const entry of aliasCases) {
         cache.cachedGet = fakeWikipedia({
           summaries: { [`${entry.make} ${entry.model}`]: aliasSummary(entry) },
-          files: { [entry.file]: commonsInfo() }
+          files: { [decodeURIComponent(entry.file)]: commonsInfo() }
         });
         const photo = await wikimedia.findLeadPhoto(entry.make, entry.model);
         if (!photo || photo.article !== entry.title || !photo.url.includes(entry.file)) throw new Error(JSON.stringify({ entry, photo }));
@@ -166,7 +172,7 @@ describe('Wikipedia photos (R2)', function() {
       for (const entry of aliasCases) {
         cache.cachedGet = fakeWikipedia({
           summaries: { [entry.title]: aliasSummary(entry) },
-          files: { [entry.file]: commonsInfo() }
+          files: { [decodeURIComponent(entry.file)]: commonsInfo() }
         });
         const photo = await wikimedia.findLeadPhoto(entry.make, entry.model);
         if (!photo || photo.article !== entry.title) throw new Error(JSON.stringify({ entry, photo }));
@@ -181,7 +187,7 @@ describe('Wikipedia photos (R2)', function() {
         ]) {
           cache.cachedGet = fakeWikipedia({
             summaries: { [`${entry.make} ${entry.model}`]: hit, [entry.title]: hit },
-            files: { [entry.file]: commonsInfo() }
+            files: { [decodeURIComponent(entry.file)]: commonsInfo() }
           });
           if (await wikimedia.findLeadPhoto(entry.make, entry.model)) throw new Error('unverified alias article accepted');
         }
@@ -209,6 +215,38 @@ describe('Wikipedia photos (R2)', function() {
           summaries: { 'Toyota GR86': aliasSummary(entry) }, files: { [file]: commonsInfo() }
         });
         if (await wikimedia.findLeadPhoto('Toyota', 'GR86')) throw new Error('wrong-generation photo accepted: ' + file);
+      }
+    });
+
+    it('keeps Mustang II production metadata when the lead photo does not name the exact model', async function() {
+      const file = '2024_Ford_Mustang.jpg';
+      const page = 'https://en.wikipedia.org/wiki/Ford_Mustang_(second_generation)';
+      const hit = {
+        ...aliasSummary({ ...mustangII, file }),
+        extract: 'Ford marketed the second-generation pony car as the Mustang II.',
+        content_urls: { desktop: { page } }, wikibase_item: 'Q5467870'
+      };
+      cache.cachedGet = fakeWikipedia({ summaries: { [mustangII.title]: hit }, files: { [file]: commonsInfo() } });
+      const overview = await carinfo.getWikiSummary('Ford', 'Mustang II');
+      if (overview?.wikidataId !== hit.wikibase_item || overview.url !== page || overview.summary !== hit.extract) {
+        throw new Error('missing production Mustang II overview: ' + JSON.stringify(overview));
+      }
+      if (await wikimedia.findLeadPhoto('Ford', 'Mustang II')) throw new Error('general Mustang photo accepted');
+    });
+
+    it('rejects Mustang II redirects to the concept or general Mustang article', async function() {
+      for (const [title, extract] of [
+        ['Ford Mustang II (concept car)', 'Ford built the Mustang II concept car in 1963.'],
+        ['Ford Mustang', 'The Ford Mustang is a series of pony cars.']
+      ]) {
+        const hit = { ...aliasSummary({ ...mustangII, title }), extract };
+        cache.cachedGet = fakeWikipedia({
+          summaries: { 'Ford Mustang II': hit, [title]: hit },
+          files: { [decodeURIComponent(mustangII.file)]: commonsInfo() },
+          search: { 'Ford Mustang II': [title], 'Ford Mustang II automobile': [title] }
+        });
+        if (await carinfo.getWikiSummary('Ford', 'Mustang II')) throw new Error('unexpected overview from ' + title);
+        if (await wikimedia.findLeadPhoto('Ford', 'Mustang II')) throw new Error('unexpected lead photo from ' + title);
       }
     });
 

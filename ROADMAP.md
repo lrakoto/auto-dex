@@ -269,6 +269,12 @@ R14 on 2026-10-01 so they ship before R4.
   a 2016 528i xDrive. The photo job fills an empty cover and keeps existing
   selections and votes. [Original upload](https://commons.wikimedia.org/w/index.php?oldid=617139160) ·
   [Commons source and credit](https://commons.wikimedia.org/wiki/File:2016_BMW_528i_xDrive.jpg).
+  The [Ford Mustang II](https://autodx.io/cars/car?make=Ford&model=Mustang%20II)
+  has its own catalog entry for U.S. model years 1974–1978. Its overview
+  and eligible lead photo come from the second-generation production car's
+  article. [Ford's 1975 brochure](https://www.thehenryford.org/collections/explore/artifact/383704) ·
+  [Ford's 1978 brochure](https://www.thehenryford.org/collections/explore/artifact/383723) ·
+  [1978 EPA guide](https://www.fueleconomy.gov/feg/epadata/78guide.txt).
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;
