@@ -454,6 +454,11 @@ describe('Catalog', function() {
   });
 
   describe('timeline', function() {
+    it('keeps the Mustang II gap and bridges a one-year omission in the scanned Mustang years', function() {
+      const car = { make: 'Ford', model: 'Mustang', model_years: [1972, 1973, 1979, 1980, 1981, 1983] };
+      assert.equal(carinfo.formatYears(car), '1972–1973, 1979–1983');
+    });
+
     it('preserves a verified model-year gap in the label and timeline segments', function() {
       const xDrive = { make: 'BMW', model: '528i xDrive', model_years: [2009, 2010, 2012, 2013, 2014, 2015, 2016] };
       const label = '2009–2010, 2012–2016';

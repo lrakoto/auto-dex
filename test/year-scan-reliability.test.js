@@ -172,6 +172,46 @@ describe('Complete model-year scans', function() {
     }
   });
 
+  it('adds the earlier Ford Mustang years without replacing saved years or completing a pending scan', async function() {
+    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
+    const existingXDrive = await db.car.findOne({ where: xDriveIdentity });
+    const earlyYears = [1965, 1966, 1967, 1968, 1969, 1970, 1971, 1972, 1973, 1979, 1980];
+    const secondGeneration = [1974, 1975, 1976, 1977, 1978];
+    const [mustang, mustangII] = await db.car.bulkCreate([
+      { make: 'Ford', model: 'Mustang', image: PLACEHOLDER_URL, years_checked: false,
+        model_years: [1979, 1981, 2024], year_min: 1979, year_max: 2024 },
+      { make: 'Ford', model: 'Mustang II', image: PLACEHOLDER_URL, years_checked: true,
+        model_years: secondGeneration, year_min: 1974, year_max: 1978 }
+    ]);
+    const requests = [];
+    let models = new Map([['Mustang', [1981, 2024, 2026]]]);
+    nhtsa.getModelYears = async make => {
+      requests.push(make);
+      return models;
+    };
+
+    try {
+      await scanYears({ maxMakes: 0 });
+      assert.deepEqual(requests, []);
+      assert.deepEqual(fields(await mustang.reload()), [[...earlyYears, 1981, 2024], 1965, 2024, false]);
+      assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
+
+      const refreshed = [[...earlyYears, 1981, 2024, 2026], 1965, 2026, true];
+      await scanMake('Ford');
+      assert.deepEqual(fields(await mustang.reload()), refreshed);
+      assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
+
+      models = new Map([['Mustang II', secondGeneration]]);
+      await scanMake('Ford');
+      assert.deepEqual(requests, ['Ford', 'Ford']);
+      assert.deepEqual(fields(await mustang.reload()), refreshed);
+      assert.deepEqual(fields(await mustangII.reload()), [secondGeneration, 1974, 1978, true]);
+    } finally {
+      await db.car.destroy({ where: { id: [mustang.id, mustangII.id] } });
+      if (!existingXDrive) await db.car.destroy({ where: xDriveIdentity });
+    }
+  });
+
   it('keeps a failed make pending while continuing other makes and retries it later', async function() {
     const failedMake = 'Year Scan A Fixture', goodMake = 'Year Scan B Fixture';
     const failed = await db.car.create({ make: failedMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
