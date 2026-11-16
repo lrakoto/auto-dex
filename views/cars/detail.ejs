@@ -98,6 +98,15 @@
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
       <% } %>
+      <% if (namingHistory) { %>
+        <p class="model-naming-note mt-3">
+          <%= namingHistory.text %>
+          <% namingHistory.sources.forEach((source, index) => { %>
+            <% if (index) { %> · <% } %>
+            <a href="<%= source.url %>" target="_blank" rel="noopener"><%= source.label %></a>
+          <% }) %>
+        </p>
+      <% } %>
       <% if (generationHistory) { %>
         <section class="facts-panel generation-references" aria-labelledby="generation-references">
           <div class="accent-line"></div>

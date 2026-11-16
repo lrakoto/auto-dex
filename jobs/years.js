@@ -15,7 +15,9 @@ const VERIFIED_MODEL_YEARS = [
     // The later EPA dataset lists the exact 528i separately from AWD models.
     make: 'BMW', model: '528i',
     years: [1979, 1980, 1981, 1997, 1998, 1999, 2000, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016]
-  }
+  },
+  // EPA lists 528xi for 2008. BMW and EPA used 528i xDrive for the later sedan.
+  { make: 'BMW', model: '528xi', years: [2008] }
 ];
 
 function yearFields(years) {

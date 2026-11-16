@@ -253,6 +253,14 @@ R14 on 2026-10-01 so they ship before R4.
   [1981 EPA guide](https://fueleconomy.gov/feg/epadata/81guide.txt) ·
   [EPA model-year dataset](https://fueleconomy.gov/feg/download.shtml) ·
   [BMW Classic E12 528i](https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-159-1.bmw-528i-e12.html).
+  The 528xi uses the EPA's 2008 model name and shows IFCAR's photo of the
+  E60 sedan. Early BMW materials also used 528xi for 2009, which the EPA
+  lists as 528i xDrive. The later AWD model still needs a catalog entry
+  for its two U.S. model-year runs of 2009–2010 and 2012–2016.
+  [EPA's 2008 528xi entry](https://www.fueleconomy.gov/feg/noframes/24031.shtml) ·
+  [BMW's early price sheet for model year 2009](https://www.bimmerfile.com/wp-content/uploads/2008/09/2009-5-series-pricing1.pdf) ·
+  [EPA's BMW 5 Series listings](https://www.fueleconomy.gov/Feg/bymodel/2009_BMW_5_Series.shtml) ·
+  [IFCAR's public-domain photo](https://commons.wikimedia.org/wiki/File:BMW_528xi_sedan.jpg#Licensing).
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;
