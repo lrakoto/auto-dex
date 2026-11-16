@@ -235,6 +235,10 @@ R14 on 2026-10-01 so they ship before R4.
   BMW detail pages now link to manufacturer records for the E39 528i and
   both the E32 and E38 750iL. The references use stored model years and
   show BMW's factory production dates explicitly.
+  The 840Ci now has verified U.S. model years 1994–1997 and a separate E31
+  factory production reference. Catalog upkeep corrects pre-launch years
+  from vPIC and retains 1997 on later scans. [EPA 840Ci records](https://www.fueleconomy.gov/feg/Find.do?action=sbs&id=29073&id=11648&id=12565&id=13318) ·
+  [BMW Classic E31 840Ci](https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html).
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;
