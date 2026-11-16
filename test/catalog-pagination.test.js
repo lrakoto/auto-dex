@@ -121,6 +121,40 @@ describe('Catalog pagination', function() {
     assertPager(first.text, submitted.replaceAll('&', '&amp;') + '&amp;page=', 1, 2);
   });
 
+  it('offers earlier Explore decades and matches recorded model years within them', async function() {
+    const rows = await db.car.bulkCreate([
+      { model: 'Early Sedan Fixture', years: [1979, 1980, 1981, 1997, 1998, 1999, 2000] },
+      { model: 'Decade Gap Fixture', years: [1959, 1980] }
+    ].map(({ model, years }) => ({
+      make: 'BMW', model, image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'car',
+      model_years: years, year_min: years[0], year_max: years.at(-1)
+    })));
+    try {
+      const historical = '/cars/explore?type=all&decade=1970&country=Germany&make=BMW&sort=az';
+      const res = await request(app).get(historical).expect(200);
+      const form = assertFilterForm(res.text, 'explore-filters', '/cars/explore', 'Apply filters');
+      assert.match(form, /<option value="1970" selected>1970s<\/option>/);
+      assert.match(form, /<option value="1950"\s*>1950s<\/option>/);
+      assert.doesNotMatch(form, /<option value="1960"\s/);
+      assert.match(form, /<option value="1980"\s*>1980s<\/option>/);
+      assert.match(res.text, /class="card-model">Early Sedan Fixture<\/span>/);
+      assert.doesNotMatch(res.text, /class="card-model">Decade Gap Fixture<\/span>/);
+
+      const sweden = await request(app)
+        .get('/cars/explore?type=all&decade=1970&country=Sweden&make=Volvo&sort=az').expect(200);
+      assert.match(sweden.text, /<option value="1970" selected>1970s<\/option>/);
+      assert.doesNotMatch(sweden.text, /class="card-model">Pagination Fixture/);
+
+      const stale = await request(app).get(historical + '&page=99&partial=1').expect(200);
+      assert.match(stale.text, /id="cars-row"/);
+      assert.doesNotMatch(stale.text, /<html\b/i);
+      const firstPage = stale.text.match(/href="([^"]+)"[^>]*>Back to first page<\/a>/)?.[1];
+      assert.equal(firstPage, historical.replaceAll('&', '&amp;') + '&amp;page=1');
+    } finally {
+      await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+    }
+  });
+
   it('applies the model year while keeping the manufacturer and vehicle type', async function() {
     const make = 'Year Filter Works';
     const rows = await db.car.bulkCreate(Array.from({ length: 13 }, (_, index) => ({
