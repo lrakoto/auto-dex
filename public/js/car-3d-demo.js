@@ -53,13 +53,21 @@
     current = null;
   }
 
+  function showPoster(attempt, state, label, message) {
+    // A focused control can disappear when the viewer falls back to its poster.
+    const focused = document.activeElement;
+    const returnFocus = stage.contains(focused) || controls.contains(focused);
+    remove(attempt);
+    update(state, label, message);
+    if (returnFocus) button.focus();
+  }
+
   function fail(attempt, message) {
     if (current !== attempt) return;
     // Model-viewer caches failures by URL as well as successful loads.
     if (attempt.model) modelRetry++;
     else if (attempt.script) moduleAttempt++;
-    remove(attempt);
-    update('error', 'Retry 3D model', message);
+    showPoster(attempt, 'error', 'Retry 3D model', message);
   }
 
   function showModel(attempt) {
@@ -135,8 +143,7 @@
   button.addEventListener('click', () => {
     const state = stage.dataset.state;
     if (state === 'loading' || state === 'ready') {
-      remove(current);
-      update('idle', 'Load 3D model', 'Poster shown.');
+      showPoster(current, 'idle', 'Load 3D model', 'Poster shown.');
     } else start();
   });
   zoomIn.addEventListener('click', () => changeZoom(1));

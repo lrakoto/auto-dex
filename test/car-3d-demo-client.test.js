@@ -29,8 +29,15 @@ function element() {
 }
 
 function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model of the Khronos Toy Car' } = {}) {
-  const button = element(), stage = element(), poster = element(), status = element();
-  const controls = element(), zoomIn = element(), zoomOut = element(), reset = element();
+  let activeElement = null;
+  function focusable() {
+    const node = element();
+    node.focus = () => { activeElement = node; };
+    return node;
+  }
+  const button = focusable(), stage = element(), poster = element(), status = element();
+  const controls = element(), zoomIn = focusable(), zoomOut = focusable(), reset = focusable();
+  const credit = focusable();
   const modules = [], models = [], timers = new Map();
   let registered = false, nextTimer = 0;
   stage.dataset.state = 'idle';
@@ -38,6 +45,8 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
   stage.dataset.modelAlt = modelAlt;
   controls.hidden = button.hidden = true;
   stage.appendChild = model => models.push(model);
+  stage.contains = node => models.some(model => model === node && !model.removed);
+  controls.contains = node => [zoomIn, zoomOut, reset].includes(node);
   const nodes = {
     'car-3d-load': button, 'car-3d-stage': stage, 'car-3d-poster': poster, 'car-3d-status': status,
     'car-3d-controls': controls, 'car-3d-zoom-in': zoomIn, 'car-3d-zoom-out': zoomOut, 'car-3d-reset': reset
@@ -45,9 +54,10 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
   const customElements = { get: name => registered && name === 'model-viewer' ? function ModelViewer() {} : undefined };
   vm.runInNewContext(source, {
     document: {
+      get activeElement() { return activeElement; },
       getElementById: id => nodes[id] || null,
       createElement(tag) {
-        const viewer = element();
+        const viewer = focusable();
         if (tag === 'model-viewer') Object.assign(viewer, {
           fieldOfView: 'auto', jumps: 0,
           jumpCameraToGoal() { this.jumps++; }
@@ -61,7 +71,8 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
     clearTimeout(id) { timers.delete(id); }
   }, { filename: scriptPath });
   return {
-    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset, timers,
+    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset, credit, timers,
+    get activeElement() { return activeElement; },
     click: () => button.emit('click'),
     installViewer(module = modules[0]) { registered = true; module.emit('load'); },
     expireTimers() {
@@ -214,6 +225,57 @@ describe('Local 3D viewer in the browser', function() {
     demo.models[1].emit('load');
     assert.equal(demo.stage.dataset.state, 'ready');
     assert.equal(demo.poster.hidden, true);
+  });
+
+  for (const [label, target] of [
+    ['the viewer', demo => demo.models[0]],
+    ['a camera control', demo => demo.reset]
+  ]) {
+    it('returns focus to Retry when a ready model fails with focus on ' + label, function() {
+      const demo = loadDemo();
+      demo.button.focus();
+      demo.click();
+      demo.installViewer();
+      const [model] = demo.models;
+      model.emit('load');
+      assert.equal(demo.activeElement, demo.button);
+
+      target(demo).focus();
+      model.emit('error');
+      assert.equal(demo.button.textContent, 'Retry 3D model');
+      assert.equal(demo.activeElement, demo.button);
+      assert.equal(model.removed, true);
+      assert.equal(demo.controls.hidden, true);
+      assert.equal(demo.poster.hidden, false);
+    });
+  }
+
+  it('leaves focus outside the preview on delayed success and subsequent failure', function() {
+    const demo = loadDemo();
+    demo.button.focus();
+    demo.click();
+    demo.credit.focus();
+    demo.installViewer();
+    const [model] = demo.models;
+    model.emit('load');
+    assert.equal(demo.activeElement, demo.credit);
+    model.emit('error');
+    assert.equal(demo.stage.dataset.state, 'error');
+    assert.equal(demo.activeElement, demo.credit);
+  });
+
+  it('returns focus to Load when closing a preview whose model remains focused', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.installViewer();
+    const [model] = demo.models;
+    model.emit('load');
+    model.focus();
+
+    demo.click();
+    assert.equal(demo.button.textContent, 'Load 3D model');
+    assert.equal(demo.activeElement, demo.button);
+    assert.equal(demo.poster.hidden, false);
   });
 
   it('offers bounded camera controls only while the model is ready and restores the initial view', function() {
