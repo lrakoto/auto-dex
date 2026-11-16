@@ -403,10 +403,18 @@ R14 on 2026-10-01 so they ship before R4.
   weathered paint, a distorted grille in the original scan, and opaque glass
   in the cleanup. The
   [Chevrolet Caprice catalog entry](https://autodx.io/cars/car?make=Chevrolet&model=Caprice)
-  currently shows 1981–1996. Keep this as a reference until the year and
-  variant are verified and the catalog can place them accurately.
+  adds the 1966–1980 U.S. model years to the vPIC years already recorded.
+  Chevrolet offered Caprice as an Impala option in 1965, made it a separate
+  series in 1966, and continued it as Caprice Classic starting in 1973.
+  The 1969 Custom Coupe belongs on this entry. Keep the scan as reference
+  until the scanned car's exact variant and the rights to any retained
+  branding and textures are verified.
   [Original scan](https://sketchfab.com/3d-models/old-chevy-caprice-c765fd12b7d841c9ae6f5ca245491e68) ·
   [Cleaned mesh](https://sketchfab.com/3d-models/chevrolet-caprice-coupe-1969-a7970c3b6b364a699504d415ad656372) ·
+  [Chevrolet's 1965 service bulletin](https://www.chevytalk.org/CT/DR690.pdf) ·
+  [GM's 1966 model data](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1966-Chevrolet.pdf) ·
+  [Chevrolet's 1973 brochure](https://xr793.com/wp-content/uploads/2021/01/1973-Chevrolet-Caprice-Impala-Bel-Air-v2.pdf#page=2) ·
+  [GM's 1980 order guide](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1980-Chevrolet-Impala.pdf) ·
   [GM's 1969 model data](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf).
 - **Historical alternative.** Deutsches Museum publishes its reconstruction of
   Benz Patent-Motorwagen No. 1, inventory 4710, under
