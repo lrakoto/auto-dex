@@ -245,6 +245,14 @@ R14 on 2026-10-01 so they ship before R4.
   factory production reference. Catalog upkeep corrects pre-launch years
   from vPIC and retains 1997 on later scans. [EPA 840Ci records](https://www.fueleconomy.gov/feg/Find.do?action=sbs&id=29073&id=11648&id=12565&id=13318) ·
   [BMW Classic E31 840Ci](https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html).
+  The 528i now shows the exact U.S. model-year runs of 1979–1981,
+  1997–2000, and 2008–2016. The first two years predate AutoDex's vPIC scan.
+  BMW Classic gives 1977–1981 as the E12 528i's factory production range.
+  [1979 EPA guide](https://fueleconomy.gov/feg/epadata/79guide.txt) ·
+  [1980 EPA guide](https://fueleconomy.gov/feg/epadata/80guide.txt) ·
+  [1981 EPA guide](https://fueleconomy.gov/feg/epadata/81guide.txt) ·
+  [EPA model-year dataset](https://fueleconomy.gov/feg/download.shtml) ·
+  [BMW Classic E12 528i](https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-159-1.bmw-528i-e12.html).
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;

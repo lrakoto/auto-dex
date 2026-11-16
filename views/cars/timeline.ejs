@@ -38,7 +38,7 @@
             <span class="timeline-now" style="left:<%= timeline.nowLeft.toFixed(3) %>%"><span>Now</span></span>
           </div>
 
-          <ol class="timeline-rows" aria-label="<%= make %> models by production years">
+          <ol class="timeline-rows" aria-label="<%= make %> models by model year">
             <% timeline.rows.forEach(r => { %>
               <li>
                 <a class="timeline-row<%= r.current ? ' is-current' : '' %>" href="<%= carPath(r.make, r.model) %>">
@@ -58,7 +58,7 @@
     </div>
     <p class="facts-source mt-3">
       <span class="timeline-legend"><span class="timeline-seg current"></span> on sale</span>
-      Model years: NHTSA vPIC, US-market models since 1981, so a model can predate its first bar.
+      U.S. model years come from NHTSA vPIC and verified historical records. Coverage before 1981 varies.
     </p>
   <% } else { %>
     <div class="empty-state">
