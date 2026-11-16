@@ -478,6 +478,13 @@ R14 on 2026-10-01 so they ship before R4.
   loaded before either asset and the model rendered after opt-in. Zoom,
   reset, and return to the poster passed. The Toy Car setup also produces
   gzip files. Brotli remains preferred at equal client weights.
+- **Keyboard check (2026-11-15).** Desktop Chrome at 390 and 1000 CSS px
+  loaded the BMW preview with Enter, reached the viewer with Tab, and
+  orbited with the arrow keys. Zoom, Reset view, and closing with the
+  keyboard worked. A simulated WebGL interruption restored the poster and
+  moved focus to Retry from the viewer or camera controls. Focus on a link
+  outside the viewer stayed there. Enter reopened the model after graphics
+  recovered. [WebGL context-loss test extension](https://registry.khronos.org/webgl/extensions/WEBGL_lose_context/).
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
