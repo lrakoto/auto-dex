@@ -85,6 +85,57 @@ describe('Complete model-year scans', function() {
     assert.equal(await db.car.count({ where: { make } }), 3);
   });
 
+  it('repairs existing BMW 840Ci model years and preserves them through vPIC rescans', async function() {
+    const ids = [];
+    const create = async values => {
+      const car = await db.car.create(values);
+      ids.push(car.id);
+      return car;
+    };
+    const otherMake = 'Year Correction Fixture';
+    const stale = { model_years: [1990, 1992, 1994, 1995, 1996], year_min: 1990, year_max: 1996 };
+    const verified = [[1994, 1995, 1996, 1997], 1994, 1997, true];
+    const modernYears = [[2020, 2021], 2020, 2021, true];
+    const metadata = { favcount: 7, updated_img: true, image: 'https://example.com/e31.jpg', vehicle_type: 'car' };
+    const requests = [];
+    let models = new Map([['840Ci', stale.model_years], ['840i', modernYears[0]]]);
+    nhtsa.getModelYears = async make => {
+      requests.push(make);
+      return models;
+    };
+
+    try {
+      const historical = await create({ make: 'BMW', model: '840Ci', years_checked: true, ...stale, ...metadata });
+      const modern = await create({ make: 'BMW', model: '840i', years_checked: true,
+        model_years: modernYears[0], year_min: 2020, year_max: 2021 });
+      const unrelated = await create({ make: otherMake, model: '840Ci', years_checked: true,
+        model_years: [2002], year_min: 2002, year_max: 2002 });
+      const catalogWhere = { make: ['BMW', otherMake] };
+      const initialCount = await db.car.count({ where: catalogWhere });
+
+      await scanYears({ maxMakes: 0 });
+      assert.deepEqual(requests, []);
+      assert.deepEqual(fields(await historical.reload()), verified);
+      assert.deepEqual(fields(await modern.reload()), modernYears);
+      assert.deepEqual(fields(await unrelated.reload()), [[2002], 2002, 2002, true]);
+
+      await scanMake('BMW');
+      assert.deepEqual(fields(await historical.reload()), verified);
+
+      await historical.update({ model_years: null, year_min: null, year_max: null, years_checked: false });
+      models = new Map([['840i', modernYears[0]]]);
+      await scanMake('BMW');
+      assert.deepEqual(requests, ['BMW', 'BMW']);
+      assert.deepEqual(fields(await historical.reload()), verified);
+      for (const [key, value] of Object.entries(metadata)) assert.equal(historical[key], value);
+      assert.deepEqual(fields(await modern.reload()), modernYears);
+      assert.deepEqual(fields(await unrelated.reload()), [[2002], 2002, 2002, true]);
+      assert.equal(await db.car.count({ where: catalogWhere }), initialCount);
+    } finally {
+      if (ids.length) await db.car.destroy({ where: { id: ids } });
+    }
+  });
+
   it('keeps a failed make pending while continuing other makes and retries it later', async function() {
     const failedMake = 'Year Scan A Fixture', goodMake = 'Year Scan B Fixture';
     const failed = await db.car.create({ make: failedMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
