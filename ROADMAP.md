@@ -348,9 +348,12 @@ R14 on 2026-10-01 so they ship before R4.
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   The download listing says the interior and underside are absent. The
   artist's portfolio describes modeling an interior, so plan for an exterior
-  viewer and confirm the contents when inspecting the source mesh. The live
-  Mustang page currently shows 1981–2027. Confirm where the 1967 variant
-  belongs before linking the viewer. The preview shows the fastback
+  viewer and confirm the contents when inspecting the source mesh. The
+  [Ford Mustang catalog entry](https://autodx.io/cars/car?make=Ford&model=Mustang)
+  includes 1965–1973 and resumes in 1979. Ford introduced the 1965 model in
+  April 1964 and marketed the 1974–1978 generation as Mustang II. The catalog
+  adds the verified early Mustang years to the existing vPIC years. The
+  preview shows the fastback
   roof sweep, rear roof louvers, and a recessed tail panel with three individually
   framed lamps per side. These match Ford's 1967 Fastback 2+2 references.
   The model has GT-style grille fog lamps and a personalized plate. Ford's
@@ -366,6 +369,9 @@ R14 on 2026-10-01 so they ship before R4.
   [Artist's portfolio](https://markpeters.art/ford-mustang-fastback-1967) ·
   [Ford's 1967 sales brochure](https://ponynsnake.com/wp-content/uploads/2023/07/access-1967_Ford_Mustang_brochure_AR_96_212010_18065.pdf) ·
   [Ford's 1967 launch release, pp. 2–3 and 10](https://www.1967shelbyresearch.com/library/docs/files/1966-09-16%20Ford%20Press%20Release%20-%201967%20Mustang.pdf#page=2) ·
+  [Ford's model-year milestones](https://media.ford.com/content/dam/fordmedia/North%20America/US/2013/12/05/Mustang_Milestones.pdf) ·
+  [1979 EPA guide](https://www.fueleconomy.gov/feg/epadata/79guide.txt) ·
+  [1980 EPA guide](https://www.fueleconomy.gov/feg/epadata/80guide.txt) ·
   [Ford brand licensing](https://www.fordbrandlicensing.com/).
 - **Volkswagen Golf reference scan.** The live
   [Volkswagen Golf catalog entry](https://autodx.io/cars/car?make=Volkswagen&model=Golf)
