@@ -4,6 +4,7 @@
  * and NHTSA's model lists (which cover international brands), by vehicle type.
  */
 const { cachedGet } = require('../lib/cache');
+const { VERIFIED_MODEL_YEARS } = require('../lib/verified-model-years');
 
 const MAKES_LIST = [
   'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Bugatti','Buick',
@@ -168,15 +169,17 @@ async function getModels(makeDisplay, { type = 'car' } = {}) {
   const cached = modelsCache.get(key);
   if (cached && (Date.now() - cached.at) < CACHE_TTL) return cached.data;
 
-  const extras = type === 'car' ? EXTRA_MODELS[canonicalMake(makeDisplay)] || [] : [];
+  const make = canonicalMake(makeDisplay);
+  const extras = type === 'car' ? EXTRA_MODELS[make] || [] : [];
   const lists = await Promise.allSettled(spec.nhtsa.map(nhtsaType => getModelsByType(makeDisplay, nhtsaType)));
   const failed = lists.filter(r => r.status === 'rejected');
+  const listed = lists.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
+  // A supplement must not hide the DB fallback for an empty upstream catalog.
+  const supplemental = type === 'car' && listed.some(name => typeof name === 'string' && name.trim())
+    ? VERIFIED_MODEL_YEARS.filter(entry => entry.make === make && entry.supplemental).map(entry => entry.model)
+    : [];
   // Curated makes still work when NHTSA is down
-  const models = mergeModels(
-    makeDisplay,
-    lists.flatMap(r => (r.status === 'fulfilled' ? r.value : [])),
-    extras
-  );
+  const models = mergeModels(makeDisplay, supplemental, listed, extras);
   if (failed.length) {
     console.log(`getModels error for ${makeDisplay} (${type}):`, failed[0].reason.message);
   } else {

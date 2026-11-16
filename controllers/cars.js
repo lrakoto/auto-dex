@@ -452,6 +452,7 @@ router.get('/', async (req, res) => {
         make, model, image, favcount, relatedCars, country, summary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
         generationHistory,
         namingHistory: getNamingHistory(make, model),
+        carPath,
         saleLinks: saleLinks(make, model, type),
         gallery, mySpotCount, heroCredit, complaints,
         complaintsYear: (complaints && complaints.year) || (car && car.year_max),
