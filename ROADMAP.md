@@ -560,6 +560,16 @@ R14 on 2026-10-01 so they ship before R4.
   remaining 1,644,064 bytes over 16.4 seconds. The loading button now reads
   **Keep poster**, and the status explains that an active transfer may
   continue in the background. [Pinned Three.js file loader](https://github.com/mrdoob/three.js/blob/r169/src/loaders/FileLoader.js).
+- **Embedded textures in the private GLB preview (2026-11-16).** Desktop
+  Chrome reported a loaded model for embedded PNG and JPEG fixtures even
+  though the local document blocked their texture loads. The command now
+  copies the embedded images to allowlisted local URLs and updates the
+  GLB image references. Both fixtures rendered their expected colors after
+  opt-in with the same security policy. The original binary chunk, geometry,
+  and texture pixels are preserved. Textured previews transfer the image
+  bytes in both the GLB and its separate textures. Textureless GLBs are
+  served as supplied.
+  [glTF binary layout](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-gltf-layout).
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before

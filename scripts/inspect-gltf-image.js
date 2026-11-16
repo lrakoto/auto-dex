@@ -69,4 +69,15 @@ function inspectGltfImage(buffer) {
   throw new Error('Unsupported image format: expected PNG or JPEG');
 }
 
-module.exports = { inspectGltfImage };
+function embeddedImageBytes(gltf, buffers, index) {
+  const { bufferView } = gltf.images[index];
+  const view = Number.isInteger(bufferView) && gltf.bufferViews?.[bufferView];
+  const buffer = view && buffers[view.buffer];
+  const start = view?.byteOffset ?? 0;
+  const size = view?.byteLength;
+  if (!buffer || !Number.isInteger(start) || start < 0 || !Number.isInteger(size) || size < 1 ||
+      start + size > buffer.length) throw new Error(`Invalid buffer view for image ${index}`);
+  return buffer.subarray(start, start + size);
+}
+
+module.exports = { embeddedImageBytes, inspectGltfImage };
