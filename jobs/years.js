@@ -7,9 +7,16 @@ const { isDeepStrictEqual } = require('node:util');
 const db = require('../models');
 const nhtsa = require('../lib/nhtsa'); // referenced via the module so tests can stub it
 
-// The vPIC list includes pre-launch years for this exact trim and omits 1997.
-// FuelEconomy.gov lists it in U.S. model years 1994–1997.
-const VERIFIED_MODEL_YEARS = [{ make: 'BMW', model: '840Ci', years: [1994, 1995, 1996, 1997] }];
+const VERIFIED_MODEL_YEARS = [
+  // vPIC lists pre-launch years and omits 1997. The EPA has all four years.
+  { make: 'BMW', model: '840Ci', years: [1994, 1995, 1996, 1997] },
+  {
+    // The EPA's original guides cover the two years before our vPIC scan.
+    // The later EPA dataset lists the exact 528i separately from AWD models.
+    make: 'BMW', model: '528i',
+    years: [1979, 1980, 1981, 1997, 1998, 1999, 2000, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016]
+  }
+];
 
 function yearFields(years) {
   return { model_years: years, year_min: years[0], year_max: years[years.length - 1] };

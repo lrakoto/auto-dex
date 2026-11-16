@@ -225,7 +225,7 @@ router.get('/timeline', async (req, res) => {
       carPath,
       pageTitle: `${make} ${typeWord}Timeline — Every Model, Year by Year — AutoDex`,
       pageDescription: timeline
-        ? `${timeline.rows.length} ${make} models on one timeline, ${timeline.start}–${timeline.end}: when each was built, the gaps, and what's still on sale.`
+        ? `${timeline.rows.length} ${make} models from ${timeline.start}–${timeline.end}, with model years, gaps, and what's still on sale.`
         : `The ${make} model timeline on AutoDex.`,
       canonicalPath: `/cars/timeline?make=${encodeURIComponent(make)}${typeParam(type)}`,
       // Nothing to show until the year scan reaches this make
@@ -285,7 +285,7 @@ router.get('/', async (req, res) => {
     let pagedCars, total, yearOptions;
     if (type === 'car' && hasListedCars) {
       let cqModels = nhtsaCars;
-      // Year filter + dropdown come from the catalog's NHTSA model years
+      // Year filter + dropdown come from the catalog's model-year data
       // (jobs/years.js), for listed models only. Models with no year data
       // drop out when a year is picked.
       const listed = new Set(cqModels.map(m => m.model));
