@@ -24,7 +24,7 @@ describe('Local 3D viewer lab', function () {
   let assets;
   const enabled = { NODE_ENV: 'development', ENABLE_3D_DEMO: '1' };
 
-  function labApp(env) {
+  function labApp(env, options = {}) {
     const app = express();
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
@@ -32,15 +32,15 @@ describe('Local 3D viewer lab', function () {
     app.use(helmet({ contentSecurityPolicy: { directives: {
       connectSrc: ["'self'"]
     } } }));
-    registerDevCar3d(app, { env, assetRoot: assets });
+    registerDevCar3d(app, { env, assetRoot: assets, ...options });
     return app;
   }
 
   const lab = (env) => request(labApp(env));
 
-  async function withRawServer(env, run) {
+  async function withRawServer(app, run) {
     // Avoid clients that decompress responses before tests can inspect wire bytes.
-    const server = labApp(env).listen(0, '127.0.0.1');
+    const server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     try {
       await run((name, { method = 'GET', headers = {} } = {}) => new Promise((resolve, reject) => {
@@ -167,10 +167,11 @@ describe('Local 3D viewer lab', function () {
         fs.writeFile(path.join(assets, name + '.' + extension), compress(body)))
     ]));
 
-    await withRawServer(enabled, async get => {
+    await withRawServer(labApp(enabled), async get => {
       for (const { name: encoding, extension, accept, decompress } of encodings) {
         const headers = { 'Accept-Encoding': accept };
         for (const [name, type, body] of representations) {
+          const decodedSize = name === 'ToyCar.gltf' ? String(body.length) : undefined;
           const packed = await get(name, { headers });
           assert.equal(packed.status, 200);
           assert.match(packed.headers['content-type'], type);
@@ -178,11 +179,13 @@ describe('Local 3D viewer lab', function () {
           assert.match(packed.headers.vary, /\bAccept-Encoding\b/i);
           assert.equal(packed.headers['cache-control'], 'no-store');
           assert.equal(packed.headers['x-robots-tag'], 'noindex');
+          assert.equal(packed.headers['x-file-size'], decodedSize);
           assert.deepEqual(decompress(packed.body), body);
           const head = await get(name, { headers, method: 'HEAD' });
           assert.equal(head.status, 200);
           assert.match(head.headers['content-type'], type);
           assert.equal(head.headers['content-encoding'], encoding);
+          assert.equal(head.headers['x-file-size'], decodedSize);
           assert.match(head.headers.vary, /\bAccept-Encoding\b/i);
           assert.equal(Number(head.headers['content-length']), packed.body.length);
           assert.equal(head.body.length, 0);
@@ -194,19 +197,49 @@ describe('Local 3D viewer lab', function () {
         assert.equal(whole.headers['content-encoding'], encoding);
         assert.equal(whole.headers['content-range'], undefined);
         assert.deepEqual(decompress(whole.body), bin);
-        const mismatch = await get('ToyCar.bin', { headers: { ...headers, 'If-Match': '"mismatch"' } });
+        const mismatch = await get('ToyCar.gltf', { headers: { ...headers, 'If-Match': '"mismatch"' } });
         assert.equal(mismatch.status, 412);
         assert.equal(mismatch.headers['content-encoding'], undefined);
+        assert.equal(mismatch.headers['x-file-size'], undefined);
         assert.equal(mismatch.body.toString(), 'Precondition Failed');
         assert.equal((await get('ToyCar.bin.' + extension)).status, 404);
       }
     });
   });
 
+  it('reports the original size only on compressed private GLB responses', async function () {
+    const name = 'model.glb';
+    const body = Buffer.alloc(128, 0x67);
+    const packed = brotliCompressSync(body);
+    await fs.writeFile(path.join(assets, name), body);
+    await fs.writeFile(path.join(assets, name + '.br'), packed);
+    const privateApp = labApp(enabled, {
+      scene: { modelFile: name, posterFile: 'poster.jpg' },
+      assets: new Map([[name, 'model/gltf-binary']]),
+      compressedAssets: new Set([name])
+    });
+
+    await withRawServer(privateApp, async get => {
+      const compressed = await get(name, { headers: { 'Accept-Encoding': 'br', Range: 'bytes=1-2' } });
+      assert.equal(compressed.status, 200);
+      assert.equal(compressed.headers['content-encoding'], 'br');
+      assert.equal(compressed.headers['content-range'], undefined);
+      assert.equal(Number(compressed.headers['content-length']), packed.length);
+      assert.equal(Number(compressed.headers['x-file-size']), body.length);
+      assert.deepEqual(compressed.body, packed);
+
+      const identity = await get(name, { headers: { 'Accept-Encoding': 'identity', Range: 'bytes=1-2' } });
+      assert.equal(identity.status, 206);
+      assert.equal(identity.headers['x-file-size'], undefined);
+      assert.equal(identity.headers['content-range'], 'bytes 1-2/128');
+      assert.deepEqual(identity.body, body.subarray(1, 3));
+    });
+  });
+
   it('keeps originals usable when packed versions are unavailable or declined', async function () {
     const body = Buffer.from([0, 1, 2, 128, 255]);
     await fs.writeFile(path.join(assets, 'ToyCar.bin'), body);
-    await withRawServer(enabled, async get => {
+    await withRawServer(labApp(enabled), async get => {
       async function checkIdentity(headers) {
         const res = await get('ToyCar.bin', { headers });
         assert.equal(res.status, 200);

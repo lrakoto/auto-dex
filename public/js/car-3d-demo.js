@@ -16,7 +16,7 @@
   if (!modelUrl || !modelAlt) return;
 
   const viewerUrl = '/dev/3d/assets/viewer.min.js';
-  const timeoutMs = 20000;
+  const inactivityTimeoutMs = 20000;
   const defaultOrbit = '35deg 72deg auto';
   const zoomSteps = ['auto', '24deg', '18deg', '12deg'];
   let current;
@@ -46,8 +46,21 @@
     status.textContent = message;
   }
 
-  function remove(attempt) {
+  function stopLoadTimer(attempt) {
     clearTimeout(attempt.timer);
+    attempt.timer = null;
+  }
+
+  function armLoadTimer(attempt) {
+    stopLoadTimer(attempt);
+    const timer = setTimeout(() => {
+      if (attempt.timer === timer) fail(attempt, 'Loading took too long.');
+    }, inactivityTimeoutMs);
+    attempt.timer = timer;
+  }
+
+  function remove(attempt) {
+    stopLoadTimer(attempt);
     if (attempt.script) attempt.script.remove();
     if (attempt.model) attempt.model.remove();
     current = null;
@@ -91,9 +104,19 @@
     model.setAttribute('interaction-prompt', 'none');
     model.setAttribute('loading', 'eager');
     model.inert = true;
+    let lastProgress = 0;
+    model.addEventListener('progress', (event) => {
+      if (current !== attempt || stage.dataset.state !== 'loading') return;
+      const { reason, totalProgress } = event.detail || {};
+      // The viewer can finish progress reporting before it emits load or error.
+      if (reason !== 'model-load' || !Number.isFinite(totalProgress)
+        || totalProgress <= lastProgress || totalProgress >= 1) return;
+      lastProgress = totalProgress;
+      armLoadTimer(attempt);
+    });
     model.addEventListener('load', () => {
       if (current !== attempt) return;
-      clearTimeout(attempt.timer);
+      stopLoadTimer(attempt);
       model.inert = false;
       model.removeAttribute('aria-hidden');
       zoomLevel = 0;
@@ -105,6 +128,7 @@
     }, { once: true });
     stage.appendChild(model);
     const suffix = modelRetry ? '?retry=' + modelRetry : '';
+    armLoadTimer(attempt);
     model.setAttribute('src', modelUrl + suffix);
   }
 
@@ -116,9 +140,6 @@
     const attempt = {};
     current = attempt;
     update('loading', 'Cancel 3D load', 'Keep viewing the poster while 3D loads.');
-    attempt.timer = setTimeout(() => {
-      fail(attempt, 'Loading took too long.');
-    }, timeoutMs);
 
     if (window.customElements.get('model-viewer')) {
       showModel(attempt);
@@ -137,6 +158,7 @@
       if (window.customElements.get('model-viewer')) showModel(attempt);
       else fail(attempt, 'The 3D viewer could not be loaded.');
     }, { once: true });
+    armLoadTimer(attempt);
     document.head.appendChild(script);
   }
 

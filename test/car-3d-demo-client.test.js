@@ -18,11 +18,11 @@ function element() {
     setAttribute(name, value) { attrs.set(name, value); },
     removeAttribute(name) { attrs.delete(name); },
     addEventListener(type, handler, { once } = {}) { listeners.set(type, { handler, once }); },
-    emit(type) {
+    emit(type, detail) {
       const listener = listeners.get(type);
       if (!listener) return;
       if (listener.once) listeners.delete(type);
-      listener.handler({ target: this });
+      listener.handler({ target: this, detail });
     },
     remove() { this.removed = true; }
   };
@@ -40,6 +40,14 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
   const credit = focusable();
   const modules = [], models = [], timers = new Map();
   let registered = false, nextTimer = 0;
+  let now = 0;
+  function expireTimers(until = Infinity) {
+    for (const [id, { callback, due }] of timers) {
+      if (due > until) continue;
+      timers.delete(id);
+      callback();
+    }
+  }
   stage.dataset.state = 'idle';
   stage.dataset.modelUrl = src;
   stage.dataset.modelAlt = modelAlt;
@@ -67,7 +75,10 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
       head: { appendChild: module => modules.push(module) }
     },
     window: { customElements },
-    setTimeout(callback) { timers.set(++nextTimer, callback); return nextTimer; },
+    setTimeout(callback, delay) {
+      timers.set(++nextTimer, { callback, due: now + delay });
+      return nextTimer;
+    },
     clearTimeout(id) { timers.delete(id); }
   }, { filename: scriptPath });
   return {
@@ -75,8 +86,10 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
     get activeElement() { return activeElement; },
     click: () => button.emit('click'),
     installViewer(module = modules[0]) { registered = true; module.emit('load'); },
-    expireTimers() {
-      for (const [id, callback] of timers) { timers.delete(id); callback(); }
+    expireTimers,
+    advanceTimers(ms) {
+      now += ms;
+      expireTimers(now);
     }
   };
 }
@@ -135,7 +148,7 @@ describe('Local 3D viewer in the browser', function() {
     const demo = loadDemo();
     demo.click();
     const [canceledModule] = demo.modules;
-    const [canceledTimeout] = demo.timers.values();
+    const [{ callback: canceledTimeout }] = demo.timers.values();
     assert.equal(demo.button.textContent, 'Cancel 3D load');
     assert.notEqual(demo.button.getAttribute('aria-disabled'), 'true');
 
@@ -168,7 +181,7 @@ describe('Local 3D viewer in the browser', function() {
     demo.click();
     demo.installViewer();
     const [canceledModel] = demo.models;
-    const [canceledTimeout] = demo.timers.values();
+    const [{ callback: canceledTimeout }] = demo.timers.values();
 
     demo.click();
     assert.equal(canceledModel.removed, true);
@@ -179,6 +192,9 @@ describe('Local 3D viewer in the browser', function() {
 
     demo.click();
     assert.equal(demo.models[1].src, canceledModel.src);
+    const [retryTimer] = demo.timers.keys();
+    canceledModel.emit('progress', { reason: 'model-load', totalProgress: 0.8 });
+    assert.deepEqual([...demo.timers.keys()], [retryTimer]);
     canceledModel.emit('load');
     canceledModel.emit('error');
     canceledTimeout();
@@ -225,6 +241,48 @@ describe('Local 3D viewer in the browser', function() {
     demo.models[1].emit('load');
     assert.equal(demo.stage.dataset.state, 'ready');
     assert.equal(demo.poster.hidden, true);
+  });
+
+  it('gives the model phase a fresh timeout and allows a slow load that keeps advancing', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.advanceTimers(19_500);
+    demo.installViewer();
+    const [model] = demo.models;
+    for (const totalProgress of [0.2, 0.45, 0.7]) {
+      demo.advanceTimers(19_500);
+      assert.equal(demo.stage.dataset.state, 'loading');
+      assert.equal(demo.poster.hidden, false);
+      model.emit('progress', { reason: 'model-load', totalProgress });
+    }
+    model.emit('load');
+    assert.equal(demo.stage.dataset.state, 'ready');
+    model.emit('progress', { reason: 'model-load', totalProgress: 0.95 });
+    assert.equal(demo.timers.size, 0);
+
+    demo.advanceTimers(20_000);
+    assert.equal(demo.stage.dataset.state, 'ready');
+  });
+
+  it('times out a stalled model despite duplicate, regressive, or unrelated progress', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.installViewer();
+    const [model] = demo.models;
+    const report = totalProgress => model.emit('progress', { reason: 'model-load', totalProgress });
+    demo.advanceTimers(10_000);
+    report(0.35);
+    demo.advanceTimers(19_999);
+    assert.equal(demo.stage.dataset.state, 'loading');
+
+    for (const ignored of [0, 0, 0.1, 0.35, NaN, Infinity, -1, 1, 1.1, '0.7']) report(ignored);
+    model.emit('progress');
+    model.emit('progress', { reason: 'environment-update', totalProgress: 0.9 });
+    demo.advanceTimers(1);
+
+    assert.equal(demo.stage.dataset.state, 'error');
+    assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.button.textContent, 'Retry 3D model');
   });
 
   for (const [label, target] of [
