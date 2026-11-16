@@ -16,6 +16,10 @@ const { embeddedImageBytes, inspectGltfImage } = require('./inspect-gltf-image')
 const viewerFile = 'viewer.min.js';
 const compressedAssets = new Set([viewerFile, 'model.glb']);
 const externalDecoders = ['KHR_draco_mesh_compression', 'EXT_meshopt_compression', 'KHR_texture_basisu'];
+// These extensions only add material settings or references to textures.
+const materialExtensions = new Set([
+  'KHR_materials_clearcoat', 'KHR_materials_transmission', 'KHR_materials_unlit', 'KHR_texture_transform'
+]);
 
 async function readAsset(file) {
   const info = await fs.stat(file);
@@ -39,11 +43,62 @@ function checkEmbeddedModel(model) {
   return { gltf, bin, images };
 }
 
+function isAlignmentPadding(bytes, start, end) {
+  return end >= start && end - start <= 3 && bytes.subarray(start, end).every(byte => byte === 0);
+}
+
+function trimTextureChunk(gltf, bin, chunks, imageViews) {
+  // Additional chunks or unfamiliar extensions may reference the original BIN.
+  if (chunks.length !== bin.length + 8) return chunks;
+  for (const declared of [gltf.extensionsUsed, gltf.extensionsRequired]) {
+    if (declared !== undefined && (!Array.isArray(declared) || declared.some(name => !materialExtensions.has(name)))) return chunks;
+  }
+
+  const views = gltf.bufferViews;
+  if (!Array.isArray(views)) return chunks;
+  const retain = views.length - imageViews.size;
+  if (retain < 1 || views.some((_view, index) => imageViews.has(index) !== (index >= retain))) return chunks;
+
+  // Keep both the index and byte offset of every remaining buffer view.
+  const accessors = gltf.accessors ?? [];
+  if (!Array.isArray(accessors) || accessors.some(accessor => [
+    accessor?.bufferView, accessor?.sparse?.indices?.bufferView, accessor?.sparse?.values?.bufferView
+  ].some(index => index !== undefined && (!Number.isInteger(index) || index < 0 || index >= retain)))) return chunks;
+
+  let geometryEnd = 0;
+  for (const view of views.slice(0, retain)) {
+    const start = view?.byteOffset ?? 0;
+    const length = view?.byteLength;
+    if (view?.buffer !== 0 || !Number.isInteger(start) || start < 0 ||
+        !Number.isInteger(length) || length < 1 || start + length > gltf.buffers[0].byteLength) return chunks;
+    geometryEnd = Math.max(geometryEnd, start + length);
+  }
+
+  // The discarded suffix must consist entirely of images and alignment bytes.
+  const suffix = views.slice(retain).sort((a, b) => (a.byteOffset ?? 0) - (b.byteOffset ?? 0));
+  let end = geometryEnd;
+  for (const view of suffix) {
+    const start = view.byteOffset ?? 0;
+    if (view.buffer !== 0 || !isAlignmentPadding(bin, end, start)) return chunks;
+    end = start + view.byteLength;
+  }
+  if (!isAlignmentPadding(bin, end, bin.length)) return chunks;
+
+  const paddedLength = Math.ceil(geometryEnd / 4) * 4;
+  const trimmed = Buffer.alloc(8 + paddedLength);
+  chunks.copy(trimmed, 0, 0, 8 + geometryEnd);
+  trimmed.writeUInt32LE(paddedLength);
+  views.length = retain;
+  gltf.buffers[0].byteLength = geometryEnd;
+  return trimmed;
+}
+
 function preparePreviewModel(model) {
   const { gltf, bin, images } = checkEmbeddedModel(model);
   if (!images.length) return { model, textures: [] };
 
   const buffers = [bin.subarray(0, gltf.buffers[0].byteLength)];
+  const imageViews = new Set(images.map(image => image.bufferView));
   const textures = images.map((image, index) => {
     const bytes = embeddedImageBytes(gltf, buffers, index);
     const { format } = inspectGltfImage(bytes);
@@ -54,12 +109,11 @@ function preparePreviewModel(model) {
     return { name, mimeType: image.mimeType, bytes };
   });
 
-  // Serve textures at ordinary local URLs and keep the original BIN and
-  // any trailing chunks intact, including every geometry offset.
+  const originalChunks = model.subarray(20 + model.readUInt32LE(12));
+  const remainingChunks = trimTextureChunk(gltf, bin, originalChunks, imageViews);
   const json = Buffer.from(JSON.stringify(gltf));
   const paddedSize = Math.ceil(json.length / 4) * 4;
   const prefix = Buffer.alloc(20 + paddedSize, 0x20);
-  const remainingChunks = model.subarray(20 + model.readUInt32LE(12));
   model.copy(prefix, 0, 0, 20);
   prefix.writeUInt32LE(prefix.length + remainingChunks.length, 8);
   prefix.writeUInt32LE(paddedSize, 12);

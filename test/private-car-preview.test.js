@@ -62,14 +62,14 @@ function triangleGlb(overrides = {}) {
   return glbFile({ ...manifest, ...overrides }, positions);
 }
 
-function texturedTriangleGlb(changeManifest) {
+function texturedTriangleGlb(changeManifest, gap = Buffer.alloc(0)) {
   const { manifest, positions } = triangleFixture();
   const uv = Buffer.alloc(24);
   uv.writeFloatLE(1, 8);
   uv.writeFloatLE(1, 20);
   const jpegOffset = positions.length + uv.length;
-  const pngOffset = jpegOffset + jpeg.length;
-  const bin = Buffer.concat([positions, uv, jpeg, poster]);
+  const pngOffset = jpegOffset + jpeg.length + gap.length;
+  const bin = Buffer.concat([positions, uv, jpeg, gap, poster]);
   manifest.buffers[0].byteLength = bin.length;
   manifest.bufferViews.push(
     { buffer: 0, byteOffset: positions.length, byteLength: uv.length },
@@ -87,6 +87,27 @@ function texturedTriangleGlb(changeManifest) {
   manifest.images = [{ mimeType: 'image/png', bufferView: 2 }, { mimeType: 'image/jpeg', bufferView: 3 }];
   changeManifest?.(manifest);
   return glbFile(manifest, bin);
+}
+
+function withUnknownChunk(model) {
+  const chunk = Buffer.alloc(12);
+  chunk.writeUInt32LE(4, 0);
+  chunk.write('TEST', 4);
+  chunk.writeUInt32LE(0x10203040, 8);
+  const file = Buffer.concat([model, chunk]);
+  file.writeUInt32LE(file.length, 8);
+  return file;
+}
+
+function assertExternalizedTextures(prepared) {
+  assert.deepEqual(prepared.textures, [
+    { name: 'texture-0.png', mimeType: 'image/png', bytes: poster },
+    { name: 'texture-1.jpg', mimeType: 'image/jpeg', bytes: jpeg }
+  ]);
+  const parsed = parseGlb(prepared.model);
+  assert.deepEqual(parsed.gltf.images.map(image => image.uri), ['texture-0.png', 'texture-1.jpg']);
+  assert.ok(parsed.gltf.images.every(image => image.bufferView === undefined));
+  return parsed;
 }
 
 describe('Private GLB preview', function () {
@@ -186,22 +207,61 @@ describe('Private GLB preview', function () {
     await request(toyLab).get(assetUrl + 'texture-0.png').expect(404);
   });
 
-  it('extracts embedded PNG and JPEG textures without changing the binary chunk', function () {
-    const input = texturedTriangleGlb();
+  it('extracts PNG and JPEG textures and trims only the texture suffix from BIN', function () {
+    const input = texturedTriangleGlb(manifest => {
+      manifest.extensionsUsed = ['KHR_materials_clearcoat'];
+      manifest.materials[0].extensions = { KHR_materials_clearcoat: { clearcoatFactor: 0.5 } };
+    });
     const prepared = preparePreviewModel(input);
-    assert.deepEqual(prepared.textures, [
-      { name: 'texture-0.png', mimeType: 'image/png', bytes: poster },
-      { name: 'texture-1.jpg', mimeType: 'image/jpeg', bytes: jpeg }
-    ]);
-    const { gltf: source } = parseGlb(input);
-    const { gltf: output } = parseGlb(prepared.model);
-    assert.deepEqual(output.images.map(image => image.uri), ['texture-0.png', 'texture-1.jpg']);
-    assert.ok(output.images.every(image => image.bufferView === undefined));
-    for (const field of ['meshes', 'buffers', 'bufferViews', 'accessors', 'materials', 'textures']) {
+    const { gltf: source, bin: sourceBin } = parseGlb(input);
+    const { gltf: output, bin } = assertExternalizedTextures(prepared);
+    const geometryBytes = source.bufferViews[source.images[1].bufferView].byteOffset;
+    assert.ok(prepared.model.length < input.length);
+    assert.deepEqual(output.buffers, [{ byteLength: geometryBytes }]);
+    assert.deepEqual(output.bufferViews, source.bufferViews.slice(0, 2));
+    assert.deepEqual(bin, sourceBin.subarray(0, geometryBytes));
+    assert.equal(bin.length % 4, 0);
+    for (const field of ['meshes', 'accessors', 'materials', 'textures', 'extensionsUsed']) {
       assert.deepEqual(output[field], source[field], field);
     }
-    const binChunk = file => file.subarray(20 + file.readUInt32LE(12));
-    assert.deepEqual(binChunk(prepared.model), binChunk(input));
+  });
+
+  it('still extracts textures and preserves BIN when trimming could lose referenced or unknown data', function () {
+    const cases = [
+      ['accessor uses the same view', texturedTriangleGlb(manifest => {
+        manifest.accessors.push({ bufferView: manifest.images[0].bufferView, componentType: 5121, count: 1, type: 'SCALAR' });
+      })],
+      ['sparse accessor uses the same view', texturedTriangleGlb(manifest => {
+        manifest.accessors.push({
+          componentType: 5121, count: 1, type: 'SCALAR', sparse: {
+            count: 1,
+            indices: { bufferView: 0, componentType: 5121 },
+            values: { bufferView: manifest.images[0].bufferView }
+          }
+        });
+      })],
+      ['another view overlaps image bytes', texturedTriangleGlb(manifest => {
+        const imageView = manifest.bufferViews[manifest.images[0].bufferView];
+        manifest.bufferViews.splice(2, 0, { buffer: 0, byteOffset: imageView.byteOffset + 4, byteLength: 4 });
+        for (const image of manifest.images) image.bufferView++;
+      })],
+      ['nonzero bytes between images', texturedTriangleGlb(undefined, Buffer.from([0, 1, 0]))],
+      ['unknown glTF extension', texturedTriangleGlb(manifest => {
+        manifest.extensionsUsed = ['VENDOR_private_binary'];
+        manifest.extensions = { VENDOR_private_binary: { bufferView: manifest.images[0].bufferView } };
+      })],
+      ['unknown trailing GLB chunk', withUnknownChunk(texturedTriangleGlb())]
+    ];
+    const binaryTail = file => file.subarray(20 + file.readUInt32LE(12));
+    for (const [label, input] of cases) {
+      const prepared = preparePreviewModel(input);
+      const { gltf: output } = assertExternalizedTextures(prepared);
+      const { gltf: source } = parseGlb(input);
+      assert.deepEqual(binaryTail(prepared.model), binaryTail(input), label);
+      for (const field of ['buffers', 'bufferViews', 'accessors', 'extensions']) {
+        assert.deepEqual(output[field], source[field], `${label}: ${field}`);
+      }
+    }
   });
 
   it('keeps a textureless GLB byte-for-byte and rejects invalid embedded textures', function () {

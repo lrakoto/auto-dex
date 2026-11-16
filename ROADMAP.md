@@ -566,10 +566,17 @@ R14 on 2026-10-01 so they ship before R4.
   copies the embedded images to allowlisted local URLs and updates the
   GLB image references. Both fixtures rendered their expected colors after
   opt-in with the same security policy. The original binary chunk, geometry,
-  and texture pixels are preserved. Textured previews transfer the image
-  bytes in both the GLB and its separate textures. Textureless GLBs are
-  served as supplied.
+  and texture pixels are preserved. The first version transferred the
+  embedded image bytes as part of the GLB as well as separate textures.
   [glTF binary layout](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#binary-gltf-layout).
+- **Private texture transfers (2026-11-16).** The preview trims the GLB
+  when all extracted images occupy an unshared suffix, preserving the
+  bytes and offsets of the remaining geometry. Shared or interleaved data,
+  unknown chunks, and unfamiliar extensions retain the original binary
+  layout. With the textured Toy Car in cold desktop Chrome at 390 × 844
+  CSS px and 2×, the model and textures transferred 2,922,020 bytes,
+  down from 3,766,226 bytes (22.4%). The front and three-quarter renders
+  matched pixel for pixel and only the poster loaded before opt-in.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
