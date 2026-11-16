@@ -101,6 +101,7 @@
       <% if (namingHistory) { %>
         <p class="model-naming-note mt-3">
           <%= namingHistory.text %>
+          <a href="<%= carPath(make, namingHistory.relatedModel) %>">BMW <%= namingHistory.relatedModel %></a> ·
           <% namingHistory.sources.forEach((source, index) => { %>
             <% if (index) { %> · <% } %>
             <a href="<%= source.url %>" target="_blank" rel="noopener"><%= source.label %></a>

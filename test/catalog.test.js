@@ -454,6 +454,18 @@ describe('Catalog', function() {
   });
 
   describe('timeline', function() {
+    it('preserves a verified model-year gap in the label and timeline segments', function() {
+      const xDrive = { make: 'BMW', model: '528i xDrive', model_years: [2009, 2010, 2012, 2013, 2014, 2015, 2016] };
+      const label = '2009–2010, 2012–2016';
+      assert.equal(carinfo.formatYears(xDrive), label);
+      assert.equal(carinfo.formatYears({ ...xDrive, make: 'Fixture' }), '2009–2016');
+      assert.equal(carinfo.formatYears({ ...xDrive, model_years: [], year_min: 2010, year_max: 2012 }), '2010–2012');
+
+      const { rows: [row] } = buildTimeline([xDrive], { now: 2026 });
+      assert.equal(row.label, label);
+      assert.deepEqual(row.segments.map(({ from, to }) => [from, to]), [[2009, 2010], [2012, 2016]]);
+    });
+
     it('lays out runs, gaps and what is still on sale', function() {
       const span = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
       const t = buildTimeline([

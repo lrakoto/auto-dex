@@ -333,6 +333,32 @@ describe('Wikipedia photos (R2)', function() {
       if (await wikimedia.findLeadPhoto('BMW', '528i', { yearMax: 2000, modelYears: range(1997, 2000) })) throw new Error('fell back to the series photo');
     });
 
+    it('requires the 528i xDrive name in a generation lead photo filename', async function() {
+      const model = '528i xDrive';
+      const title = 'BMW 5 Series (F10)';
+      const modelYears = [2009, 2010, 2012, 2013, 2014, 2015, 2016];
+      for (const [file, expected] of [
+        ['BMW_550i_(F10).jpg', false],
+        ['BMW_528i_(F10).jpg', false],
+        ['BMW_528i-xDrive_(F10).jpg', true]
+      ]) {
+        cache.cachedGet = fakeWikipedia({
+          summaries: {
+            'BMW 528i xDrive': { type: 'standard', title: 'BMW 5 Series', description: 'Executive car' },
+            [title]: {
+              ...aliasSummary({ title, file }),
+              extract: 'The F10 is an executive car produced from 2010.'
+            }
+          },
+          links: { 'BMW 5 Series': [title] },
+          files: { [file]: commonsInfo() }
+        });
+        const photo = await wikimedia.findLeadPhoto('BMW', model, { yearMax: 2016, modelYears });
+        if (expected && (photo?.article !== title || !photo.url.includes(file))) throw new Error('exact xDrive photo was not used');
+        if (!expected && photo !== null) throw new Error(`accepted another trim: ${file}`);
+      }
+    });
+
     it('picks the generation holding most of a trim\'s model years, a year behind production', function() {
       const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
       const gens = [{ title: 'E34', start: 1987 }, { title: 'E39', start: 1995 }, { title: 'E60', start: 2003 }];

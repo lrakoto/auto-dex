@@ -85,7 +85,7 @@ describe('Complete model-year scans', function() {
     assert.equal(await db.car.count({ where: { make } }), 3);
   });
 
-  it('repairs verified BMW model years and preserves them through vPIC rescans', async function() {
+  it('repairs verified BMW years and seeds the supplemental xDrive before vPIC scans', async function() {
     const ids = [];
     const create = async values => {
       const car = await db.car.create(values);
@@ -102,11 +102,14 @@ describe('Complete model-year scans', function() {
     ];
     const stale528xi = { model_years: [2008, 2012, 2013], year_min: 2008, year_max: 2013 };
     const verified528xi = [[2008], 2008, 2008, true];
+    const verifiedXDrive = [[2009, 2010, 2012, 2013, 2014, 2015, 2016], 2009, 2016, true];
+    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
     const metadata = { favcount: 7, updated_img: true, image: 'https://example.com/e31.jpg', vehicle_type: 'car' };
     const requests = [];
     let models = new Map([
       ['840Ci', stale.model_years], ['840i', modernYears[0]],
-      ['528i', [1981, 1998, 2000, 2007, 2016]], ['528xi', stale528xi.model_years]
+      ['528i', [1981, 1998, 2000, 2007, 2016]], ['528xi', stale528xi.model_years],
+      ['528i xDrive', [2010, 2011, 2012]]
     ]);
     nhtsa.getModelYears = async make => {
       requests.push(make);
@@ -124,19 +127,27 @@ describe('Complete model-year scans', function() {
         model_years: [2002], year_min: 2002, year_max: 2002 });
       const catalogWhere = { make: ['BMW', otherMake] };
       const initialCount = await db.car.count({ where: catalogWhere });
+      assert.equal(await db.car.findOne({ where: xDriveIdentity }), null);
 
       await scanYears({ maxMakes: 0 });
+      const xDrive = await db.car.findOne({ where: xDriveIdentity });
+      assert.ok(xDrive);
+      ids.push(xDrive.id);
       assert.deepEqual(requests, []);
       assert.deepEqual(fields(await historical.reload()), verified);
       assert.deepEqual(fields(await modern.reload()), modernYears);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);
+      assert.deepEqual(fields(xDrive), verifiedXDrive);
+      assert.equal(xDrive.vehicle_type, 'car');
+      assert.equal(xDrive.image, PLACEHOLDER_URL);
       assert.deepEqual(fields(await unrelated.reload()), [[2002], 2002, 2002, true]);
 
       await scanMake('BMW');
       assert.deepEqual(fields(await historical.reload()), verified);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);
+      assert.deepEqual(fields(await xDrive.reload()), verifiedXDrive);
 
       await historical.update({ model_years: null, year_min: null, year_max: null, years_checked: false });
       models = new Map([['840i', modernYears[0]], ['528xi', [2012, 2013]]]);
@@ -147,8 +158,15 @@ describe('Complete model-year scans', function() {
       assert.deepEqual(fields(await modern.reload()), modernYears);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);
+      assert.deepEqual(fields(await xDrive.reload()), verifiedXDrive);
       assert.deepEqual(fields(await unrelated.reload()), [[2002], 2002, 2002, true]);
-      assert.equal(await db.car.count({ where: catalogWhere }), initialCount);
+      await xDrive.update({ image: 'https://example.com/owner-xdrive.jpg', updated_img: true, favcount: 2 });
+      await scanYears({ maxMakes: 0 });
+      assert.deepEqual(requests, ['BMW', 'BMW']);
+      assert.equal((await xDrive.reload()).image, 'https://example.com/owner-xdrive.jpg');
+      assert.equal(xDrive.favcount, 2);
+      assert.equal((await db.car.findOne({ where: xDriveIdentity })).id, xDrive.id);
+      assert.equal(await db.car.count({ where: catalogWhere }), initialCount + 1);
     } finally {
       if (ids.length) await db.car.destroy({ where: { id: ids } });
     }
@@ -158,9 +176,11 @@ describe('Complete model-year scans', function() {
     const failedMake = 'Year Scan A Fixture', goodMake = 'Year Scan B Fixture';
     const failed = await db.car.create({ make: failedMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
     const good = await db.car.create({ make: goodMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
-    db.car.findAll = options => realFindAll.call(db.car, {
+    const xDriveIdentity = { make: 'BMW', model: '528i xDrive' };
+    const existingXDrive = await db.car.findOne({ where: xDriveIdentity });
+    db.car.findAll = options => realFindAll.call(db.car, options?.group?.includes('make') ? {
       ...options, where: { ...options.where, make: [failedMake, goodMake] }
-    });
+    } : options);
     const requested = [];
     let fail = true;
     nhtsa.getModelYears = async make => {
@@ -168,14 +188,18 @@ describe('Complete model-year scans', function() {
       if (make === failedMake && fail) throw new Error('incomplete');
       return new Map([['Fixture', [2020]]]);
     };
-    await scanYears();
-    assert.deepEqual(requested, [failedMake, goodMake]);
-    assert.equal((await failed.reload()).years_checked, false);
-    assert.equal((await good.reload()).years_checked, true);
-    requested.length = 0;
-    fail = false;
-    await scanYears();
-    assert.deepEqual(requested, [failedMake]);
-    assert.equal((await failed.reload()).years_checked, true);
+    try {
+      await scanYears();
+      assert.deepEqual(requested, [failedMake, goodMake]);
+      assert.equal((await failed.reload()).years_checked, false);
+      assert.equal((await good.reload()).years_checked, true);
+      requested.length = 0;
+      fail = false;
+      await scanYears();
+      assert.deepEqual(requested, [failedMake]);
+      assert.equal((await failed.reload()).years_checked, true);
+    } finally {
+      if (!existingXDrive) await db.car.destroy({ where: xDriveIdentity });
+    }
   });
 });
