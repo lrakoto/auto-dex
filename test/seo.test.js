@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
@@ -37,6 +38,43 @@ describe('SEO', function() {
     }
     for (const path of ['/puzzle', '/cars/cool-wall']) {
       if (!res.text.includes(`${path}</loc>`)) throw new Error(`sitemap missing ${path}`);
+    }
+  });
+
+  it('lists each populated timeline once at its canonical vehicle-type URL', async function() {
+    const dates = { model_years: [2022, 2023], year_min: 2022, year_max: 2023 };
+    const cars = await db.car.bulkCreate([
+      { make: 'MV Agusta', model: 'Sitemap Bike', vehicle_type: 'motorcycle' },
+      { make: 'MV Agusta', model: 'Sitemap Null Years', vehicle_type: 'car', model_years: null },
+      { make: 'MV Agusta', model: 'Sitemap Empty Years', vehicle_type: 'offroad', model_years: [] },
+      { make: 'MV Agusta', model: 'Sitemap No First Year', vehicle_type: 'commercial', year_min: null },
+      { make: 'Suzuki', model: 'Sitemap Legacy Car', vehicle_type: null },
+      { make: 'Suzuki', model: 'Sitemap Explicit Car', vehicle_type: 'car' },
+      { make: 'Suzuki', model: 'Sitemap Mixed Bike', vehicle_type: 'motorcycle' },
+      { make: 'Sitemap Utility Fixture', model: 'Off-road Model', vehicle_type: 'offroad' },
+      { make: 'Sitemap Utility Fixture', model: 'Commercial Model', vehicle_type: 'commercial' },
+      { make: 'Sitemap Utility Fixture', model: 'Unknown Type Model', vehicle_type: 'unsupported' }
+    ].map(car => ({ ...dates, ...car })));
+    try {
+      const res = await request(app).get('/sitemap.xml').expect(200);
+      const urls = Array.from(res.text.matchAll(/<loc>[^<]*(\/cars\/timeline\?[^<]+)<\/loc>/g), match => match[1]);
+      for (const [make, types] of [
+        ['MV Agusta', ['motorcycle']],
+        ['Suzuki', ['car', 'motorcycle']],
+        ['Sitemap Utility Fixture', ['commercial', 'offroad']]
+      ]) {
+        const bare = `/cars/timeline?make=${encodeURIComponent(make)}`;
+        const expected = types.map(type => type === 'car' ? bare : `${bare}&amp;type=${type}`);
+        const actual = urls.filter(url => url === bare || url.startsWith(bare + '&amp;'));
+        assert.deepEqual(actual.sort(), expected.sort());
+      }
+
+      const timeline = await request(app).get('/cars/timeline?make=MV%20Agusta&type=motorcycle').expect(200);
+      assert.match(timeline.text, /rel="canonical" href="[^"]+\/cars\/timeline\?make=MV%20Agusta&amp;type=motorcycle"/);
+      assert.match(timeline.text, />Sitemap Bike<\/span>/);
+      assert.doesNotMatch(timeline.text, /name="robots" content="noindex/);
+    } finally {
+      await db.car.destroy({ where: { id: cars.map(car => car.id) } });
     }
   });
 

@@ -98,7 +98,7 @@ router.get('/sitemap.xml', async (req, res) => {
   try {
     const siteUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
     const { Op } = require('sequelize');
-    const [makes, cars, publicGarages, datedMakes, bikeMakes] = await Promise.all([
+    const [makes, cars, publicGarages, datedTimelines, bikeMakes] = await Promise.all([
       getKnownMakes(),
       db.car.findAll({
         attributes: ['make', 'model', 'updatedAt'],
@@ -110,12 +110,23 @@ router.get('/sitemap.xml', async (req, res) => {
         where: { garagePublic: true, username: { [Op.ne]: null } },
         limit: SITEMAP_MODEL_LIMIT
       }),
-      // Makes with a timeline to show
-      db.car.findAll({ attributes: ['make'], where: { year_min: { [Op.ne]: null } }, group: ['make'] }),
+      db.car.findAll({
+        attributes: ['make', 'vehicle_type'],
+        where: { year_min: { [Op.ne]: null }, model_years: { [Op.ne]: [] } },
+        group: ['make', 'vehicle_type'],
+        order: [['make', 'ASC'], ['vehicle_type', 'ASC']],
+        raw: true
+      }),
       // Makes with a motorcycle listing
       db.car.findAll({ attributes: ['make'], where: { vehicle_type: 'motorcycle' }, group: ['make'] })
     ]);
-    const timelineMakes = makes.filter(m => datedMakes.some(r => r.make === m));
+    const timelinePaths = new Set();
+    for (const { make, vehicle_type: vehicleType } of datedTimelines) {
+      const type = vehicleType ?? 'car';
+      if (!make || make !== make.trim() || !Object.hasOwn(carquery.VEHICLE_TYPES, type)) continue;
+      const typeQuery = type === 'car' ? '' : `&type=${type}`;
+      timelinePaths.add(`/cars/timeline?make=${encodeURIComponent(make)}${typeQuery}`);
+    }
 
     const urls = [
       { loc: '/', priority: '1.0' },
@@ -127,7 +138,7 @@ router.get('/sitemap.xml', async (req, res) => {
       // Motorcycle makes are listed once, at their canonical &type=motorcycle URL below
       ...makes.filter(m => !carquery.MOTORCYCLE_MAKES.includes(m))
         .map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}`, priority: '0.6' })),
-      ...timelineMakes.map(m => ({ loc: `/cars/timeline?make=${encodeURIComponent(m)}`, priority: '0.5' })),
+      ...Array.from(timelinePaths, loc => ({ loc, priority: '0.5' })),
       ...makes.filter(m => bikeMakes.some(r => r.make === m))
         .map(m => ({ loc: `/cars?selectmake=${encodeURIComponent(m)}&type=motorcycle`, priority: '0.5' })),
       ...cars.map(c => ({
