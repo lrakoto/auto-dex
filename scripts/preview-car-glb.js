@@ -5,7 +5,7 @@ const { once } = require('node:events');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { brotliCompressSync, constants } = require('node:zlib');
+const { brotliCompressSync, constants, gzipSync } = require('node:zlib');
 const express = require('express');
 const demo = require('../config/car-3d');
 const securityHeaders = require('../config/security-headers');
@@ -14,7 +14,7 @@ const { parseGlb } = require('./inspect-car-gltf');
 const { inspectGltfImage } = require('./inspect-gltf-image');
 
 const viewerFile = 'viewer.min.js';
-const compressed = new Set([viewerFile, 'model.glb']);
+const compressedAssets = new Set([viewerFile, 'model.glb']);
 const externalDecoders = ['KHR_draco_mesh_compression', 'EXT_meshopt_compression', 'KHR_texture_basisu'];
 
 async function readAsset(file) {
@@ -68,7 +68,7 @@ function createPreviewApp(assetRoot, { name, creditLabel, posterFile, posterMime
       homeHref: demo.labPath
     },
     assets: new Map([[viewerFile, 'text/javascript'], ['model.glb', 'model/gltf-binary'], [posterFile, posterMime]]),
-    brotliAssets: compressed
+    compressedAssets
   });
   return app;
 }
@@ -107,9 +107,10 @@ async function run(args) {
     for (const [file, bytes] of [[viewerFile, viewer], ['model.glb', model], [posterFile, poster]]) {
       if (stopped) return;
       await fs.writeFile(path.join(root, file), bytes, { mode: 0o600 });
-      if (!stopped && compressed.has(file)) {
+      if (!stopped && compressedAssets.has(file)) {
         const params = { [constants.BROTLI_PARAM_QUALITY]: 6 };
         await fs.writeFile(path.join(root, file + '.br'), brotliCompressSync(bytes, { params }), { mode: 0o600 });
+        if (!stopped) await fs.writeFile(path.join(root, file + '.gz'), gzipSync(bytes), { mode: 0o600 });
       }
     }
     if (stopped) return;

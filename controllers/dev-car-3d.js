@@ -1,7 +1,11 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const express = require('express');
+const Negotiator = require('negotiator');
 const demo = require('../config/car-3d');
+
+const compressedSuffixes = { br: '.br', gzip: '.gz' };
+const preferred = Object.keys(compressedSuffixes);
 
 async function hasAsset(root, name) {
   try {
@@ -18,7 +22,7 @@ module.exports = function registerDevCar3d(app, {
   assetRoot = demo.assetRoot,
   scene = demo.scene,
   assets = demo.assets,
-  brotliAssets = demo.brotliAssets
+  compressedAssets = demo.compressedAssets
 } = {}) {
   if (!demo.isEnabled(env)) return;
 
@@ -48,16 +52,16 @@ module.exports = function registerDevCar3d(app, {
 
     let file = name;
     const options = { root, dotfiles: 'deny', cacheControl: false };
-    if (brotliAssets.has(name)) {
+    if (compressedAssets.has(name)) {
       res.vary('Accept-Encoding');
-      const sidecar = `${name}.br`;
-      const available = await hasAsset(root, sidecar) ? ['br', 'identity'] : ['identity'];
-      const encoding = req.acceptsEncodings(available);
+      const existing = await Promise.all(preferred.map(encoding => hasAsset(root, name + compressedSuffixes[encoding])));
+      const available = preferred.filter((_encoding, index) => existing[index]);
+      const encoding = new Negotiator(req).encoding([...available, 'identity'], { preferred });
       if (!encoding) return res.sendStatus(406);
-      if (encoding === 'br') {
-        file = sidecar;
-        options.headers = { 'Content-Encoding': 'br' };
-        // A partial Brotli stream cannot be decoded as the original file.
+      if (encoding !== 'identity') {
+        file += compressedSuffixes[encoding];
+        options.headers = { 'Content-Encoding': encoding };
+        // Only the original file supports byte-range delivery.
         options.acceptRanges = false;
       }
     }

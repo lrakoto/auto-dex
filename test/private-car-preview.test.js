@@ -3,6 +3,7 @@ const { once } = require('node:events');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { gzipSync } = require('node:zlib');
 const { escapeXML } = require('ejs');
 const express = require('express');
 const request = require('supertest');
@@ -54,6 +55,7 @@ describe('Private GLB preview', function () {
     await Promise.all([
       fs.writeFile(path.join(assets, 'viewer.min.js'), 'export {};'),
       fs.writeFile(path.join(assets, 'model.glb'), model),
+      fs.writeFile(path.join(assets, 'model.glb.gz'), gzipSync(model)),
       fs.writeFile(path.join(assets, 'poster.png'), poster),
       fs.writeFile(path.join(assets, 'private.txt'), 'unlisted file'),
       fs.writeFile(path.join(assets, 'ToyCar.gltf'), '{}')
@@ -105,7 +107,7 @@ describe('Private GLB preview', function () {
         .expect('X-Robots-Tag', 'noindex')
         .expect(200);
     }
-    for (const file of ['private.txt', 'ToyCar.gltf', 'model.glb.br', '..%2Fprivate.txt']) {
+    for (const file of ['private.txt', 'ToyCar.gltf', 'model.glb.br', 'model.glb.gz', '..%2Fprivate.txt']) {
       await app.get(assetUrl + file).expect(404);
     }
   });
