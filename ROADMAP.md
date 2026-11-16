@@ -232,6 +232,9 @@ R14 on 2026-10-01 so they ship before R4.
   scripted check can't pass; add them once someone confirms their search URL
   in a browser.
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
+  BMW detail pages now link to manufacturer records for the E39 528i and
+  both the E32 and E38 750iL. The references use stored model years and
+  show BMW's factory production dates explicitly.
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;

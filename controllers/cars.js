@@ -20,6 +20,7 @@ const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
 const { isCommercialName } = require('../lib/vehicleTypes');
 const { buildTimeline } = require('../lib/timeline');
+const { getGenerationHistory } = require('../lib/bmw-generations');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
@@ -411,8 +412,9 @@ router.get('/', async (req, res) => {
           return null;
         }) : null
       ]);
-      const wikiSummary = wiki ? wiki.summary : null;
-      const wikiUrl = wiki ? wiki.url : null;
+      const generationHistory = getGenerationHistory(car);
+      const summary = generationHistory?.overview || wiki?.summary || null;
+      const wikiUrl = generationHistory?.overview ? null : (wiki?.url || null);
 
       // ?image= comes from the garage's favorite links. Honor it only when
       // it's the viewer's own favorite photo or already in this car's
@@ -442,7 +444,8 @@ router.get('/', async (req, res) => {
       if (local3dPreview) res.set('Cache-Control', 'no-store');
 
       res.render('cars/detail', {
-        make, model, image, favcount, relatedCars, country, wikiSummary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
+        make, model, image, favcount, relatedCars, country, summary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
+        generationHistory,
         saleLinks: saleLinks(make, model, type),
         gallery, mySpotCount, heroCredit, complaints,
         complaintsYear: (complaints && complaints.year) || (car && car.year_max),
@@ -458,10 +461,10 @@ router.get('/', async (req, res) => {
         local3dPreview,
         noindex: Boolean(local3dPreview),
         pageTitle: `${make} ${model} — Specs, Images & Info — AutoDex`,
-        pageDescription: wikiSummary ? wikiSummary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
+        pageDescription: summary ? summary.slice(0, 160) : `${make} ${model} specs, photos, and details on AutoDex.`,
         canonicalPath: carPath(make, model),
         ogTitle: make + ' ' + model + ' — AutoDex',
-        ogDescription: wikiSummary ? wikiSummary.slice(0, 160) : make + ' ' + model + ' on AutoDex.',
+        ogDescription: summary ? summary.slice(0, 160) : make + ' ' + model + ' on AutoDex.',
         ogImage: catalogImage === PLACEHOLDER_URL ? null : catalogImage
       });
     } catch (err) {
