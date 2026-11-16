@@ -4,7 +4,7 @@
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const { addImage, availablePhoto } = require('../lib/gallery');
-const { photoCorrectionFor, verifiedPhotoCorrections } = require('../lib/catalog-photo-corrections');
+const { verifiedPhotoFor, verifiedCatalogPhotos } = require('../lib/catalog-photo-corrections');
 const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carquery = require('../config/carquery');
 const wikimedia = require('../lib/wikimedia'); // via the module so tests can stub it
@@ -64,20 +64,28 @@ async function addWikipediaPhoto(car, photo) {
 
 async function applyVerifiedCatalogPhotos() {
   const { Op } = db.Sequelize;
-  for (const { make, model, wrongFile, photo } of verifiedPhotoCorrections) {
+  const missingCover = {
+    // Admins can intentionally return a car to the placeholder.
+    updated_img: { [Op.not]: true },
+    [Op.or]: [{ image: null }, { image: { [Op.in]: ['', PLACEHOLDER_URL] } }]
+  };
+  for (const { make, model, wrongFile, photo } of verifiedCatalogPhotos) {
+    const eligible = wrongFile ? { image: { [Op.iRegexp]: wrongFile.source } } : missingCover;
     await db.sequelize.transaction(async transaction => {
       const car = await db.car.findOne({
         attributes: ['id', 'image'],
-        where: { make, model, image: { [Op.iRegexp]: wrongFile.source } },
+        where: { make, model, ...eligible },
         transaction
       });
       if (!car) return;
       const previous = car.getDataValue('image');
-      await db.car_image.findOrCreate({
-        where: { carId: car.id, url: previous },
-        defaults: { source: 'catalog' },
-        transaction
-      });
+      if (wrongFile) {
+        await db.car_image.findOrCreate({
+          where: { carId: car.id, url: previous },
+          defaults: { source: 'catalog' },
+          transaction
+        });
+      }
       const credit = {
         credit_name: photo.creditName, credit_url: photo.creditUrl, credit_checked: true,
         license: photo.license, license_url: photo.licenseUrl
@@ -88,9 +96,10 @@ async function applyVerifiedCatalogPhotos() {
         transaction
       });
       if (!created) await replacement.update(credit, { transaction });
+      if (!wrongFile && replacement.score < 0) return;
       // Keep any different cover chosen since this repair read the row.
       await db.car.update({ image: photo.url, updated_img: true }, {
-        where: { id: car.id, image: previous }, transaction
+        where: { ...eligible, id: car.id, image: previous }, transaction
       });
     });
   }
@@ -142,8 +151,12 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   for (const car of cars) {
     attempted++;
     try {
-      const photo = photoCorrectionFor(car)?.photo
-        ?? await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max, modelYears: car.model_years });
+      const verified = verifiedPhotoFor(car);
+      // The targeted pass fills an empty cover. The ordinary promotion rules
+      // can replace an existing cover and are only used for other entries.
+      const photo = verified && !verified.wrongFile
+        ? null
+        : (verified?.photo ?? await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max, modelYears: car.model_years }));
       failures = 0;
       if (photo) {
         await addWikipediaPhoto(car, photo);

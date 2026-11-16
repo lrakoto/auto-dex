@@ -14,7 +14,7 @@ const carquery = require('../config/carquery'); // getModels via the module so t
 const { catalogPreviewFor } = require('../config/car-3d');
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
-const { isMismatchedCatalogPhoto, photoCorrectionFor } = require('../lib/catalog-photo-corrections');
+const { isMismatchedCatalogPhoto, verifiedPhotoFor } = require('../lib/catalog-photo-corrections');
 const coolWall = require('../lib/coolWall');
 const rarity = require('../lib/rarity');
 const { getGallery, vote } = require('../lib/gallery');
@@ -440,7 +440,7 @@ router.get('/', async (req, res) => {
 
       gallery.forEach(img => { img.credit = photoCredit(img.url, img); });
       let heroImage = gallery.find(g => g.url === image);
-      if (!heroImage && car && image === catalogImage && photoCorrectionFor(car)?.photo.url === image) {
+      if (!heroImage && car && image === catalogImage && verifiedPhotoFor(car)?.photo.url === image) {
         heroImage = await db.car_image.findOne({ where: { carId: car.id, url: image } });
       }
       const heroCredit = photoCredit(image, heroImage);
