@@ -14,6 +14,7 @@ const carquery = require('../config/carquery'); // getModels via the module so t
 const { catalogPreviewFor } = require('../config/car-3d');
 const { getMakeCountry } = carquery;
 const { photoCredit } = require('../lib/photos');
+const { isMismatchedCatalogPhoto, photoCorrectionFor } = require('../lib/catalog-photo-corrections');
 const coolWall = require('../lib/coolWall');
 const rarity = require('../lib/rarity');
 const { getGallery, vote } = require('../lib/gallery');
@@ -398,7 +399,7 @@ router.get('/', async (req, res) => {
         passenger ? nhtsa.getSafetyRatings(make, model, car && car.year_max).catch(() => null) : null,
         req.user ? db.favorite_car.findOne({ where: { userId: req.user.id, make, model } }) : null,
         req.user && car ? db.spotting.count({ where: { userId: req.user.id, carId: car.id } }) : 0,
-        car ? getGallery(car.id, req.user && req.user.id, car.image) : [],
+        car ? getGallery(car, req.user && req.user.id) : [],
         // NHTSA outage shouldn't break the page — same three-state pattern as garage recalls
         nhtsa.getComplaints(make, model, car && car.year_max).catch(() => null)
       ]);
@@ -422,7 +423,8 @@ router.get('/', async (req, res) => {
       // picture. Share previews always use the catalog photo.
       const catalogImage = (car && car.image) || PLACEHOLDER_URL;
       const wanted = isValidImageUrl(req.query.image) ? req.query.image.trim() : null;
-      const image = wanted && ((userFavorite && userFavorite.image === wanted) || gallery.some(g => g.url === wanted))
+      const image = wanted && !isMismatchedCatalogPhoto(car, wanted)
+        && ((userFavorite && userFavorite.image === wanted) || gallery.some(g => g.url === wanted))
         ? wanted
         : catalogImage;
 
@@ -437,7 +439,10 @@ router.get('/', async (req, res) => {
       ];
 
       gallery.forEach(img => { img.credit = photoCredit(img.url, img); });
-      const heroImage = gallery.find(g => g.url === image);
+      let heroImage = gallery.find(g => g.url === image);
+      if (!heroImage && car && image === catalogImage && photoCorrectionFor(car)?.photo.url === image) {
+        heroImage = await db.car_image.findOne({ where: { carId: car.id, url: image } });
+      }
       const heroCredit = photoCredit(image, heroImage);
       const cool = await coolWall.getCarCool(car && car.id, req.user && req.user.id);
       const local3dPreview = catalogPreviewFor(car);

@@ -3,7 +3,8 @@
 // ENABLE_BACKGROUND_JOBS=false disables the scheduler when using separate cron.
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
-const { addImage } = require('../lib/gallery');
+const { addImage, availablePhoto } = require('../lib/gallery');
+const { photoCorrectionFor, verifiedPhotoCorrections } = require('../lib/catalog-photo-corrections');
 const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const carquery = require('../config/carquery');
 const wikimedia = require('../lib/wikimedia'); // via the module so tests can stub it
@@ -40,7 +41,7 @@ async function addWikipediaPhoto(car, photo) {
     licenseUrl: photo.licenseUrl
   });
   if (!image) return;
-  const current = await db.car.findByPk(car.id, { attributes: ['id', 'image', 'updated_img'] });
+  const current = await db.car.findByPk(car.id, { attributes: ['id', 'make', 'model', 'image', 'updated_img'] });
   if (!current || current.image === photo.url || image.score < 0) return;
   const rawHero = current.getDataValue('image');
   // Retired stock imagery is replaced regardless of its historical votes.
@@ -53,12 +54,45 @@ async function addWikipediaPhoto(car, photo) {
     || (heroRow && ['catalog', 'unsplash'].includes(heroRow.source));
   const outvoted = await db.car_image.count({ where: {
     carId: car.id,
-    source: { [Op.ne]: 'unsplash' },
-    url: { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN },
+    ...availablePhoto(current),
     score: { [Op.gt]: image.score }
   } });
   if (automatedHero && !outvoted) {
     await db.car.update({ image: photo.url, updated_img: true }, { where: { id: car.id } });
+  }
+}
+
+async function applyVerifiedCatalogPhotos() {
+  const { Op } = db.Sequelize;
+  for (const { make, model, wrongFile, photo } of verifiedPhotoCorrections) {
+    await db.sequelize.transaction(async transaction => {
+      const car = await db.car.findOne({
+        attributes: ['id', 'image'],
+        where: { make, model, image: { [Op.iRegexp]: wrongFile.source } },
+        transaction
+      });
+      if (!car) return;
+      const previous = car.getDataValue('image');
+      await db.car_image.findOrCreate({
+        where: { carId: car.id, url: previous },
+        defaults: { source: 'catalog' },
+        transaction
+      });
+      const credit = {
+        credit_name: photo.creditName, credit_url: photo.creditUrl, credit_checked: true,
+        license: photo.license, license_url: photo.licenseUrl
+      };
+      const [replacement, created] = await db.car_image.findOrCreate({
+        where: { carId: car.id, url: photo.url },
+        defaults: { source: 'wikimedia', ...credit },
+        transaction
+      });
+      if (!created) await replacement.update(credit, { transaction });
+      // Keep any different cover chosen since this repair read the row.
+      await db.car.update({ image: photo.url, updated_img: true }, {
+        where: { id: car.id, image: previous }, transaction
+      });
+    });
   }
 }
 
@@ -108,7 +142,8 @@ async function wikipediaPhotos(budget = WIKI_BATCH, { delayMs = WIKI_DELAY_MS } 
   for (const car of cars) {
     attempted++;
     try {
-      const photo = await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max, modelYears: car.model_years });
+      const photo = photoCorrectionFor(car)?.photo
+        ?? await wikimedia.findLeadPhoto(car.make, car.model, { yearMax: car.year_max, modelYears: car.model_years });
       failures = 0;
       if (photo) {
         await addWikipediaPhoto(car, photo);
@@ -133,6 +168,7 @@ const BATCH_SIZE = 0;
 
 async function updatePhotos({ delayMs = WIKI_DELAY_MS } = {}) {
   try {
+    await applyVerifiedCatalogPhotos();
     const pendingRetirement = await db.car.findOne({ attributes: ['id'], where: retirementPendingWhere() });
     await wikipediaPhotos(pendingRetirement ? WIKI_RETIREMENT_BATCH : WIKI_BATCH, { delayMs });
   } catch (err) {
@@ -141,6 +177,6 @@ async function updatePhotos({ delayMs = WIKI_DELAY_MS } = {}) {
 }
 
 module.exports = {
-  updatePhotos, wikipediaPhotos, addWikipediaPhoto, unsplashImages, backfillCredits,
+  updatePhotos, wikipediaPhotos, addWikipediaPhoto, applyVerifiedCatalogPhotos, unsplashImages, backfillCredits,
   BATCH_SIZE, WIKI_BATCH, WIKI_RETIREMENT_BATCH, WIKI_RECHECK_DAYS, UNSPLASH_RETIREMENT_AT, PHOTO_ALIAS_RECHECK_AT
 };

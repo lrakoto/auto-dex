@@ -88,7 +88,7 @@ describe('Retiring inaccurate Unsplash photos', function() {
     const old = await db.car_image.create({ carId: car.id, url: retired, source: 'catalog', score: 100 });
     const oldSource = await db.car_image.create({ carId: car.id, url: 'https://example.com/retired-source.jpg', source: 'unsplash', score: 200 });
     const safe = await db.car_image.create({ carId: car.id, url: replacement, source: 'wikimedia', score: 0 });
-    const shown = await gallery.getGallery(car.id, null, retired);
+    const shown = await gallery.getGallery(car, null);
     assert.deepEqual(shown.map(row => row.id), [safe.id]);
     assert.equal(await gallery.vote(old.id, 987654, 1), null);
     assert.equal(await gallery.vote(oldSource.id, 987654, 1), null);

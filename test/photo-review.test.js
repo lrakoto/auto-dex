@@ -206,7 +206,7 @@ describe('Reviewed catalog photos', function() {
     assert.equal(car.image, candidate.url);
     const historical = await db.car_image.findOne({ where: { carId: car.id, url: previousUrl } });
     assert(historical, 'raw retired cover history was discarded');
-    const gallery = await require('../lib/gallery').getGallery(car.id, adminUser.id, car.image);
+    const gallery = await require('../lib/gallery').getGallery(car, adminUser.id);
     assert(!gallery.some(image => image.url === previousUrl), 'retired history became a visible gallery option');
   });
 

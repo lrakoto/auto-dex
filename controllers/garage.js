@@ -14,6 +14,7 @@ const { getFuelSpecs } = require('../lib/carinfo');
 const { validateUsername } = require('../lib/usernames');
 const { favoritePhoto } = require('../lib/photos');
 const photoCandidates = require('../lib/photoCandidates');
+const { isMismatchedCatalogPhoto } = require('../lib/catalog-photo-corrections');
 const { WIKI_BATCH, WIKI_RETIREMENT_BATCH } = require('../jobs/images');
 const { isRetiredPhoto, RETIRED_PHOTO_PATTERN } = require('../lib/photoPolicy');
 const { ALL_MAKES } = require('../config/carquery');
@@ -662,7 +663,7 @@ router.post('/admin/photos/:id', isAdmin, adminWriteLimiter, async (req, res) =>
     const car = await db.car.findByPk(id);
     if (!car) return res.status(404).render('404', { pageTitle: 'Page Not Found — AutoDex', noindex: true });
     const candidate = await photoCandidates.getCandidate(provider, candidateId, car.make, car.model);
-    if (!candidate || isRetiredPhoto(candidate.url)) {
+    if (!candidate || isRetiredPhoto(candidate.url) || isMismatchedCatalogPhoto(car, candidate.url)) {
       req.flash('error', 'That photo is no longer available for approval. Search again and choose another photo.');
       return res.redirect(redirect);
     }
@@ -726,7 +727,11 @@ router.post('/admin/proposal/:id/approve', isAdmin, adminWriteLimiter, async (re
       return res.redirect('/garage/admin');
     }
     // Joins the gallery; becomes the hero right away only if the car had none
-    await addImage(proposal.carId, imageUrl, { userId: proposal.userId, source: 'user' });
+    const image = await addImage(proposal.carId, imageUrl, { userId: proposal.userId, source: 'user' });
+    if (!image) {
+      req.flash('error', 'This photo is unavailable for this vehicle.');
+      return res.redirect('/garage/admin');
+    }
     await proposal.update({ status: 'approved' });
     req.flash('success', 'Photo approved and added to the gallery.');
   } catch (err) {
@@ -784,7 +789,11 @@ router.put('/admin/car/:id', isAdmin, adminWriteLimiter, upload.single('carImage
     }
 
     // Admin override: joins the gallery and becomes the hero immediately
-    await addImage(parseInt(req.params.id, 10), image, { userId: req.user.id, source: 'admin', makeHero: true });
+    const saved = await addImage(parseInt(req.params.id, 10), image, { userId: req.user.id, source: 'admin', makeHero: true });
+    if (!saved) {
+      req.flash('error', 'This photo is unavailable for this vehicle.');
+      return res.redirect('/garage/admin');
+    }
 
     req.flash('success', 'Car image updated.');
     res.redirect('/garage/admin');

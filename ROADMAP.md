@@ -77,6 +77,12 @@ Check an item off in the same PR that finishes it. Research behind this list
   covers for these names receive a one-time catch-up check, then normal retries.
   Descriptions and Wikidata facts use these same verified articles, avoiding
   unrelated bare-model results such as the MG3 machine gun.
+- Two BMW series leads showed the wrong trim. The 528i uses a verified 2000
+  E39 photo by Elise240SX, and the 750iL uses a verified E38 photo by TTTNIS.
+  The old 550i and 730i files stay in gallery history with their votes but
+  are excluded from display and selection for the two affected trims.
+  [528i photo and license](https://commons.wikimedia.org/wiki/File:2000_BMW_528i_Sedan_in_Jet_Black,_Front_Left,_07-12-2023.jpg) ·
+  [750iL photo and dedication](https://commons.wikimedia.org/wiki/File:BMW_750iL.jpg#Licensing).
 
 ### R3 — Safety and owner-reported problems on car pages
 - [x] NHTSA 5-star ratings (`api.nhtsa.gov/SafetyRatings/...`: overall,
