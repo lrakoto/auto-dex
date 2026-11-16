@@ -526,6 +526,15 @@ R14 on 2026-10-01 so they ship before R4.
   Desktop WKWebView used 2,887,951 gzip bytes for the model and viewer
   together and rendered at 390 and 1000 CSS px. Poster-first loading,
   zoom, reset, and return to the poster passed.
+- **Slow-load check (2026-11-16).** With HTTP cache disabled, desktop Chrome
+  at 390 × 844 CSS px and 2× received the repacked BMW GLB over Brotli at
+  0.8 Mbps down, 0.4 Mbps up, and 200 ms of added latency. The earlier
+  preview returned to the poster at 20.00 s while the GLB was still
+  downloading. With the timer reset by advancing model progress, the
+  same preview reached ready at 23.89 s. The compressed model response
+  reports its decoded size so the viewer can measure progress. With the
+  GLB response withheld entirely, the poster remained visible and Retry
+  appeared at 20.04 s. Timing on a physical phone remains to be checked.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
