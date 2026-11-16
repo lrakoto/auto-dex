@@ -32,7 +32,9 @@ async function addMissingModels(make) {
       const key = model.toLowerCase();
       if (existing.has(key)) continue;
       existing.add(key);
-      const vehicleType = type === 'motorcycle' && isAtvName(model, make) ? 'offroad' : type;
+      let vehicleType = type;
+      if (type === 'car' && isCommercialName(make, model)) vehicleType = 'commercial';
+      if (type === 'motorcycle' && isAtvName(model, make)) vehicleType = 'offroad';
       rows.push({ make, model, image: PLACEHOLDER_URL, favcount: 0, updated_img: false, vehicle_type: vehicleType });
     }
   }

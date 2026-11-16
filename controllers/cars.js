@@ -18,6 +18,7 @@ const coolWall = require('../lib/coolWall');
 const rarity = require('../lib/rarity');
 const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
+const { isCommercialName } = require('../lib/vehicleTypes');
 const { buildTimeline } = require('../lib/timeline');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
@@ -255,7 +256,7 @@ router.get('/', async (req, res) => {
     }
 
     const isCarMake = carquery.MAKES_LIST.includes(make);
-    const [nhtsaCars, typeRows] = await Promise.all([
+    const [listedModels, typeRows] = await Promise.all([
       isCarMake ? carquery.getModels(make) : [],
       db.car.findAll({
         attributes: ['vehicle_type', [fn('COUNT', col('id')), 'n']],
@@ -264,6 +265,9 @@ router.get('/', async (req, res) => {
         raw: true
       })
     ]);
+    // NHTSA's truck list also includes commercial models. Keep the Cars tab
+    // consistent with the same name rules used to classify saved catalog rows.
+    const nhtsaCars = listedModels.filter(({ model }) => !isCommercialName(make, model));
     // Unclassified rows count as cars until jobs/vehicleTypes.js gets to them
     const counts = {};
     typeRows.forEach(r => {
