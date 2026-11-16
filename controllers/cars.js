@@ -100,14 +100,12 @@ const EXPLORE_SORTS = {
 };
 
 router.get('/explore', async (req, res) => {
-  const { Op } = require('sequelize');
+  const { Op, fn, col } = require('sequelize');
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const str = v => (typeof v === 'string' ? v : '');
-  const firstDecade = 1980;
+  const firstStandardDecade = 1980;
   const lastDecade = Math.floor(new Date().getFullYear() / 10) * 10;
-  const decades = [];
-  for (let d = lastDecade; d >= firstDecade; d -= 10) decades.push(d);
-  const decade = decades.includes(parseInt(req.query.decade, 10)) ? parseInt(req.query.decade, 10) : null;
+  const requestedDecade = parseInt(req.query.decade, 10);
   const type = req.query.type === 'all' ? 'all' : (TYPE_KEYS.includes(req.query.type) ? req.query.type : 'car');
   const photos = req.query.photos === '1';
   const requestedSort = str(req.query.sort);
@@ -116,7 +114,24 @@ router.get('/explore', async (req, res) => {
   try {
     // Include the makes stored in AutoDex, including commercial manufacturers
     // outside the curated car and motorcycle lists.
-    const catalogMakes = await db.car.findAll({ attributes: ['make'], group: ['make'], raw: true });
+    const [catalogMakes, historicalYears] = await Promise.all([
+      db.car.findAll({ attributes: ['make'], group: ['make'], raw: true }),
+      db.car.findAll({
+        attributes: [[fn('unnest', col('model_years')), 'year']],
+        where: { year_min: { [Op.lt]: firstStandardDecade } },
+        raw: true
+      })
+    ]);
+    const decades = new Set();
+    for (let d = lastDecade; d >= firstStandardDecade; d -= 10) decades.add(d);
+    // Earlier choices come from exact model years across the catalog so a
+    // change to another filter can still show an empty decade result.
+    for (const { year } of historicalYears) {
+      if (Number.isInteger(year) && year >= 1000 && year < firstStandardDecade) {
+        decades.add(Math.floor(year / 10) * 10);
+      }
+    }
+    const decade = decades.has(requestedDecade) ? requestedDecade : null;
     const makesList = [...new Set([...carquery.ALL_MAKES, ...catalogMakes.map(row => row.make).filter(make => make?.trim())])]
       .sort((a, b) => a.localeCompare(b));
     const countries = [...new Set(makesList.map(getMakeCountry).filter(Boolean))].sort();
@@ -174,7 +189,7 @@ router.get('/explore', async (req, res) => {
       return res.render('partials/car-grid', { ...viewData, layout: false });
     }
     Object.assign(viewData, {
-      decades, countries, makesList,
+      decades: Array.from(decades).sort((a, b) => b - a), countries, makesList,
       vehicleTypes: TYPE_KEYS.map(k => ({ key: k, label: carquery.VEHICLE_TYPES[k].label })),
       filters: { decade, country, make, photos, sort, type },
       pageTitle: `Explore ${label === 'those filters' ? noun : label + ' ' + noun} — AutoDex`,
