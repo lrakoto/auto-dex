@@ -21,7 +21,7 @@
     <div class="lab-intro">
       <p class="lab-kicker">AutoDex Lab / 01</p>
       <h1 id="lab-title">3D Viewer Lab</h1>
-      <p><%= scene.intro %></p>
+      <% if (assetsReady) { %><p><%= scene.intro %></p><% } %>
     </div>
     <section class="lab-card" aria-labelledby="lab-model">
       <div class="lab-toolbar">
@@ -36,25 +36,28 @@
           </div>
         <% } %>
       </div>
-      <% if (assetsReady) { %>
+      <% if (posterReady) { %>
         <figure class="lab-figure">
-          <div id="car-3d-stage" class="lab-stage" data-state="idle" data-model-url="<%= modelUrl %>" data-model-alt="<%= scene.modelAlt %>">
+          <div id="car-3d-stage" class="lab-stage"<% if (assetsReady) { %> data-state="idle" data-model-url="<%= modelUrl %>" data-model-alt="<%= scene.modelAlt %>"<% } %>>
             <img id="car-3d-poster" class="lab-poster" src="<%= posterUrl %>" alt="<%= scene.posterAlt %>">
           </div>
-          <div id="car-3d-controls" class="lab-camera-controls" role="group" aria-label="3D camera controls" hidden>
-            <button id="car-3d-zoom-in" type="button" aria-controls="car-3d-stage">Zoom in</button>
-            <button id="car-3d-zoom-out" type="button" aria-controls="car-3d-stage">Zoom out</button>
-            <button id="car-3d-reset" type="button" aria-controls="car-3d-stage">Reset view</button>
-          </div>
-          <figcaption class="lab-caption">
-            <p id="car-3d-instructions">Drag to orbit. On touch, swipe sideways to turn the car. With the viewer focused, use the arrow keys.</p>
-            <noscript><p>Enable JavaScript to explore the 3D model.</p></noscript>
-          </figcaption>
+          <% if (assetsReady) { %>
+            <div id="car-3d-controls" class="lab-camera-controls" role="group" aria-label="3D camera controls" hidden>
+              <button id="car-3d-zoom-in" type="button" aria-controls="car-3d-stage">Zoom in</button>
+              <button id="car-3d-zoom-out" type="button" aria-controls="car-3d-stage">Zoom out</button>
+              <button id="car-3d-reset" type="button" aria-controls="car-3d-stage">Reset view</button>
+            </div>
+            <figcaption class="lab-caption">
+              <p id="car-3d-instructions">Drag to orbit. On touch, swipe sideways to turn the car. With the viewer focused, use the arrow keys.</p>
+              <noscript><p>Enable JavaScript to explore the 3D model.</p></noscript>
+            </figcaption>
+          <% } %>
         </figure>
-      <% } else { %>
+      <% } %>
+      <% if (!assetsReady) { %>
         <div class="lab-missing" id="car-3d-missing">
-          <p>Demo assets are not installed.</p>
-          <p>Run the local 3D demo setup in the AutoDex checkout, then reload this page.</p>
+          <p>3D preview files are unavailable.</p>
+          <p><%= scene.missingAssetHelp || 'Run the local 3D demo setup in the AutoDex checkout, then reload this page.' %></p>
         </div>
       <% } %>
       <div class="lab-credit">

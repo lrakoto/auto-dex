@@ -64,6 +64,7 @@ function createPreviewApp(assetRoot, { name, creditLabel, posterFile, posterMime
       modelAlt: `Interactive 3D model of ${name}`,
       posterFile,
       posterAlt: `Preview image of ${name}`,
+      missingAssetHelp: 'Restart the private preview with the local model and poster files.',
       creditLabel,
       homeHref: demo.labPath
     },

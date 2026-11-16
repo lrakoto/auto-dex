@@ -42,8 +42,11 @@ module.exports = function registerDevCar3d(app, {
       res.set('Content-Security-Policy', policy.split(';')
         .filter(directive => directive.trim() !== 'upgrade-insecure-requests').join(';'));
     }
-    const present = await Promise.all(Array.from(assets.keys(), name => assetSize(root, name)));
-    res.render('dev-car-3d', { layout: false, assetsReady: present.every(Boolean), scene, modelUrl, posterUrl });
+    const names = Array.from(assets.keys());
+    const sizes = await Promise.all(names.map(name => assetSize(root, name)));
+    const posterReady = sizes[names.indexOf(scene.posterFile)] > 0;
+    const assetsReady = posterReady && sizes.every(Boolean);
+    res.render('dev-car-3d', { layout: false, posterReady, assetsReady, scene, modelUrl, posterUrl });
   });
 
   router.get('/assets/:name', async (req, res, next) => {

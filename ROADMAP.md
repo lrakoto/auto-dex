@@ -535,6 +535,10 @@ R14 on 2026-10-01 so they ship before R4.
   reports its decoded size so the viewer can measure progress. With the
   GLB response withheld entirely, the poster remained visible and Retry
   appeared at 20.04 s. Timing on a physical phone remains to be checked.
+- **Incomplete local assets (2026-11-16).** The lab shows an available poster
+  when a required 3D file is unavailable. It provides setup or restart
+  instructions and offers the interactive controls once the complete bundle
+  is present.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
