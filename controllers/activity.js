@@ -1,3 +1,4 @@
+const { createHmac, timingSafeEqual } = require('node:crypto');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../models');
@@ -45,25 +46,43 @@ function publicSighting({ car, user, createdAt }) {
   };
 }
 
+function ownVoteFor(userId, voteDay) {
+  return db.spot_vote.findOne({ where: { userId, voteDay }, attributes: ['id', 'spottingId'] });
+}
+
+function voteWithdrawalToken(userId, voteDay, { id, spottingId }) {
+  return createHmac('sha256', process.env.SECRET_SESSION)
+    .update(`spot-vote-withdraw:${userId}:${voteDay}:${id}:${spottingId}`).digest('hex');
+}
+
+async function withdrawUnavailableVote(userId, voteDay, token) {
+  const vote = await ownVoteFor(userId, voteDay);
+  if (!vote) return;
+  const expected = voteWithdrawalToken(userId, voteDay, vote);
+  if (!timingSafeEqual(Buffer.from(token, 'hex'), Buffer.from(expected, 'hex'))) return;
+  // The vote may move between reading it and deleting it.
+  await db.spot_vote.destroy({ where: { userId, voteDay, id: vote.id, spottingId: vote.spottingId } });
+}
+
 async function ballot(recent, voteDay, now, userId) {
   const eligible = photoCandidates(recent, voteDay, now);
-  if (!eligible.length) return { candidates: [], hasVote: false };
-
   const [totals, ownVote] = await Promise.all([
-    db.spot_vote.findAll({
+    eligible.length ? db.spot_vote.findAll({
       attributes: ['spottingId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'votes']],
       where: { voteDay, spottingId: eligible.map(spot => spot.id) },
       group: ['spottingId'],
       raw: true
-    }),
-    userId ? db.spot_vote.findOne({ where: { userId, voteDay }, attributes: ['spottingId'] }) : null
+    }) : [],
+    userId ? ownVoteFor(userId, voteDay) : null
   ]);
   const votesBySpot = new Map(totals.map(row => [row.spottingId, Number(row.votes)]));
   const top = Math.max(0, ...votesBySpot.values());
   const leaders = totals.filter(row => Number(row.votes) === top);
   const leadingId = leaders.length === 1 ? leaders[0].spottingId : null;
+  const unavailableVote = ownVote && !eligible.some(spot => spot.id === ownVote.spottingId);
   return {
     hasVote: Boolean(ownVote),
+    unavailableVoteToken: unavailableVote ? voteWithdrawalToken(userId, voteDay, ownVote) : null,
     candidates: eligible.map(spot => ({
       ...publicSighting(spot),
       id: spot.id,
@@ -110,17 +129,22 @@ router.get('/', async (req, res, next) => {
 router.post('/vote', isLoggedIn, voteLimiter, async (req, res, next) => {
   const now = new Date();
   const voteDay = utcDay(now);
-  const { spottingId: input, day, action } = req.body;
+  const { spottingId: input, day, action, withdrawalToken } = req.body;
   const spottingId = Number(input);
-  if (typeof input !== 'string' || !/^[1-9]\d*$/.test(input) || spottingId > 2147483647 ||
-      typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day) || !['vote', 'withdraw'].includes(action)) {
+  const validSpotAction = ['vote', 'withdraw'].includes(action) && typeof input === 'string' &&
+    /^[1-9]\d*$/.test(input) && spottingId <= 2147483647;
+  const validUnavailableWithdrawal = action === 'withdraw-unavailable' && typeof withdrawalToken === 'string' &&
+    /^[a-f0-9]{64}$/.test(withdrawalToken);
+  if (!(validSpotAction || validUnavailableWithdrawal) || typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
     return res.status(400).send('Choose a sighting and voting action.');
   }
   if (day !== voteDay) return res.status(409).send('Voting has reset. Reload the sightings page.');
 
   try {
     const userId = req.user.id;
-    if (action === 'withdraw') {
+    if (action === 'withdraw-unavailable') {
+      await withdrawUnavailableVote(userId, voteDay, withdrawalToken);
+    } else if (action === 'withdraw') {
       await db.spot_vote.destroy({ where: { userId, voteDay, spottingId } });
     } else {
       const cast = await db.sequelize.transaction(async transaction => {

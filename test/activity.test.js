@@ -241,6 +241,64 @@ describe('Public sightings feed', function () {
       assert.doesNotMatch(await feed(), /Leading today/i);
     });
 
+    it('allows withdrawal when the voted sighting is no longer public', async function () {
+      const day = utcDay(new Date());
+      const yesterday = utcDay(new Date(Date.parse(day) - dayMs));
+      const voter = await owner('unavailable_voter', false);
+      const submitter = await owner('unavailable_submitter', true);
+      const { agent, _csrf } = await signIn(voter);
+      const [car, replacement] = await cars('Hidden Vote Fixture', 'Replacement Vote Fixture');
+      const image = photo('withdraw-hidden');
+      const sighting = await recentSpot(submitter, car, new Date(day), image);
+      await postVote(agent, { spottingId: sighting.id, day, action: 'vote', _csrf })
+        .expect(302).expect('Location', ballotPath);
+      const today = { userId: voter.id, voteDay: day };
+      assert.equal(await db.spot_vote.count({ where: today }), 1);
+
+      await submitter.update({ garagePublic: false });
+      const hidden = await agent.get('/activity').expect(200);
+      for (const value of [image, submitter.username, submitter.name, submitter.email, car.model, modelMarker(car)]) {
+        assert.ok(!hidden.text.includes(value), 'activity exposed ' + value);
+      }
+      assert.match(hidden.text, /id="spot-of-the-day"/);
+      const fallback = hidden.text.match(/<form\b[^>]*action="\/activity\/vote"[^>]*>[\s\S]*?<\/form>/)?.[0];
+      assert.ok(fallback, 'missing withdrawal form for unavailable sighting');
+      assert.match(fallback, /^<form\b[^>]*method="post"/i);
+      assert.match(fallback, /name="action" value="withdraw-unavailable"[^>]*>\s*Withdraw your vote\s*<\/button>/);
+      assert.ok(fallback.includes(`name="day" value="${day}"`));
+      assert.doesNotMatch(hidden.text, /name="spottingId"/);
+      assert.ok(!fallback.includes(`value="${sighting.id}"`));
+      const withdrawalToken = fallback.match(/name="withdrawalToken" value="([a-f0-9]{64})"/)?.[1];
+      const formCsrf = fallback.match(/name="_csrf" value="([^"]+)"/)?.[1];
+      assert.ok(withdrawalToken && formCsrf, 'missing withdrawal token or CSRF token');
+      assert.doesNotMatch(await feed(), /withdraw-unavailable/);
+
+      const fields = { day, action: 'withdraw-unavailable', withdrawalToken, _csrf: formCsrf };
+      await postVote(agent, { ...fields, day: yesterday }).expect(409);
+      assert.equal(await db.spot_vote.count({ where: today }), 1);
+
+      await submitter.update({ garagePublic: true });
+      const newer = await recentSpot(submitter, replacement, new Date(day), photo('withdraw-replacement'));
+      await postVote(agent, { spottingId: newer.id, day, action: 'vote', _csrf })
+        .expect(302).expect('Location', ballotPath);
+      await submitter.update({ garagePublic: false });
+      await postVote(agent, fields).expect(302).expect('Location', ballotPath);
+      assert.equal((await db.spot_vote.findOne({ where: today }))?.spottingId, newer.id);
+
+      const current = await agent.get('/activity').expect(200);
+      const currentToken = current.text.match(/name="withdrawalToken" value="([a-f0-9]{64})"/)?.[1];
+      assert.ok(currentToken && currentToken !== withdrawalToken);
+      await postVote(agent, { ...fields, withdrawalToken: currentToken, _csrf: undefined })
+        .set('X-Requested-With', 'XMLHttpRequest').expect(403);
+      await postVote(agent, { ...fields, withdrawalToken: currentToken }).expect(302).expect('Location', ballotPath);
+      assert.equal(await db.spot_vote.count({ where: today }), 0);
+
+      await submitter.update({ garagePublic: true });
+      const republished = await feed();
+      assert.ok(republished.includes(image));
+      assert.doesNotMatch(republished, /Leading today/i);
+    });
+
     it('keeps nonpublic and ineligible photos out of the ballot and rejects direct votes for them', async function () {
       const now = new Date();
       const day = utcDay(now);
