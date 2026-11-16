@@ -82,7 +82,7 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
     clearTimeout(id) { timers.delete(id); }
   }, { filename: scriptPath });
   return {
-    button, stage, poster, modules, models, controls, zoomIn, zoomOut, reset, credit, timers,
+    button, stage, poster, status, modules, models, controls, zoomIn, zoomOut, reset, credit, timers,
     get activeElement() { return activeElement; },
     click: () => button.emit('click'),
     installViewer(module = modules[0]) { registered = true; module.emit('load'); },
@@ -136,6 +136,7 @@ describe('Local 3D viewer in the browser', function() {
 
     demo.click();
     assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.status.textContent, 'Poster shown.');
     demo.click();
     const reopened = demo.models[2];
     assert.equal(reopened.src, retry.src);
@@ -144,12 +145,13 @@ describe('Local 3D viewer in the browser', function() {
     assert.equal(demo.stage.dataset.state, 'ready');
   });
 
-  it('returns to the poster when canceled before the viewer module loads', function() {
+  it('offers to keep the poster before the viewer module loads', function() {
     const demo = loadDemo();
     demo.click();
     const [canceledModule] = demo.modules;
     const [{ callback: canceledTimeout }] = demo.timers.values();
-    assert.equal(demo.button.textContent, 'Cancel 3D load');
+    assert.equal(demo.button.textContent, 'Keep poster');
+    assert.equal(demo.status.textContent, 'Loading 3D model…');
     assert.notEqual(demo.button.getAttribute('aria-disabled'), 'true');
 
     demo.click();
@@ -157,6 +159,7 @@ describe('Local 3D viewer in the browser', function() {
     assert.equal(demo.timers.size, 0);
     assert.equal(demo.stage.dataset.state, 'idle');
     assert.equal(demo.button.textContent, 'Load 3D model');
+    assert.equal(demo.status.textContent, 'Poster shown. The 3D download may continue.');
     assert.equal(demo.poster.hidden, false);
     assert.equal(demo.controls.hidden, true);
     canceledTimeout();
@@ -189,6 +192,7 @@ describe('Local 3D viewer in the browser', function() {
     assert.equal(demo.stage.dataset.state, 'idle');
     assert.equal(demo.poster.hidden, false);
     assert.equal(demo.controls.hidden, true);
+    assert.equal(demo.status.textContent, 'Poster shown. The 3D download may continue.');
 
     demo.click();
     assert.equal(demo.models[1].src, canceledModel.src);
