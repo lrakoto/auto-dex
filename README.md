@@ -178,6 +178,9 @@ asset providers. Setup removes the backdrop and repacks the model, keeping
 the original render as a poster. It also prepares lossless Brotli and gzip
 copies of the geometry, manifest, and viewer script. Rerun setup to add these
 files to an existing demo installation.
+Choose **Load 3D model** to start the viewer and model downloads. During
+loading, **Keep poster** leaves the preview closed. A download already
+underway may continue in the background.
 Neither the demo route nor its downloaded assets are served
 in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
 for the real-car pilot.

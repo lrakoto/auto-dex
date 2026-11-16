@@ -539,6 +539,13 @@ R14 on 2026-10-01 so they ship before R4.
   when a required 3D file is unavailable. It provides setup or restart
   instructions and offers the interactive controls once the complete bundle
   is present.
+- **Leaving a slow preview (2026-11-16).** Desktop Chrome at 390 × 844 CSS
+  px with 0.8 Mbps down, 0.4 Mbps up, and 200 ms added latency had received
+  451,446 of 2,095,510 Brotli model bytes when the private BMW preview was
+  closed. The poster stayed visible, and the original request delivered the
+  remaining 1,644,064 bytes over 16.4 seconds. The loading button now reads
+  **Keep poster**, and the status explains that an active transfer may
+  continue in the background. [Pinned Three.js file loader](https://github.com/mrdoob/three.js/blob/r169/src/loaders/FileLoader.js).
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before

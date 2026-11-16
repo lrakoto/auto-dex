@@ -139,7 +139,7 @@
     }
     const attempt = {};
     current = attempt;
-    update('loading', 'Cancel 3D load', 'Keep viewing the poster while 3D loads.');
+    update('loading', 'Keep poster', 'Loading 3D model…');
 
     if (window.customElements.get('model-viewer')) {
       showModel(attempt);
@@ -149,8 +149,8 @@
     const script = document.createElement('script');
     attempt.script = script;
     script.type = 'module';
-    // Reuse the module URL after cancellation so a pending import is evaluated
-    // only once. Change the URL only after an error or timeout.
+    // Reuse the module URL when returning to the poster so a pending import
+    // is evaluated only once. Change the URL only after an error or timeout.
     const suffix = moduleAttempt > 1 ? '?retry=' + moduleAttempt : '';
     script.src = viewerUrl + suffix;
     script.addEventListener('load', () => showModel(attempt), { once: true });
@@ -165,7 +165,8 @@
   button.addEventListener('click', () => {
     const state = stage.dataset.state;
     if (state === 'loading' || state === 'ready') {
-      showPoster(current, 'idle', 'Load 3D model', 'Poster shown.');
+      const message = state === 'loading' ? 'Poster shown. The 3D download may continue.' : 'Poster shown.';
+      showPoster(current, 'idle', 'Load 3D model', message);
     } else start();
   });
   zoomIn.addEventListener('click', () => changeZoom(1));
