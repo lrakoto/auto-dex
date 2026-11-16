@@ -352,9 +352,10 @@ R14 on 2026-10-01 so they ship before R4.
   [BMW factory dimensions](https://www.press.bmwgroup.com/united-kingdom/article/attachment/T0110413EN_GB/159995).
 - **1967 Ford Mustang Fastback.** Mark Peters publishes a 505,332-triangle
   exterior under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-  The download listing says the interior and underside are absent. The
-  artist's portfolio describes modeling an interior, so plan for an exterior
-  viewer and confirm the contents when inspecting the source mesh. The
+  Sketchfab confirmed downloads are enabled on November 16, 2026. The
+  artist's portfolio points to that listing, and Sketchfab's download
+  requires a signed-in account. The listing describes the interior and
+  underside as unfinished. The
   [Ford Mustang catalog entry](https://autodx.io/cars/car?make=Ford&model=Mustang)
   includes 1965–1973 and resumes in 1979. Ford introduced the 1965 model in
   April 1964 and marketed the 1974–1978 generation as Mustang II. The catalog
@@ -372,6 +373,7 @@ R14 on 2026-10-01 so they ship before R4.
   files are available. Verify the texture credits and confirm Ford's
   clearance for public delivery of the downloadable browser asset.
   [Creator listing](https://sketchfab.com/3d-models/1967-ford-mustang-fastback-4096px2-02933292f4d64a52a9bec5923e24b0af) ·
+  [Download instructions](https://sketchfab.com/developers/download-api/downloading-models) ·
   [Artist's portfolio](https://markpeters.art/ford-mustang-fastback-1967) ·
   [Ford's 1967 sales brochure](https://ponynsnake.com/wp-content/uploads/2023/07/access-1967_Ford_Mustang_brochure_AR_96_212010_18065.pdf) ·
   [Ford's 1967 launch release, pp. 2–3 and 10](https://www.1967shelbyresearch.com/library/docs/files/1966-09-16%20Ford%20Press%20Release%20-%201967%20Mustang.pdf#page=2) ·
