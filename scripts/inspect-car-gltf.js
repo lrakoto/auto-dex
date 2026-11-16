@@ -3,7 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { measureScene } = require('./measure-gltf-scene');
-const { inspectGltfImage } = require('./inspect-gltf-image');
+const { embeddedImageBytes, inspectGltfImage } = require('./inspect-gltf-image');
 
 function parseGlb(file) {
   if (file.length < 20 || file.toString('ascii', 0, 4) !== 'glTF' ||
@@ -88,13 +88,7 @@ async function inspectCarGltf(input) {
       bytes = await readResource(item.uri);
     } else if (item.uri === undefined && Number.isInteger(item.bufferView)) {
       if (!item.mimeType) throw new Error(`Image ${index} must declare a MIME type for its buffer view`);
-      const view = gltf.bufferViews?.[item.bufferView];
-      const buffer = view && buffers[view.buffer];
-      const start = view?.byteOffset ?? 0;
-      const size = view?.byteLength;
-      if (!buffer || !Number.isInteger(start) || start < 0 || !Number.isInteger(size) || size < 1 ||
-          start + size > buffer.length) throw new Error(`Invalid buffer view for image ${index}`);
-      bytes = buffer.subarray(start, start + size);
+      bytes = embeddedImageBytes(gltf, buffers, index);
     } else {
       throw new Error(`Image ${index} must have a file URI or a buffer view`);
     }

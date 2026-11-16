@@ -11,7 +11,7 @@ const demo = require('../config/car-3d');
 const securityHeaders = require('../config/security-headers');
 const registerDevCar3d = require('../controllers/dev-car-3d');
 const { parseGlb } = require('./inspect-car-gltf');
-const { inspectGltfImage } = require('./inspect-gltf-image');
+const { embeddedImageBytes, inspectGltfImage } = require('./inspect-gltf-image');
 
 const viewerFile = 'viewer.min.js';
 const compressedAssets = new Set([viewerFile, 'model.glb']);
@@ -26,18 +26,48 @@ async function readAsset(file) {
 function checkEmbeddedModel(model) {
   const { gltf, bin } = parseGlb(model);
   const buffer = gltf?.buffers?.[0];
+  const images = gltf?.images ?? [];
   if (gltf?.asset?.version !== '2.0' || gltf.buffers?.length !== 1 ||
       !bin?.length || buffer?.uri !== undefined ||
       !Number.isInteger(buffer?.byteLength) || buffer.byteLength < 1 || buffer.byteLength > bin.length ||
-      gltf.images?.some(image => image.uri !== undefined)) {
+      !Array.isArray(images) || images.some(image => !image || image.uri !== undefined)) {
     throw new Error('Export a self-contained GLB 2.0 with embedded geometry and images');
   }
   if (externalDecoders.some(extension => gltf.extensionsUsed?.includes(extension))) {
     throw new Error('Export GLB geometry without Draco or meshopt, and use embedded PNG or JPEG textures');
   }
+  return { gltf, bin, images };
 }
 
-function createPreviewApp(assetRoot, { name, creditLabel, posterFile, posterMime }) {
+function preparePreviewModel(model) {
+  const { gltf, bin, images } = checkEmbeddedModel(model);
+  if (!images.length) return { model, textures: [] };
+
+  const buffers = [bin.subarray(0, gltf.buffers[0].byteLength)];
+  const textures = images.map((image, index) => {
+    const bytes = embeddedImageBytes(gltf, buffers, index);
+    const { format } = inspectGltfImage(bytes);
+    if (image.mimeType !== `image/${format}`) throw new Error(`Image ${index}: MIME type differs from the file header`);
+    const name = `texture-${index}.${format === 'jpeg' ? 'jpg' : format}`;
+    image.uri = name;
+    delete image.bufferView;
+    return { name, mimeType: image.mimeType, bytes };
+  });
+
+  // Serve textures at ordinary local URLs and keep the original BIN and
+  // any trailing chunks intact, including every geometry offset.
+  const json = Buffer.from(JSON.stringify(gltf));
+  const paddedSize = Math.ceil(json.length / 4) * 4;
+  const prefix = Buffer.alloc(20 + paddedSize, 0x20);
+  const remainingChunks = model.subarray(20 + model.readUInt32LE(12));
+  model.copy(prefix, 0, 0, 20);
+  prefix.writeUInt32LE(prefix.length + remainingChunks.length, 8);
+  prefix.writeUInt32LE(paddedSize, 12);
+  json.copy(prefix, 20);
+  return { model: Buffer.concat([prefix, remainingChunks]), textures };
+}
+
+function createPreviewApp(assetRoot, { name, creditLabel, posterFile, posterMime, textureAssets = [] }) {
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, '../views'));
@@ -68,7 +98,7 @@ function createPreviewApp(assetRoot, { name, creditLabel, posterFile, posterMime
       creditLabel,
       homeHref: demo.labPath
     },
-    assets: new Map([[viewerFile, 'text/javascript'], ['model.glb', 'model/gltf-binary'], [posterFile, posterMime]]),
+    assets: new Map([[viewerFile, 'text/javascript'], ['model.glb', 'model/gltf-binary'], [posterFile, posterMime], ...textureAssets]),
     compressedAssets
   });
   return app;
@@ -87,7 +117,7 @@ async function run(args) {
       throw new Error('Install the pinned viewer with node scripts/setup-car-3d-demo.js');
     })
   ]);
-  checkEmbeddedModel(model);
+  const prepared = preparePreviewModel(model);
   const { format } = inspectGltfImage(poster);
   const posterFile = format === 'jpeg' ? 'poster.jpg' : 'poster.png';
   if (createHash('sha256').update(viewer).digest('hex') !== demo.viewer.scriptSha256) {
@@ -105,7 +135,9 @@ async function run(args) {
   process.once('SIGTERM', stop);
   try {
     root = await fs.mkdtemp(path.join(os.tmpdir(), 'autodex-glb-preview-'));
-    for (const [file, bytes] of [[viewerFile, viewer], ['model.glb', model], [posterFile, poster]]) {
+    const files = [[viewerFile, viewer], ['model.glb', prepared.model], [posterFile, poster],
+      ...prepared.textures.map(({ name, bytes }) => [name, bytes])];
+    for (const [file, bytes] of files) {
       if (stopped) return;
       await fs.writeFile(path.join(root, file), bytes, { mode: 0o600 });
       if (!stopped && compressedAssets.has(file)) {
@@ -116,7 +148,8 @@ async function run(args) {
     }
     if (stopped) return;
 
-    const app = createPreviewApp(root, { name, creditLabel, posterFile, posterMime: `image/${format}` });
+    const textureAssets = prepared.textures.map(({ name, mimeType }) => [name, mimeType]);
+    const app = createPreviewApp(root, { name, creditLabel, posterFile, posterMime: `image/${format}`, textureAssets });
     const server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const closed = once(server, 'close');
@@ -138,4 +171,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createPreviewApp, checkEmbeddedModel };
+module.exports = { createPreviewApp, checkEmbeddedModel, preparePreviewModel };
