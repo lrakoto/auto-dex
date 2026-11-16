@@ -88,8 +88,8 @@
     <div class="col-lg-8 mb-5 mb-lg-0">
       <div class="accent-line"></div>
       <h2 class="mb-4" style="font-size:1.75rem;"><%= make %> <span style="font-weight:300;"><%= model %></span></h2>
-      <% if (wikiSummary) { %>
-        <p class="lead" style="color:#a1a1aa;line-height:1.75;"><%= wikiSummary %></p>
+      <% if (summary) { %>
+        <p class="lead" style="color:#a1a1aa;line-height:1.75;"><%= summary %></p>
         <% if (wikiUrl) { %>
           <a href="<%= wikiUrl %>" target="_blank" rel="noopener" style="font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;color:#52525b;">
             Wikipedia &rarr;
@@ -97,6 +97,23 @@
         <% } %>
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
+      <% } %>
+      <% if (generationHistory) { %>
+        <section class="facts-panel generation-references" aria-labelledby="generation-references">
+          <div class="accent-line"></div>
+          <h3 class="section-label" id="generation-references">BMW generation references</h3>
+          <dl class="facts-list">
+            <% generationHistory.generations.forEach(generation => { %>
+              <div class="fact-row">
+                <dt><%= generation.code %></dt>
+                <dd>
+                  <%= generation.production %> production<br>
+                  <a href="<%= generation.url %>" target="_blank" rel="noopener">BMW archive for <%= generation.code %></a>
+                </dd>
+              </div>
+            <% }) %>
+          </dl>
+        </section>
       <% } %>
       <% if (typeof carSpecs !== 'undefined' && carSpecs) { %>
         <div class="specs-grid" style="margin-top:2rem;">
