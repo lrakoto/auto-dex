@@ -9,6 +9,8 @@ const wrong528File = 'BMW_550i_%28F10%29_%E2%80%93_Frontansicht_%282%29%2C_17._J
 const wrong528 = thumb('9/93', wrong528File);
 const right528File = '2000_BMW_528i_Sedan_in_Jet_Black%2C_Front_Left%2C_07-12-2023.jpg';
 const right528 = thumb('f/ff', right528File);
+const right528xi = thumb('a/a6', 'BMW_528xi_sedan.jpg');
+const credit528xi = 'https://commons.wikimedia.org/wiki/File:BMW_528xi_sedan.jpg';
 const wrong750 = thumb('c/c1', 'BMW_730i_%28E32%29_registered_August_1990_2986cc.jpg');
 const right750 = thumb('c/cc', 'BMW_750iL.jpg');
 const manual750 = 'https://example.test/owner-chosen-750il.jpg';
@@ -17,11 +19,12 @@ describe('Verified BMW catalog photos', function() {
   it('corrects only known wrong covers while keeping gallery history and votes', async function() {
     const cars = await db.car.bulkCreate([
       { make: 'BMW', model: '528i', image: wrong528 },
+      { make: 'BMW', model: '528xi', image: wrong528 },
       { make: 'BMW', model: '750iL', image: manual750 },
       { make: 'BMW', model: '550i', image: wrong528 },
       { make: 'BMW', model: '730i', image: wrong750 }
     ].map(car => ({ ...car, updated_img: true, wiki_checked: true, favcount: 0 })));
-    const [fiveSeries, sevenSeries, real550, real730] = cars;
+    const [fiveSeries, allWheelDrive, sevenSeries, real550, real730] = cars;
     const galleryImage = (car, url) => db.car_image.findOne({ where: { carId: car.id, url } });
     let voter;
     try {
@@ -35,7 +38,8 @@ describe('Verified BMW catalog photos', function() {
         score: 1, credit_name: 'Original photographer', license: 'Original license'
       });
       const retainedVote = await db.car_image_vote.create({ imageId: wrong.id, userId: voter.id, value: 1 });
-      await db.car_image.bulkCreate([
+      const [wrongAllWheelDrive] = await db.car_image.bulkCreate([
+        { carId: allWheelDrive.id, url: wrong528, source: 'wikimedia', score: 1 },
         { carId: sevenSeries.id, url: manual750, source: 'admin' },
         { carId: real550.id, url: wrong528, source: 'wikimedia' },
         { carId: real730.id, url: wrong750, source: 'wikimedia' }
@@ -51,6 +55,20 @@ describe('Verified BMW catalog photos', function() {
       assert.equal(decodeURIComponent(corrected.credit_url), 'https://commons.wikimedia.org/wiki/File:' + decodeURIComponent(right528File));
       assert.equal(corrected.license, 'CC BY-SA 4.0');
       assert.equal(corrected.license_url, 'https://creativecommons.org/licenses/by-sa/4.0/');
+
+      assert.equal((await allWheelDrive.reload()).image, right528xi);
+      const correctedAllWheelDrive = await galleryImage(allWheelDrive, right528xi);
+      assert.ok(correctedAllWheelDrive);
+      assert.equal(correctedAllWheelDrive.source, 'wikimedia');
+      assert.equal(correctedAllWheelDrive.credit_name, 'IFCAR');
+      assert.equal(correctedAllWheelDrive.credit_url, credit528xi);
+      assert.equal(correctedAllWheelDrive.license, 'Public domain');
+      assert.equal(correctedAllWheelDrive.license_url, credit528xi + '#Licensing');
+      assert.deepEqual((await gallery.getGallery(allWheelDrive, voter.id)).map(photo => photo.url), [right528xi]);
+      assert.equal((await gallery.vote(correctedAllWheelDrive.id, voter.id, -1)).heroUrl, right528xi);
+      assert.equal(await gallery.vote(wrongAllWheelDrive.id, voter.id, -1), null);
+      assert.equal((await wrongAllWheelDrive.reload()).score, 1);
+
       assert.equal((await sevenSeries.reload()).image, manual750);
       assert.equal(await galleryImage(sevenSeries, right750), null);
       for (const [car, url] of [[real550, wrong528], [real730, wrong750]]) {
@@ -86,6 +104,8 @@ describe('Verified BMW catalog photos', function() {
       assert.equal(credited.license_url, 'https://commons.wikimedia.org/wiki/File:BMW_750iL.jpg#Licensing');
       assert.ok(await galleryImage(sevenSeries, manual750));
       assert.equal((await galleryImage(fiveSeries, right528)).id, corrected.id);
+      assert.equal((await galleryImage(allWheelDrive, right528xi)).id, correctedAllWheelDrive.id);
+      assert.equal(await db.car_image.count({ where: { carId: allWheelDrive.id } }), 2);
       assert.equal(await db.car_image.count({ where: { carId: fiveSeries.id } }), 2);
     } finally {
       await db.car.destroy({ where: { id: cars.map(car => car.id) } });

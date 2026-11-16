@@ -21,7 +21,7 @@ const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
 const { isCommercialName } = require('../lib/vehicleTypes');
 const { buildTimeline } = require('../lib/timeline');
-const { getGenerationHistory } = require('../lib/bmw-generations');
+const { getGenerationHistory, getNamingHistory } = require('../lib/bmw-generations');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
@@ -451,6 +451,7 @@ router.get('/', async (req, res) => {
       res.render('cars/detail', {
         make, model, image, favcount, relatedCars, country, summary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
         generationHistory,
+        namingHistory: getNamingHistory(make, model),
         saleLinks: saleLinks(make, model, type),
         gallery, mySpotCount, heroCredit, complaints,
         complaintsYear: (complaints && complaints.year) || (car && car.year_max),
