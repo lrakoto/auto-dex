@@ -231,6 +231,29 @@ describe('Complete model-year scans', function() {
     }
   });
 
+  it('adds pre-vPIC Caprice years only to the civilian Caprice listing and retains them on a rescan', async function() {
+    const unseeded = await unseededSupplements();
+    const make = 'Chevrolet';
+    const early = Array.from({ length: 15 }, (_, i) => 1966 + i);
+    const caprice = await db.car.create({ make, model: 'Caprice', image: PLACEHOLDER_URL,
+      model_years: [1981, 1995], year_min: 1981, year_max: 1995, years_checked: true });
+    const police = await db.car.create({ make, model: 'Caprice Police Vehicle', image: PLACEHOLDER_URL,
+      model_years: [2011, 2017], year_min: 2011, year_max: 2017, years_checked: true });
+    nhtsa.getModelYears = async () => new Map([['Caprice', [1981, 1995, 1996]]]);
+    try {
+      await scanYears({ maxMakes: 0 });
+      assert.deepEqual(fields(await caprice.reload()), [[...early, 1981, 1995], 1966, 1995, true]);
+      assert.deepEqual(fields(await police.reload()), [[2011, 2017], 2011, 2017, true]);
+
+      await scanMake(make);
+      assert.deepEqual(fields(await caprice.reload()), [[...early, 1981, 1995, 1996], 1966, 1996, true]);
+      assert.deepEqual(fields(await police.reload()), [[2011, 2017], 2011, 2017, true]);
+    } finally {
+      await db.car.destroy({ where: { id: [caprice.id, police.id] } });
+      await removeTestSupplements(unseeded);
+    }
+  });
+
   it('keeps a failed make pending while continuing other makes and retries it later', async function() {
     const failedMake = 'Year Scan A Fixture', goodMake = 'Year Scan B Fixture';
     const failed = await db.car.create({ make: failedMake, model: 'Fixture', image: PLACEHOLDER_URL, years_checked: false });
