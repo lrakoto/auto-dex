@@ -258,6 +258,8 @@ R14 on 2026-10-01 so they ship before R4.
   LP1219, LP1419 and LPS1525. Manufacturer Cars tabs apply the same rules
   to their live NHTSA list. [Ford's NHTSA chassis listings](https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/Ford/vehicletype/incomplete%20vehicle?format=json) ·
   [Mercedes-Benz trucks in NHTSA's 1986 records](https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/Mercedes-Benz/modelyear/1986/vehicletype/Truck?format=json).
+  2026-11-15: also matched the Ford F-590, original F-Super Duty, LL9000 and
+  LLS9000 by exact name. [Ford's VIN coding submission](https://static.nhtsa.gov/nhtsa/downloads/MfrMail/01-22-N11B-4095.pdf).
 
 ### R17 — High-fidelity 3D cars *(requested by the owner)*
 

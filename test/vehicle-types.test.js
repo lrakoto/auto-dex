@@ -76,7 +76,10 @@ describe('Vehicle types', function() {
 
     it('recognizes the verified Ford and Mercedes-Benz truck series', function() {
       const commercial = [
-        ['Ford', ['A8513', 'A9513', 'A9522', 'AT8513', 'AT9513', 'AT9522', 'P600', 'P700', 'P800', 'A-8513', 'AT 9513', 'P-700']],
+        ['Ford', [
+          'A8513', 'A9513', 'A9522', 'AT8513', 'AT9513', 'AT9522', 'P600', 'P700', 'P800', 'A-8513', 'AT 9513', 'P-700',
+          'F-590', 'F590', 'F 590', 'F-Super Duty', 'F Super Duty', 'LL9000', 'LL-9000', 'LLS9000', 'LLS 9000'
+        ]],
         ['Mercedes-Benz', ['LP1219', 'LP1419', 'LPS1525', 'LP-1419', 'LPS 1525']]
       ];
       for (const [make, models] of commercial) {
@@ -87,7 +90,8 @@ describe('Vehicle types', function() {
       for (const [make, model] of [
         ['Ford', 'A8500'], ['Ford', 'AT9523'], ['Ford', 'P601'], ['Ford', 'F-150'],
         ['Ford', 'LP1219'], ['Mercedes-Benz', 'A8513'], ['Mercedes-Benz', 'LP14190'],
-        ['Mercedes-Benz', 'GLS 450']
+        ['Mercedes-Benz', 'GLS 450'], ['Ford', 'F-550'], ['Ford', 'F-250 Super Duty'], ['Ford', 'Super Duty'],
+        ['Ford', 'LL9001'], ['GMC', 'F-590'], ['Mercedes-Benz', 'LL9000']
       ]) {
         assert.equal(isCommercialName(make, model), false, make + ' ' + model);
       }
@@ -233,14 +237,15 @@ describe('Vehicle types', function() {
       const image = 'https://example.com/a8513.jpg';
       const rows = await db.car.bulkCreate([
         { make: 'Ford', model: 'A8513', image, favcount: 7, updated_img: true, vehicle_type: 'car' },
+        { make: 'Ford', model: 'F-590', image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'car' },
         { make: 'Ford', model: 'F-650', image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'commercial' }
       ]);
-      const [truck] = rows;
+      const [truck, chassis] = rows;
       const truckId = truck.id;
       const getModels = carquery.getModels;
       carquery.getModels = async (make, options) => {
         if (make !== 'Ford') return getModels(make, options);
-        return options?.type === 'motorcycle' ? [] : ['A8513', 'F-650', 'F-150', 'P700'].map(model => ({ make, model }));
+        return options?.type === 'motorcycle' ? [] : ['A8513', 'F-590', 'F-650', 'F-150', 'P700'].map(model => ({ make, model }));
       };
       let existingUntypedPickup;
       try {
@@ -258,6 +263,7 @@ describe('Vehicle types', function() {
         await truck.reload();
         assert.equal(truck.id, truckId);
         assert.equal(truck.vehicle_type, 'commercial');
+        assert.equal((await chassis.reload()).vehicle_type, 'commercial');
         assert.equal(truck.image, image);
         assert.equal(truck.favcount, 7);
         assert.equal(truck.updated_img, true);
@@ -278,10 +284,11 @@ describe('Vehicle types', function() {
         const cars = await request(app).get(base).expect(200);
         assert.match(cars.text, /class="type-tab active"[^>]*>\s*Cars\b/);
         assert.match(cars.text, /class="card-model">F-150<\/span>/);
-        assert.doesNotMatch(cars.text, /class="card-model">(?:A8513|F-650|P700)<\/span>/);
+        assert.doesNotMatch(cars.text, /class="card-model">(?:A8513|F-590|F-650|P700)<\/span>/);
         const commercial = await request(app).get(base + '&type=commercial').expect(200);
         assert.match(commercial.text, /class="type-tab active"[^>]*>\s*Commercial\b/);
         assert.match(commercial.text, /class="card-model">A8513<\/span>/);
+        assert.match(commercial.text, /class="card-model">F-590<\/span>/);
         assert.match(commercial.text, /class="card-model">F-650<\/span>/);
         assert.match(commercial.text, /class="card-model">P700<\/span>/);
         assert.doesNotMatch(commercial.text, /class="card-model">F-150<\/span>/);
