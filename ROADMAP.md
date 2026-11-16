@@ -254,6 +254,10 @@ R14 on 2026-10-01 so they ship before R4.
   E-450/E-550; `reclassifyCommercial` moves rows already typed as cars.
   Swept against all 5,201 dev-catalog rows: 16 new matches, all chassis or
   medium-duty trucks.
+  2026-11-15: added nine Ford AeroMax and P-series codes and Mercedes-Benz
+  LP1219, LP1419 and LPS1525. Manufacturer Cars tabs apply the same rules
+  to their live NHTSA list. [Ford's NHTSA chassis listings](https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/Ford/vehicletype/incomplete%20vehicle?format=json) ·
+  [Mercedes-Benz trucks in NHTSA's 1986 records](https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/Mercedes-Benz/modelyear/1986/vehicletype/Truck?format=json).
 
 ### R17 — High-fidelity 3D cars *(requested by the owner)*
 

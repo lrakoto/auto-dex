@@ -5,6 +5,7 @@
 const db = require('../models');
 const carquery = require('../config/carquery');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const { isCommercialName } = require('../lib/vehicleTypes');
 
 async function seedAllMakes() {
   try {
@@ -32,7 +33,7 @@ async function seedAllMakes() {
               image: PLACEHOLDER_URL,
               favcount: 0,
               updated_img: false,
-              vehicle_type: type
+              vehicle_type: type === 'car' && isCommercialName(m.make, m.model) ? 'commercial' : type
             })),
             { ignoreDuplicates: true }
           );

@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
@@ -5,7 +6,7 @@ const carquery = require('../config/carquery');
 const carinfo = require('../lib/carinfo');
 const { classifyModel, isCommercialName } = require('../lib/vehicleTypes');
 const { classifyVehicleTypes, classifyMake, reclassifyAtvs, reclassifyCommercial } = require('../jobs/vehicleTypes');
-const { photoPoolWhere } = require('../lib/catalog');
+const { lookupCatalogCar, photoPoolWhere } = require('../lib/catalog');
 const { createVerifiedUser } = require('./helpers');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 
@@ -70,6 +71,25 @@ describe('Vehicle types', function() {
       ];
       for (const [make, model] of cars) {
         if (isCommercialName(make, model)) throw new Error(`should stay a car: ${make} ${model}`);
+      }
+    });
+
+    it('recognizes the verified Ford and Mercedes-Benz truck series', function() {
+      const commercial = [
+        ['Ford', ['A8513', 'A9513', 'A9522', 'AT8513', 'AT9513', 'AT9522', 'P600', 'P700', 'P800', 'A-8513', 'AT 9513', 'P-700']],
+        ['Mercedes-Benz', ['LP1219', 'LP1419', 'LPS1525', 'LP-1419', 'LPS 1525']]
+      ];
+      for (const [make, models] of commercial) {
+        // These trucks can also appear in the upstream passenger lists.
+        const upstream = lists({ mpv: models, truck: models, 'incomplete vehicle': models });
+        for (const model of models) assert.equal(classifyModel(make, model, upstream), 'commercial', make + ' ' + model);
+      }
+      for (const [make, model] of [
+        ['Ford', 'A8500'], ['Ford', 'AT9523'], ['Ford', 'P601'], ['Ford', 'F-150'],
+        ['Ford', 'LP1219'], ['Mercedes-Benz', 'A8513'], ['Mercedes-Benz', 'LP14190'],
+        ['Mercedes-Benz', 'GLS 450']
+      ]) {
+        assert.equal(isCommercialName(make, model), false, make + ' ' + model);
       }
     });
 
@@ -207,6 +227,69 @@ describe('Vehicle types', function() {
       if (types.join() !== 'commercial,commercial,car') throw new Error(types.join());
       if (await db.car.count() !== before) throw new Error('rows deleted');
       if (await reclassifyCommercial() !== 0) throw new Error('second pass changed rows');
+    });
+
+    it('keeps reclassified Ford trucks out of the upstream-fed Cars tab', async function() {
+      const image = 'https://example.com/a8513.jpg';
+      const rows = await db.car.bulkCreate([
+        { make: 'Ford', model: 'A8513', image, favcount: 7, updated_img: true, vehicle_type: 'car' },
+        { make: 'Ford', model: 'F-650', image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'commercial' }
+      ]);
+      const [truck] = rows;
+      const truckId = truck.id;
+      const getModels = carquery.getModels;
+      carquery.getModels = async (make, options) => {
+        if (make !== 'Ford') return getModels(make, options);
+        return options?.type === 'motorcycle' ? [] : ['A8513', 'F-650', 'F-150', 'P700'].map(model => ({ make, model }));
+      };
+      let existingUntypedPickup;
+      try {
+        const [pickup, created] = await db.car.findOrCreate({
+          where: { make: 'Ford', model: 'F-150' },
+          defaults: { image: PLACEHOLDER_URL, favcount: 0, vehicle_type: 'car' }
+        });
+        if (created) rows.push(pickup);
+        else if (pickup.vehicle_type === null) {
+          existingUntypedPickup = pickup;
+          await pickup.update({ vehicle_type: 'car' }, { silent: true });
+        }
+        const count = await db.car.count();
+        await reclassifyCommercial();
+        await truck.reload();
+        assert.equal(truck.id, truckId);
+        assert.equal(truck.vehicle_type, 'commercial');
+        assert.equal(truck.image, image);
+        assert.equal(truck.favcount, 7);
+        assert.equal(truck.updated_img, true);
+        assert.equal(await db.car.count(), count);
+
+        const unseeded = await lookupCatalogCar('Ford', 'P700');
+        assert.equal(unseeded.car, null);
+        assert.equal(unseeded.type, 'commercial');
+        const { added } = await classifyMake('Ford', { delayMs: 0 });
+        const parcelTruck = await db.car.findOne({ where: { make: 'Ford', model: 'P700' } });
+        assert.ok(parcelTruck);
+        rows.push(parcelTruck);
+        assert.equal(added, 1);
+        assert.equal(parcelTruck.vehicle_type, 'commercial');
+        assert.equal(await reclassifyCommercial(), 0);
+
+        const base = '/cars?selectmake=Ford';
+        const cars = await request(app).get(base).expect(200);
+        assert.match(cars.text, /class="type-tab active"[^>]*>\s*Cars\b/);
+        assert.match(cars.text, /class="card-model">F-150<\/span>/);
+        assert.doesNotMatch(cars.text, /class="card-model">(?:A8513|F-650|P700)<\/span>/);
+        const commercial = await request(app).get(base + '&type=commercial').expect(200);
+        assert.match(commercial.text, /class="type-tab active"[^>]*>\s*Commercial\b/);
+        assert.match(commercial.text, /class="card-model">A8513<\/span>/);
+        assert.match(commercial.text, /class="card-model">F-650<\/span>/);
+        assert.match(commercial.text, /class="card-model">P700<\/span>/);
+        assert.doesNotMatch(commercial.text, /class="card-model">F-150<\/span>/);
+      } finally {
+        carquery.getModels = getModels;
+        if (existingUntypedPickup) await existingUntypedPickup.update({ vehicle_type: null }, { silent: true });
+        await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+      }
     });
 
     it('leaves a make untyped when one of its NHTSA lists fails', async function() {
