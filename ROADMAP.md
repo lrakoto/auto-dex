@@ -265,6 +265,10 @@ R14 on 2026-10-01 so they ship before R4.
   [EPA's 2010 xDrive record](https://www.fueleconomy.gov/feg/noframes/26384.shtml) ·
   [EPA's 2012 xDrive record](https://www.fueleconomy.gov/feg/noframes/32068.shtml) ·
   [EPA's 2016 xDrive record](https://www.fueleconomy.gov/feg/noframes/36680.shtml).
+  The xDrive cover uses DestinationFearFan's photo, originally uploaded as
+  a 2016 528i xDrive. The photo job fills an empty cover and keeps existing
+  selections and votes. [Original upload](https://commons.wikimedia.org/w/index.php?oldid=617139160) ·
+  [Commons source and credit](https://commons.wikimedia.org/wiki/File:2016_BMW_528i_xDrive.jpg).
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;

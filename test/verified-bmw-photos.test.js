@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const db = require('../models');
 const gallery = require('../lib/gallery');
 const images = require('../jobs/images');
+const wikimedia = require('../lib/wikimedia');
+const { PLACEHOLDER_URL } = require('../lib/constants');
 
 const commons = 'https://upload.wikimedia.org/wikipedia/commons/';
 const thumb = (hash, file) => commons + 'thumb/' + hash + '/' + file + '/1280px-' + file;
@@ -14,6 +16,9 @@ const credit528xi = 'https://commons.wikimedia.org/wiki/File:BMW_528xi_sedan.jpg
 const wrong750 = thumb('c/c1', 'BMW_730i_%28E32%29_registered_August_1990_2986cc.jpg');
 const right750 = thumb('c/cc', 'BMW_750iL.jpg');
 const manual750 = 'https://example.test/owner-chosen-750il.jpg';
+const xDrive = { make: 'BMW', model: '528i xDrive' };
+const xDrivePhoto = thumb('8/8d', '2016_BMW_528i_xDrive.jpg');
+const xDriveCredit = 'https://commons.wikimedia.org/wiki/File:2016_BMW_528i_xDrive.jpg';
 
 describe('Verified BMW catalog photos', function() {
   it('corrects only known wrong covers while keeping gallery history and votes', async function() {
@@ -110,6 +115,97 @@ describe('Verified BMW catalog photos', function() {
     } finally {
       await db.car.destroy({ where: { id: cars.map(car => car.id) } });
       if (voter) await voter.destroy();
+    }
+  });
+
+  it('fills only eligible missing xDrive covers and retains credited gallery rows and votes', async function() {
+    const car = await db.car.create({ ...xDrive, image: null, wiki_checked: true, updated_img: null });
+    let voter;
+    try {
+      const where = { carId: car.id, url: xDrivePhoto };
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await car.reload()).getDataValue('image'), xDrivePhoto);
+      const candidate = await db.car_image.findOne({ where });
+      assert.ok(candidate);
+      assert.equal(candidate.source, 'wikimedia');
+      assert.equal(candidate.credit_name, 'DestinationFearFan');
+      assert.equal(candidate.credit_url, xDriveCredit);
+      assert.equal(candidate.license, 'CC BY-SA 4.0');
+      assert.equal(candidate.license_url, 'https://creativecommons.org/licenses/by-sa/4.0/');
+
+      voter = await db.user.create({
+        name: 'xDrive photo voter', email: 'xdrive-photo-voter@example.test', password: 'xdrive-fixture-password'
+      });
+      await gallery.vote(candidate.id, voter.id, 1);
+      const voteWhere = { imageId: candidate.id, userId: voter.id };
+      const vote = await db.car_image_vote.findOne({ where: voteWhere });
+      assert.ok(vote);
+
+      for (const image of ['', PLACEHOLDER_URL]) {
+        await car.update({ image, updated_img: false });
+        await images.applyVerifiedCatalogPhotos();
+        assert.equal((await car.reload()).getDataValue('image'), xDrivePhoto);
+      }
+      const saved = await candidate.reload();
+      assert.equal(saved.score, 1);
+      assert.equal(saved.credit_name, 'DestinationFearFan');
+      assert.equal(saved.credit_url, xDriveCredit);
+      assert.equal((await vote.reload()).value, 1);
+      assert.equal(await db.car_image.count({ where: { carId: car.id } }), 1);
+
+      await car.update({ image: PLACEHOLDER_URL, updated_img: true });
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await car.reload()).getDataValue('image'), PLACEHOLDER_URL);
+
+      const negativeVote = await gallery.vote(candidate.id, voter.id, -1);
+      assert.equal(negativeVote.score, -1);
+      await car.reload();
+      await car.update({ image: PLACEHOLDER_URL, updated_img: false });
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await car.reload()).getDataValue('image'), PLACEHOLDER_URL);
+      assert.equal((await candidate.reload()).score, -1);
+      assert.equal((await vote.reload()).value, -1);
+    } finally {
+      await car.destroy();
+      if (voter) await voter.destroy();
+    }
+  });
+
+  it('leaves a chosen xDrive cover in place during a fill and a later Wikimedia sweep', async function() {
+    const car = await db.car.create({ ...xDrive, image: '', wiki_checked: false, updated_img: false });
+    const chosen = 'https://example.test/chosen-xdrive-cover.jpg';
+    const hook = 'choose-xdrive-cover-before-verified-update';
+    let choseCover = false;
+    const originalFindAll = db.car.findAll;
+    const originalFindPhoto = wikimedia.findLeadPhoto;
+    db.car.addHook('beforeBulkUpdate', hook, async options => {
+      if (options.where.id !== car.id || options.attributes.image !== xDrivePhoto) return;
+      choseCover = true;
+      await db.car.update({ image: chosen, updated_img: true }, {
+        where: { id: car.id }, transaction: options.transaction, hooks: false
+      });
+    });
+    try {
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal(choseCover, true);
+      assert.equal((await car.reload()).getDataValue('image'), chosen);
+      db.car.removeHook('beforeBulkUpdate', hook);
+
+      await db.car_image.create({ carId: car.id, url: chosen, source: 'catalog' });
+      await car.update({ updated_img: false, wiki_checked: false });
+      const { Op } = db.Sequelize;
+      db.car.findAll = function(options) {
+        return originalFindAll.call(this, { ...options, where: { [Op.and]: [options.where, { id: car.id }] } });
+      };
+      wikimedia.findLeadPhoto = async () => ({ url: thumb('0/00', 'BMW_528i_xDrive_alternate.jpg') });
+      assert.equal(await images.wikipediaPhotos(1, { delayMs: 0 }), 1);
+      assert.equal((await car.reload()).getDataValue('image'), chosen);
+      assert.equal(car.wiki_checked, true);
+    } finally {
+      db.car.removeHook('beforeBulkUpdate', hook);
+      db.car.findAll = originalFindAll;
+      wikimedia.findLeadPhoto = originalFindPhoto;
+      await car.destroy();
     }
   });
 });
