@@ -1734,6 +1734,8 @@ textarea:focus-visible,
 .fact-row dt { font-weight: 500; color: var(--text-muted); }
 .fact-row dd { margin: 0; text-align: right; color: var(--text); }
 .fact-row dd a { text-decoration: underline; text-underline-offset: 2px; }
+.generation-references .section-label,
+.generation-references .fact-row dt { color: var(--text); }
 .facts-source { font-size: 0.7rem; color: var(--text-subtle); margin-top: 0.75rem; }
 .facts-source a { color: var(--text-muted); }
 
