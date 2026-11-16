@@ -175,9 +175,9 @@ Setup fetches the pinned [Khronos Toy Car](https://github.com/KhronosGroup/glTF-
 and [model-viewer](https://github.com/google/model-viewer/tree/v4.0.0) into
 an ignored local folder with their licenses. No runtime requests go to the
 asset providers. Setup removes the backdrop and repacks the model, keeping
-the original render as a poster. It also prepares lossless Brotli copies of
-the geometry, manifest, and viewer script for browsers that accept Brotli.
-Rerun setup to add these files to an existing demo installation.
+the original render as a poster. It also prepares lossless Brotli and gzip
+copies of the geometry, manifest, and viewer script. Rerun setup to add these
+files to an existing demo installation.
 Neither the demo route nor its downloaded assets are served
 in production. See [R17 in the roadmap](ROADMAP.md#r17--high-fidelity-3d-cars-requested-by-the-owner)
 for the real-car pilot.
@@ -197,8 +197,8 @@ Use a self-contained GLB 2.0 with uncompressed geometry and embedded PNG or
 JPEG textures. Keep the GLB and the PNG or JPEG poster outside the repository.
 The command prints a loopback URL and
 uses the same poster-first controls as the Toy Car lab without starting the
-AutoDex app or database. It prepares lossless Brotli copies for browsers
-that accept them. Press Ctrl+C to stop the preview and remove its temporary
+AutoDex app or database. It prepares lossless Brotli and gzip copies of the
+model and viewer. Press Ctrl+C to stop the preview and remove its temporary
 serving files. The URL is local to the computer running the command.
 
 To inspect an exported model on disk, run:

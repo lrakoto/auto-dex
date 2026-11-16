@@ -6,8 +6,8 @@ const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const os = require('node:os');
 const path = require('node:path');
-const { brotliCompressSync, constants } = require('node:zlib');
-const { assetRoot, brotliAssets, viewer } = require('../config/car-3d');
+const { brotliCompressSync, constants, gzipSync } = require('node:zlib');
+const { assetRoot, compressedAssets, viewer } = require('../config/car-3d');
 const trimToyCar = require('./trim-toy-car');
 
 const revision = '8f492390ddc7a2ae221a1369ef560589cf8c70fb';
@@ -63,8 +63,10 @@ async function main() {
     files.set('ToyCar.gltf', JSON.stringify(gltf));
     files.set('ToyCar.bin', geometry);
     const brotliOptions = { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } };
-    for (const name of brotliAssets) {
-      files.set(`${name}.br`, brotliCompressSync(files.get(name), brotliOptions));
+    for (const name of compressedAssets) {
+      const content = files.get(name);
+      files.set(`${name}.br`, brotliCompressSync(content, brotliOptions));
+      files.set(`${name}.gz`, gzipSync(content));
     }
     const modelBytes = sampleFiles.reduce((sum, name) => sum + Buffer.byteLength(files.get(name)), 0);
     await installAssets(files);

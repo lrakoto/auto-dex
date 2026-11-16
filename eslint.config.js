@@ -3,6 +3,7 @@ const js = require('@eslint/js');
 module.exports = [
   {
     ignores: [
+      'dev-assets/car-3d/**',
       'node_modules/**',
       'migrations/**',
       'seeders/**'

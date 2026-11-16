@@ -55,5 +55,5 @@ module.exports = {
   catalogPreviewFor,
   scene,
   assets,
-  brotliAssets: new Set(['viewer.min.js', 'ToyCar.gltf', 'ToyCar.bin'])
+  compressedAssets: new Set(['viewer.min.js', 'ToyCar.gltf', 'ToyCar.bin'])
 };

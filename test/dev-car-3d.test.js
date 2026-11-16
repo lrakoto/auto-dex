@@ -4,7 +4,7 @@ const http = require('node:http');
 const { once } = require('node:events');
 const os = require('node:os');
 const path = require('node:path');
-const { brotliCompressSync, brotliDecompressSync } = require('node:zlib');
+const { brotliCompressSync, brotliDecompressSync, gzipSync, gunzipSync } = require('node:zlib');
 const express = require('express');
 const helmet = require('helmet');
 const request = require('supertest');
@@ -14,6 +14,10 @@ const manifest = [
   'viewer.min.js', 'ToyCar.gltf', 'ToyCar.bin', 'ToyCar_normal.png',
   'ToyCar_emissive.png', 'ToyCar_basecolor.png', 'ToyCar_occlusion_roughness_metallic.png',
   'ToyCar_clearcoat.png', 'poster.jpg'
+];
+const encodings = [
+  { name: 'br', extension: 'br', accept: 'gzip, deflate, br, zstd', compress: brotliCompressSync, decompress: brotliDecompressSync },
+  { name: 'gzip', extension: 'gz', accept: 'gzip, deflate', compress: gzipSync, decompress: gunzipSync }
 ];
 
 describe('Local 3D viewer lab', function () {
@@ -69,7 +73,8 @@ describe('Local 3D viewer lab', function () {
 
   it('exposes neither the page nor its assets without explicit non-production opt-in', async function () {
     await fs.writeFile(path.join(assets, 'ToyCar.gltf'), '{}');
-    await fs.writeFile(path.join(assets, 'ToyCar.gltf.br'), brotliCompressSync('{}'));
+    await Promise.all(encodings.map(({ extension, compress }) =>
+      fs.writeFile(path.join(assets, 'ToyCar.gltf.' + extension), compress('{}'))));
     for (const env of [
       { NODE_ENV: 'development' },
       { NODE_ENV: 'development', ENABLE_3D_DEMO: 'true' },
@@ -79,8 +84,10 @@ describe('Local 3D viewer lab', function () {
     ]) {
       const app = lab(env);
       await app.get('/dev/3d').expect(404);
-      await app.get('/dev/3d/assets/ToyCar.gltf').set('Accept-Encoding', 'br').expect(404);
-      await app.get('/dev/3d/assets/ToyCar.gltf.br').expect(404);
+      for (const { accept, extension } of encodings) {
+        await app.get('/dev/3d/assets/ToyCar.gltf').set('Accept-Encoding', accept).expect(404);
+        await app.get('/dev/3d/assets/ToyCar.gltf.' + extension).expect(404);
+      }
     }
   });
 
@@ -148,7 +155,7 @@ describe('Local 3D viewer lab', function () {
     await app.get('/dev/3d/assets/..%2Fprivate.txt').expect(404);
   });
 
-  it('serves Brotli for the three packed assets under their original URLs and types', async function () {
+  it('negotiates Brotli and gzip for packed assets under their original URLs and types', async function () {
     const representations = [
       ['viewer.min.js', /javascript\b/, 'const viewer = true;\n'],
       ['ToyCar.gltf', /^model\/gltf\+json\b/, '{"asset":{"version":"2.0"}}'],
@@ -156,44 +163,47 @@ describe('Local 3D viewer lab', function () {
     ].map(([name, type, body]) => [name, type, Buffer.from(body)]);
     await Promise.all(representations.flatMap(([name, , body]) => [
       fs.writeFile(path.join(assets, name), body),
-      fs.writeFile(path.join(assets, name + '.br'), brotliCompressSync(body))
+      ...encodings.map(({ extension, compress }) =>
+        fs.writeFile(path.join(assets, name + '.' + extension), compress(body)))
     ]));
 
     await withRawServer(enabled, async get => {
-      for (const [name, type, body] of representations) {
-        const options = { headers: { 'Accept-Encoding': 'br' } };
-        const packed = await get(name, options);
-        assert.equal(packed.status, 200);
-        assert.match(packed.headers['content-type'], type);
-        assert.equal(packed.headers['content-encoding'], 'br');
-        assert.match(packed.headers.vary, /\bAccept-Encoding\b/i);
-        assert.equal(packed.headers['cache-control'], 'no-store');
-        assert.equal(packed.headers['x-robots-tag'], 'noindex');
-        assert.deepEqual(brotliDecompressSync(packed.body), body);
-        const head = await get(name, { ...options, method: 'HEAD' });
-        assert.equal(head.status, 200);
-        assert.match(head.headers['content-type'], type);
-        assert.equal(head.headers['content-encoding'], 'br');
-        assert.match(head.headers.vary, /\bAccept-Encoding\b/i);
-        assert.equal(Number(head.headers['content-length']), packed.body.length);
-        assert.equal(head.body.length, 0);
-      }
+      for (const { name: encoding, extension, accept, decompress } of encodings) {
+        const headers = { 'Accept-Encoding': accept };
+        for (const [name, type, body] of representations) {
+          const packed = await get(name, { headers });
+          assert.equal(packed.status, 200);
+          assert.match(packed.headers['content-type'], type);
+          assert.equal(packed.headers['content-encoding'], encoding);
+          assert.match(packed.headers.vary, /\bAccept-Encoding\b/i);
+          assert.equal(packed.headers['cache-control'], 'no-store');
+          assert.equal(packed.headers['x-robots-tag'], 'noindex');
+          assert.deepEqual(decompress(packed.body), body);
+          const head = await get(name, { headers, method: 'HEAD' });
+          assert.equal(head.status, 200);
+          assert.match(head.headers['content-type'], type);
+          assert.equal(head.headers['content-encoding'], encoding);
+          assert.match(head.headers.vary, /\bAccept-Encoding\b/i);
+          assert.equal(Number(head.headers['content-length']), packed.body.length);
+          assert.equal(head.body.length, 0);
+        }
 
-      const bin = representations[2][2];
-      const whole = await get('ToyCar.bin', { headers: { 'Accept-Encoding': 'br', Range: 'bytes=1-2' } });
-      assert.equal(whole.status, 200);
-      assert.equal(whole.headers['content-encoding'], 'br');
-      assert.equal(whole.headers['content-range'], undefined);
-      assert.deepEqual(brotliDecompressSync(whole.body), bin);
-      const mismatch = await get('ToyCar.bin', { headers: { 'Accept-Encoding': 'br', 'If-Match': '"mismatch"' } });
-      assert.equal(mismatch.status, 412);
-      assert.equal(mismatch.headers['content-encoding'], undefined);
-      assert.equal(mismatch.body.toString(), 'Precondition Failed');
-      assert.equal((await get('ToyCar.bin.br')).status, 404);
+        const bin = representations[2][2];
+        const whole = await get('ToyCar.bin?retry=1', { headers: { ...headers, Range: 'bytes=1-2' } });
+        assert.equal(whole.status, 200);
+        assert.equal(whole.headers['content-encoding'], encoding);
+        assert.equal(whole.headers['content-range'], undefined);
+        assert.deepEqual(decompress(whole.body), bin);
+        const mismatch = await get('ToyCar.bin', { headers: { ...headers, 'If-Match': '"mismatch"' } });
+        assert.equal(mismatch.status, 412);
+        assert.equal(mismatch.headers['content-encoding'], undefined);
+        assert.equal(mismatch.body.toString(), 'Precondition Failed');
+        assert.equal((await get('ToyCar.bin.' + extension)).status, 404);
+      }
     });
   });
 
-  it('keeps originals usable when Brotli is unavailable or declined', async function () {
+  it('keeps originals usable when packed versions are unavailable or declined', async function () {
     const body = Buffer.from([0, 1, 2, 128, 255]);
     await fs.writeFile(path.join(assets, 'ToyCar.bin'), body);
     await withRawServer(enabled, async get => {
@@ -204,18 +214,30 @@ describe('Local 3D viewer lab', function () {
         assert.match(res.headers.vary, /\bAccept-Encoding\b/i);
         assert.deepEqual(res.body, body);
       }
-      const sidecar = path.join(assets, 'ToyCar.bin.br');
-      const acceptBrotli = { 'Accept-Encoding': 'br' };
-      await checkIdentity(acceptBrotli); // no sidecar installed
-      await fs.writeFile(sidecar, '');
-      await checkIdentity(acceptBrotli);
-      await fs.unlink(sidecar);
-      await fs.symlink('ToyCar.bin', sidecar);
-      await checkIdentity(acceptBrotli);
-      await fs.unlink(sidecar);
-      await fs.writeFile(sidecar, brotliCompressSync(body));
-      await checkIdentity({ 'Accept-Encoding': 'br;q=0' });
-      const declined = await get('ToyCar.bin', { headers: { 'Accept-Encoding': 'br;q=0, identity;q=0' } });
+      for (const { name, extension, compress } of encodings) {
+        const sidecar = path.join(assets, 'ToyCar.bin.' + extension);
+        const headers = { 'Accept-Encoding': name };
+        await checkIdentity(headers); // no sidecar installed
+        await fs.writeFile(sidecar, '');
+        await checkIdentity(headers);
+        await fs.unlink(sidecar);
+        await fs.symlink('ToyCar.bin', sidecar);
+        await checkIdentity(headers);
+        await fs.unlink(sidecar);
+        await fs.writeFile(sidecar, compress(body));
+        await checkIdentity({ 'Accept-Encoding': name + ';q=0' });
+      }
+
+      for (const [accept, encoding] of [
+        ['br;q=0.5, gzip;q=1, identity;q=0.2', 'gzip'],
+        ['gzip;q=0.5, br;q=1, identity;q=0.2', 'br']
+      ]) {
+        const res = await get('ToyCar.bin', { headers: { 'Accept-Encoding': accept } });
+        assert.equal(res.status, 200);
+        assert.equal(res.headers['content-encoding'], encoding);
+      }
+      await checkIdentity({ 'Accept-Encoding': 'br;q=0.4, gzip;q=0.9, identity;q=1' });
+      const declined = await get('ToyCar.bin', { headers: { 'Accept-Encoding': 'br;q=0, gzip;q=0, identity;q=0' } });
       assert.equal(declined.status, 406);
       assert.match(declined.headers.vary, /\bAccept-Encoding\b/i);
       assert.equal(declined.headers['cache-control'], 'no-store');

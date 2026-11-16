@@ -465,6 +465,13 @@ R14 on 2026-10-01 so they ship before R4.
   uses the current lab controls and approved viewer version, and starts
   independently of the catalog and database. The BMW model and poster
   stay in local files. See [the setup instructions](README.md#local-3d-viewer-prototype).
+- **Gzip fallback (2026-11-15).** Desktop WKWebView received the painted
+  BMW model and viewer over local HTTP using gzip. Their combined response
+  bodies went from 5,851,132 to 3,360,599 bytes (43% smaller) and decoded to
+  the original sizes. At both 1000 × 700 and 390 × 844 CSS px, the poster
+  loaded before either asset and the model rendered after opt-in. Zoom,
+  reset, and return to the poster passed. The Toy Car setup also produces
+  gzip files. Brotli remains preferred at equal client weights.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
