@@ -505,6 +505,23 @@ R14 on 2026-10-01 so they ship before R4.
   moved focus to Retry from the viewer or camera controls. Focus on a link
   outside the viewer stayed there. Enter reopened the model after graphics
   recovered. [WebGL context-loss test extension](https://registry.khronos.org/webgl/extensions/WEBGL_lose_context/).
+- **BMW 1M mesh repacking (2026-11-16).** The painted GLB uses no textures.
+  Removing its unused UV coordinates and combining 9,591 duplicate vertex
+  records reduced it from 4,895,576 to 4,075,364 bytes (17%). The 249,452
+  triangles have identical world bounds, and each triangle corner retains
+  its original position and normal bytes in the original triangle order.
+  The Khronos validator reported zero errors and warnings.
+  At the private CLI's existing compression settings, the model goes from
+  2,429,903 to 2,095,510 bytes over Brotli and from 3,103,393 to 2,630,745
+  bytes over gzip. The Brotli model plus viewer totals 2,327,840 bytes,
+  down from 2,662,233.
+  In desktop Chrome, six matched 1000 px views covering the lamps, paint,
+  profile and rims differed by a total of six pixels, each by one channel
+  value out of 255. Both 390 px views matched pixel for pixel. These were
+  local browser checks using the same camera and pinned viewer.
+  Desktop WKWebView used 2,887,951 gzip bytes for the model and viewer
+  together and rendered at 390 and 1000 CSS px. Poster-first loading,
+  zoom, reset, and return to the poster passed.
 - **Pilot checks.** Aim for 5 MB or less for the mobile model as an initial
   target. Check proportions against trusted references and measure load
   time and interaction on a real phone. Verify no 3D bytes load before
