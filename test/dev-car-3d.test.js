@@ -91,17 +91,39 @@ describe('Local 3D viewer lab', function () {
     }
   });
 
-  it('renders a setup message on both route spellings when even one required asset is missing', async function () {
+  it('shows the poster and setup guidance on both route spellings when geometry is missing', async function () {
     await Promise.all(manifest.filter(name => name !== 'ToyCar.bin')
       .map(name => fs.writeFile(path.join(assets, name), 'fixture')));
+    const app = lab({ ...enabled, NODE_ENV: 'test' });
     for (const url of ['/dev/3d', '/dev/3d/']) {
-      const res = await lab({ ...enabled, NODE_ENV: 'test' }).get(url)
+      const res = await app.get(url)
         .expect('Cache-Control', 'no-store')
         .expect('X-Robots-Tag', 'noindex')
         .expect(200);
       assert.match(res.text, /id="car-3d-missing"/);
-      assert.doesNotMatch(res.text, /id="car-3d-load"/);
+      assert.match(res.text, /Run the local 3D demo setup/);
+      assert.match(res.text, /<img\b[^>]*id="car-3d-poster"[^>]*src="\/dev\/3d\/assets\/poster\.jpg"[^>]*alt="Studio render of the Khronos toy car from the front and side"/);
+      assert.doesNotMatch(res.text, /id="car-3d-(load|controls)"|car-3d-demo\.js|viewer\.min\.js|ToyCar\.(gltf|bin)/i);
     }
+    await app.get('/dev/3d/assets/poster.jpg').expect('Content-Type', /^image\/jpeg\b/).expect(200);
+  });
+
+  it('omits the poster when it is missing, empty, or a symlink', async function () {
+    const app = lab(enabled);
+    async function expectMissingPoster() {
+      const res = await app.get('/dev/3d').expect(200);
+      assert.match(res.text, /3D preview files are unavailable\./);
+      assert.doesNotMatch(res.text, /id="car-3d-(poster|load|controls)"|\/dev\/3d\/assets\/poster\.jpg|car-3d-demo\.js/);
+    }
+
+    await expectMissingPoster();
+    const poster = path.join(assets, 'poster.jpg');
+    await fs.writeFile(poster, '');
+    await expectMissingPoster();
+    await fs.unlink(poster);
+    await fs.writeFile(path.join(assets, 'private.jpg'), 'fixture');
+    await fs.symlink('private.jpg', poster);
+    await expectMissingPoster();
   });
 
   it('renders the standalone poster view with the existing same-origin connect policy', async function () {

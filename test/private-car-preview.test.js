@@ -92,6 +92,16 @@ describe('Private GLB preview', function () {
     assert.doesNotMatch(res.text, /<(?:script|link|img|source|model-viewer)\b[^>]*\s(?:src|href)=["'][^"']*(?:model\.glb|viewer\.min\.js)/i);
   });
 
+  it('keeps a private poster visible and provides restart guidance when the model is unavailable', async function () {
+    const posterOnly = await fs.mkdtemp(path.join(assets, 'poster-only-'));
+    await fs.writeFile(path.join(posterOnly, 'poster.png'), poster);
+    const preview = createPreviewApp(posterOnly, { name, creditLabel, posterFile: 'poster.png', posterMime: 'image/png' });
+    const res = await request(preview).get('/dev/3d').expect(200);
+    assert.match(res.text, /\bsrc="\/dev\/3d\/assets\/poster\.png"/);
+    assert.match(res.text, /Restart the private preview with the local model and poster files/);
+    assert.doesNotMatch(res.text, /Run the local 3D demo setup|id="car-3d-load"|data-model-url/);
+  });
+
   it('checks the loopback host and serves only allowlisted preview files', async function () {
     for (const url of ['/dev/3d', assetUrl + 'model.glb']) {
       await app.get(url).set('Host', 'preview.example.test').expect(403);
