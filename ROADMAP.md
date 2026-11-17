@@ -424,11 +424,14 @@ R14 on 2026-10-01 so they ship before R4.
   factory dimensions of the two-door Custom Coupe (16647). The exported
   GLB measures 5,483.9 × 2,026.9 × 1,371.6 mm (length × width × height),
   with a 3,022.6 mm wheelbase. Front and rear overhangs are 947.4 and
-  1,513.8 mm. Front and rear tracks are 1,587.5 and 1,585.0 mm. The
-  texture-free export contains 17,832 triangles and weighs 545,048 bytes.
-  The roof, windows, wheels, lights, and trim use simplified geometry.
-  Use the study to check the proportions of a more detailed exterior,
-  starting with the roof pillars and wraparound front bumper.
+  1,513.8 mm. Front and rear tracks are 1,587.5 and 1,585.0 mm.
+  The second export keeps those dimensions and adds a crowned hardtop,
+  painted rear pillars, separate side windows, and a wraparound bumper
+  around the recessed grille and concealed headlamp doors. It contains
+  19,394 triangles and weighs 613,064 bytes without textures. The glazing
+  is opaque and the wheels and rear lamps are still simplified.
+  [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
+  [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
