@@ -28,8 +28,12 @@ function element() {
   };
 }
 
-function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model of the Khronos Toy Car' } = {}) {
+function loadDemo({
+  modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model of the Khronos Toy Car', visibility = 'visible'
+} = {}) {
+  let visibilityState = visibility;
   let activeElement = null;
+  const page = element();
   function focusable() {
     const node = element();
     node.focus = () => { activeElement = node; };
@@ -62,6 +66,8 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
   const customElements = { get: name => registered && name === 'model-viewer' ? function ModelViewer() {} : undefined };
   vm.runInNewContext(source, {
     document: {
+      addEventListener: page.addEventListener,
+      get visibilityState() { return visibilityState; },
       get activeElement() { return activeElement; },
       getElementById: id => nodes[id] || null,
       createElement(tag) {
@@ -85,6 +91,10 @@ function loadDemo({ modelUrl: src = modelUrl, modelAlt = 'Interactive 3D model o
     button, stage, poster, status, modules, models, controls, zoomIn, zoomOut, reset, credit, timers,
     get activeElement() { return activeElement; },
     click: () => button.emit('click'),
+    setVisibility(state, dispatch = true) {
+      visibilityState = state;
+      if (dispatch) page.emit('visibilitychange');
+    },
     installViewer(module = modules[0]) { registered = true; module.emit('load'); },
     expireTimers,
     advanceTimers(ms) {
@@ -163,6 +173,9 @@ describe('Local 3D viewer in the browser', function() {
     assert.equal(demo.poster.hidden, false);
     assert.equal(demo.controls.hidden, true);
     canceledTimeout();
+    demo.setVisibility('hidden');
+    demo.setVisibility('visible');
+    assert.equal(demo.timers.size, 0);
     assert.equal(demo.stage.dataset.state, 'idle');
 
     demo.click();
@@ -216,7 +229,11 @@ describe('Local 3D viewer in the browser', function() {
   it('changes the module URL after an actual module load failure', function() {
     const demo = loadDemo();
     demo.click();
+    demo.setVisibility('hidden');
+    assert.equal(demo.timers.size, 0);
     demo.modules[0].emit('error');
+    demo.setVisibility('visible');
+    assert.equal(demo.timers.size, 0);
     assert.equal(demo.stage.dataset.state, 'error');
     assert.equal(demo.poster.hidden, false);
 
@@ -266,6 +283,52 @@ describe('Local 3D viewer in the browser', function() {
 
     demo.advanceTimers(20_000);
     assert.equal(demo.stage.dataset.state, 'ready');
+  });
+
+  it('keeps a hidden load pending and lets the same model finish after foregrounding', function() {
+    const demo = loadDemo({ visibility: 'hidden' });
+    demo.click();
+    demo.advanceTimers(30_000);
+    assert.equal(demo.stage.dataset.state, 'loading');
+    assert.equal(demo.timers.size, 0);
+    demo.installViewer();
+
+    const [model] = demo.models;
+    model.emit('progress', { reason: 'model-load', totalProgress: 0.8 });
+    demo.advanceTimers(30_000);
+    assert.equal(demo.stage.dataset.state, 'loading');
+    assert.equal(demo.poster.hidden, false);
+    assert.equal(demo.timers.size, 0);
+
+    demo.setVisibility('visible');
+    demo.advanceTimers(19_999);
+    model.emit('load');
+    demo.setVisibility('hidden');
+    demo.setVisibility('visible');
+    demo.advanceTimers(20_000);
+    assert.equal(demo.stage.dataset.state, 'ready');
+    assert.deepEqual(demo.models, [model]);
+    assert.equal(model.src, modelUrl);
+    assert.equal(demo.timers.size, 0);
+  });
+
+  it('gives a stalled load a fresh deadline when the tab becomes visible', function() {
+    const demo = loadDemo();
+    demo.click();
+    demo.installViewer();
+    demo.advanceTimers(19_999);
+    // The timer may observe that the tab is hidden before its listener runs.
+    demo.setVisibility('hidden', false);
+    demo.advanceTimers(1);
+    assert.equal(demo.stage.dataset.state, 'loading');
+
+    demo.setVisibility('visible');
+    demo.advanceTimers(19_999);
+    assert.equal(demo.stage.dataset.state, 'loading');
+    demo.advanceTimers(1);
+    assert.equal(demo.stage.dataset.state, 'error');
+    assert.equal(demo.button.textContent, 'Retry 3D model');
+    assert.equal(demo.poster.hidden, false);
   });
 
   it('times out a stalled model despite duplicate, regressive, or unrelated progress', function() {

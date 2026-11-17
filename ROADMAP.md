@@ -639,6 +639,10 @@ R14 on 2026-10-01 so they ship before R4.
   moved focus to Retry from the viewer or camera controls. Focus on a link
   outside the viewer stayed there. Enter reopened the model after graphics
   recovered. [WebGL context-loss test extension](https://registry.khronos.org/webgl/extensions/WEBGL_lose_context/).
+- **Background-tab loading.** The local viewer pauses its inactivity timeout
+  while the tab is hidden and gives a pending load a fresh 20 seconds when
+  the tab becomes visible. An actual load error still offers Retry
+  immediately. The poster remains visible until the model is ready.
 - **BMW 1M mesh repacking (2026-11-16).** The painted GLB uses no textures.
   Removing its unused UV coordinates and combining 9,591 duplicate vertex
   records reduced it from 4,895,576 to 4,075,364 bytes (17%). The 249,452
