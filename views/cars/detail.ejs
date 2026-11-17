@@ -109,16 +109,24 @@
         </p>
       <% } %>
       <% if (generationHistory) { %>
-        <section class="facts-panel generation-references" aria-labelledby="generation-references">
+        <section class="facts-panel generation-references<%= generationHistory.yearLabel ? ' generation-guide' : '' %>" aria-labelledby="generation-references">
           <div class="accent-line"></div>
-          <h3 class="section-label" id="generation-references">BMW generation references</h3>
+          <h3 class="section-label" id="generation-references"><%= generationHistory.heading %></h3>
+          <% if (generationHistory.yearLabel) { %>
+            <p class="generation-year-label"><%= generationHistory.yearLabel %></p>
+          <% } %>
           <dl class="facts-list">
             <% generationHistory.generations.forEach(generation => { %>
               <div class="fact-row">
-                <dt><%= generation.code %></dt>
+                <dt><%= generation.code || generation.firstYear + '–' + generation.lastYear %></dt>
                 <dd>
-                  <%= generation.production %> production<br>
-                  <a href="<%= generation.url %>" target="_blank" rel="noopener">BMW archive for <%= generation.code %></a>
+                  <% if (generation.production) { %><%= generation.production %> production<br><% } %>
+                  <% if (generation.title) { %><strong><%= generation.title %></strong><br><% } %>
+                  <% if (generation.description) { %><%= generation.description %><br><% } %>
+                  <% generation.sources.forEach((source, index) => { %>
+                    <% if (index) { %> · <% } %>
+                    <a href="<%= source.url %>" target="_blank" rel="noopener"><%= source.label %></a>
+                  <% }) %>
                 </dd>
               </div>
             <% }) %>

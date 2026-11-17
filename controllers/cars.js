@@ -21,7 +21,7 @@ const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
 const { isCommercialName } = require('../lib/vehicleTypes');
 const { buildTimeline } = require('../lib/timeline');
-const { getGenerationHistory, getNamingHistory } = require('../lib/bmw-generations');
+const { getGenerationHistory, getNamingHistory } = require('../lib/generation-history');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
