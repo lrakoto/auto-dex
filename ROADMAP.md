@@ -451,8 +451,14 @@ R14 on 2026-10-01 so they ship before R4.
   separately folding seat backs and head restraints, a rear bench back, a
   padded dash, and a left-hand 16.25 × 15.50 in oval steering wheel. The
   export has 67,268 rendered triangles and weighs 1,137,696 bytes without
-  textures. Cabin surfaces and colors are approximate. The dashboard
-  instruments, lower cabin, and tire tread still need detail.
+  textures. The seventh adds a raised dash brow, a horizontal 0–120 mph
+  speedometer with geometric markings, a fuel gauge and clock, a row of
+  unlit warning lamps, upright slatted vents, and warm wood-tone trim. It
+  has 73,408 rendered triangles and weighs 1,455,000 bytes without textures.
+  The instrument cluster is visible from the rear quarter through the
+  driver's window. Direct side reflections can obscure the small markings.
+  The cabin surfaces and colors are approximate. The lower cabin and tire
+  tread still need detail.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
@@ -463,6 +469,9 @@ R14 on 2026-10-01 so they ship before R4.
   [Chevrolet's cabin equipment](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=10) ·
   [Fisher Body's folding seat-back diagram](https://www.camaros.org/pdf/1969FisherBody.pdf#page=378) ·
   [Chevrolet's steering wheel dimensions](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=25) ·
+  [Chevrolet's dashboard equipment](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=11) ·
+  [Chevrolet chassis service manual, Fig. 38](https://drive.google.com/file/d/0B0llMKUpqcpRczZlVEdXMXJWbG8/view?usp=sharing&resourcekey=0-aYaxonz4ae9wSPUK_C4d0A) ·
+  [Instrument panel on a 16647 coupe](https://bringatrailer.com/wp-content/uploads/2022/06/1969_chevrolet_caprice-2-dr-sedan-427-v-8_20220806_114847-17069-scaled.jpg?w=1100) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
