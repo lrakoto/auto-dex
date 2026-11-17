@@ -427,11 +427,16 @@ R14 on 2026-10-01 so they ship before R4.
   1,513.8 mm. Front and rear tracks are 1,587.5 and 1,585.0 mm.
   The second export keeps those dimensions and adds a crowned hardtop,
   painted rear pillars, separate side windows, and a wraparound bumper
-  around the recessed grille and concealed headlamp doors. It contains
-  19,394 triangles and weighs 613,064 bytes without textures. The glazing
-  is opaque and the wheels and rear lamps are still simplified.
+  around the recessed grille and concealed headlamp doors. The third adds
+  a wraparound rear bumper with six recessed lamps, slim inset rings, and a
+  narrow clear backup insert in the middle red lens on each side. It also
+  separates the bright deck molding, painted lower valance, and rear quarter
+  markers. The latest export has 22,200 triangles and weighs 719,708 bytes
+  without textures. The glazing is opaque and the wheels are still simplified.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
+  [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
+  [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
