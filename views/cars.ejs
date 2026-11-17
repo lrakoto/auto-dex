@@ -18,21 +18,26 @@
         </div>
         <button class="btn btn-primary btn-lg" type="submit" style="padding:0.65rem 1.5rem;white-space:nowrap;">Search &rarr;</button>
       </form>
-      <% if (yearOptions.length > 0 || dexProgress) { %>
+      <% if (year || yearOptions.length > 0 || dexProgress) { %>
         <div class="browse-tools">
-          <% if (yearOptions.length > 0) { %>
+          <% if (year || yearOptions.length > 0) { %>
             <form action="/cars" method="GET" class="year-filter">
               <input type="hidden" name="selectmake" value="<%= search %>">
-              <% if (type !== 'car') { %><input type="hidden" name="type" value="<%= type %>"><% } %>
+              <% if (browseType) { %><input type="hidden" name="type" value="<%= browseType %>"><% } %>
               <label for="yearFilter">Model year</label>
               <select id="yearFilter" name="year" class="form-control form-control-sm">
                 <option value="">All years</option>
+                <% if (year && !yearOptions.includes(year)) { %>
+                  <option value="<%= year %>" selected><%= year %></option>
+                <% } %>
                 <% yearOptions.forEach(y => { %>
                   <option value="<%= y %>" <%= year === y ? 'selected' : '' %>><%= y %></option>
                 <% }) %>
               </select>
               <button type="submit" class="btn btn-sm btn-outline-secondary">Apply year</button>
             </form>
+          <% } %>
+          <% if (yearOptions.length > 0) { %>
             <a class="browse-link" href="/cars/timeline?make=<%= encodeURIComponent(search) %><%= typeParam %>">Timeline &rarr;</a>
           <% } %>
           <% if (dexProgress) { %>

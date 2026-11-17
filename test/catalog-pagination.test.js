@@ -180,10 +180,60 @@ describe('Catalog pagination', function() {
       const first = await request(app).get(browse + '&year=1991').expect(200);
       const appliedForm = assertFilterForm(first.text, 'year-filter', '/cars', 'Apply year');
       assert.match(appliedForm, /<option value="1991" selected>/);
+      assert.equal(Array.from(appliedForm.matchAll(/<option value="1991"/g)).length, 1);
       assert.match(first.text, /class="card-model">Year Filter Truck 13<\/span>/);
       assert.doesNotMatch(first.text, /class="card-model">Year Filter Truck 01<\/span>|class="pagination-wrap"/);
     } finally {
       await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+    }
+  });
+
+  it('shows the active year and a reset link when a saved model year has no matches', async function() {
+    const browse = '/cars?selectmake=Volvo';
+    const saved = browse + '&year=1989&page=4';
+    const page = await request(app).get(saved).expect(200);
+    const form = assertFilterForm(page.text, 'year-filter', '/cars', 'Apply year');
+    assert.match(form, /<option value="">All years<\/option>/);
+    assert.match(form, /<option value="1989" selected>1989<\/option>/);
+    assert.match(form, /<option value="1990"\s*>1990<\/option>/);
+
+    const fragment = await request(app).get(saved + '&partial=1').expect(200);
+    assert.doesNotMatch(fragment.text, /<html\b|id="yearFilter"/i);
+    for (const { text } of [page, fragment]) {
+      assert.match(text, /<h3>No models found for 1989<\/h3>/);
+      assert.doesNotMatch(text, /class="card-model"|No vehicles on this page/);
+      const link = text.match(/href="([^"]+)"[^>]*>Clear year filter<\/a>/)?.[1];
+      assert.equal(link, browse);
+    }
+    const cleared = await request(app).get(browse).expect(200);
+    assert.match(cleared.text, /class="card-model">Pagination Fixture 01<\/span>/);
+    assert.doesNotMatch(cleared.text, /<option value="1989"/);
+  });
+
+  it('can clear a saved year when a manufacturer has no dated listings', async function() {
+    const make = 'Undated Year Filter';
+    const truck = await db.car.create({
+      make, model: 'Undated Truck Fixture', image: PLACEHOLDER_URL, vehicle_type: 'commercial'
+    });
+    try {
+      const browse = '/cars?selectmake=' + encodeURIComponent(make);
+      const alias = '/cars?selectmake=' + encodeURIComponent(make.toLowerCase());
+      await request(app).get(alias + '&type=car&year=1990')
+        .expect(301).expect('Location', browse + '&type=car&year=1990');
+      for (const type of ['commercial', 'car']) {
+        const typed = browse + '&type=' + type;
+        const page = await request(app).get(typed + '&year=1990').expect(200);
+        const form = assertFilterForm(page.text, 'year-filter', '/cars', 'Apply year');
+        assert.ok(form.includes(`<input type="hidden" name="type" value="${type}">`));
+        assert.match(form, /<option value="1990" selected>1990<\/option>/);
+        assert.doesNotMatch(page.text, /class="card-model"|class="browse-link"/);
+        assert.ok(page.text.includes(`href="${typed.replaceAll('&', '&amp;')}" class="btn btn-outline-secondary mt-3">Clear year filter`));
+      }
+      const cleared = await request(app).get(browse + '&type=commercial&year=').expect(200);
+      assert.match(cleared.text, /class="card-model">Undated Truck Fixture<\/span>/);
+      assert.doesNotMatch(cleared.text, /id="yearFilter"/);
+    } finally {
+      await db.car.destroy({ where: { id: truck.id } });
     }
   });
 
