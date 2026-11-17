@@ -444,9 +444,15 @@ R14 on 2026-10-01 so they ship before R4.
   the first side-detail export. The fifth uses the factory 14 × 5J rim size
   and models the full covers with a rounded outer lip, separate slots, fine
   radial ribs, and blank dark medallions. All four instances use one mesh.
-  The result has 64,336 rendered triangles and weighs 1,082,736 bytes without
-  textures. Factory dimensions and wheel clearance were verified. The glazing
-  is opaque and the tire tread is still simplified.
+  The fifth export has 64,336 rendered triangles and weighs 1,082,736 bytes
+  without textures. Factory dimensions and wheel clearance were verified.
+  The sixth adds lightly tinted, transmissive glazing and models the cabin
+  features visible through it. It includes a full-width front bench with
+  separately folding seat backs and head restraints, a rear bench back, a
+  padded dash, and a left-hand 16.25 × 15.50 in oval steering wheel. The
+  export has 67,268 rendered triangles and weighs 1,137,696 bytes without
+  textures. Cabin surfaces and colors are approximate. The dashboard
+  instruments, lower cabin, and tire tread still need detail.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
@@ -454,6 +460,9 @@ R14 on 2026-10-01 so they ship before R4.
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
   [Chevrolet's wheel specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
   [Wheel covers in Chevrolet's dealer mailer](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=1) ·
+  [Chevrolet's cabin equipment](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=10) ·
+  [Fisher Body's folding seat-back diagram](https://www.camaros.org/pdf/1969FisherBody.pdf#page=378) ·
+  [Chevrolet's steering wheel dimensions](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=25) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
