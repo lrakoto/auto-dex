@@ -21,7 +21,7 @@ const { getGallery, vote } = require('../lib/gallery');
 const { findOrCreateCatalogCar, lookupMake, lookupCatalogCar, vehicleTypeWhere, modelSearchOptions } = require('../lib/catalog');
 const { isCommercialName } = require('../lib/vehicleTypes');
 const { buildTimeline } = require('../lib/timeline');
-const { getGenerationHistory, getNamingHistory } = require('../lib/generation-history');
+const { getGenerationHistory, getNamingHistory, getModelOverview } = require('../lib/generation-history');
 const { saleLinks } = require('../lib/forSale');
 const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
@@ -429,8 +429,11 @@ router.get('/', async (req, res) => {
         }) : null
       ]);
       const generationHistory = getGenerationHistory(car);
-      const summary = generationHistory?.overview || wiki?.summary || null;
-      const wikiUrl = generationHistory?.overview ? null : (wiki?.url || null);
+      const overview = getModelOverview(make, model);
+      const summary = overview?.summary || generationHistory?.overview || wiki?.summary || null;
+      const summarySources = overview?.sources || (
+        !generationHistory?.overview && wiki?.url ? [{ label: 'Wikipedia →', url: wiki.url }] : []
+      );
 
       // ?image= comes from the garage's favorite links. Honor it only when
       // it's the viewer's own favorite photo or already in this car's
@@ -464,7 +467,7 @@ router.get('/', async (req, res) => {
       if (local3dPreview) res.set('Cache-Control', 'no-store');
 
       res.render('cars/detail', {
-        make, model, image, favcount, relatedCars, country, summary, wikiUrl, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
+        make, model, image, favcount, relatedCars, country, summary, summarySources, wikiFacts, mediaLinks, carSpecs, safetyRatings, userFavorite,
         generationHistory,
         namingHistory: getNamingHistory(make, model),
         carPath,
