@@ -178,7 +178,7 @@ describe('Public sightings feed', function () {
     assert.doesNotMatch(hidden, /activity_badge_renamed/);
   });
 
-  it('shows dated records from public garages in time and ID order, and hides them on unpublish', async function () {
+  it('shows dated public quiz records and their current badges in time and ID order', async function () {
     const latest = new Date(Date.now() - 86_400_000);
     latest.setUTCHours(0, 0, 0, 123);
     const older = new Date(latest.getTime() - 86_400_000);
@@ -191,8 +191,8 @@ describe('Public sightings feed', function () {
     const noHandle = await owner('quiz_unset', true, null);
     const blank = await owner('quiz_blank', true, null);
     await Promise.all([
-      first.update({ quizBest: 17, quizBestAt: latest }),
-      second.update({ quizBest: 23, quizBestAt: latest }),
+      first.update({ quizBest: 9, quizBestAt: latest }),
+      second.update({ quizBest: 10, quizBestAt: latest }),
       previous.update({ quizBest: 39, quizBestAt: older }),
       hidden.update({ quizBest: 151, quizBestAt: latest }),
       legacy.update({ quizBest: 152 }),
@@ -207,8 +207,15 @@ describe('Public sightings feed', function () {
     assert.match(page, /id="quiz-records"/);
     const links = [second, first, previous].map(user => page.indexOf(`href="/u/${user.username}"`));
     assert.ok(links[0] >= 0 && links[0] < links[1] && links[1] < links[2]);
-    for (const score of [17, 23, 39]) assert.ok(page.includes(`${score} in a row`));
-    assert.ok(page.includes(`datetime="${latest.toISOString().slice(0, 10)}"`));
+    const recordFor = (html, user) => (html.match(/<li class="activity-quiz-record">[\s\S]*?<\/li>/g) || [])
+      .find(row => row.includes(`href="/u/${user.username}"`)) || '';
+    for (const [user, score, date, badge] of [[first, 9, latest, false], [second, 10, latest, true], [previous, 39, older, true]]) {
+      const row = recordFor(page, user);
+      assert.ok(row.includes(`<strong>${score} in a row</strong>`));
+      assert.ok(row.includes(`datetime="${date.toISOString().slice(0, 10)}"`));
+      assert.equal(row.includes('class="activity-quiz-badge"'), badge);
+      if (badge) assert.match(row, /Car Whisperer/);
+    }
     assert.ok(!page.includes(latest.toISOString()));
     for (const user of [first, second, previous, hidden, legacy, noHandle, blank]) {
       assert.ok(!page.includes(user.email) && !page.includes(user.name));
@@ -217,9 +224,17 @@ describe('Public sightings feed', function () {
       assert.ok(!page.includes(excluded), `activity feed exposed ${excluded}`);
     }
 
+    const improvedDate = new Date(latest.getTime() + 86_400_000);
+    await second.update({ quizBest: 11, quizBestAt: improvedDate });
+    const updated = recordFor(await feed(), second);
+    assert.match(updated, /<strong>11 in a row<\/strong>/);
+    assert.match(updated, /class="activity-quiz-badge"/);
+    assert.ok(updated.includes(`datetime="${improvedDate.toISOString().slice(0, 10)}"`));
+    assert.ok(!updated.includes(`datetime="${latest.toISOString().slice(0, 10)}"`));
+
     await second.update({ garagePublic: false });
     const unpublished = await feed();
-    assert.ok(!unpublished.includes(second.username) && !unpublished.includes('23 in a row'));
+    assert.ok(!unpublished.includes(second.username) && !unpublished.includes('<strong>11 in a row</strong>'));
     assert.ok(unpublished.includes(first.username));
   });
 

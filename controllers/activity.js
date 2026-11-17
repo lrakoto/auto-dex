@@ -14,6 +14,7 @@ const voteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, standardHead
 const { Op } = db.Sequelize;
 const utcDay = now => now.toISOString().slice(0, 10);
 const firstSpotBadge = BADGES.find(badge => badge.id === 'first-spot');
+const carWhispererBadge = BADGES.find(badge => badge.id === 'car-whisperer');
 
 function recentSightings({ transaction, includeFirstSpot = false } = {}) {
   const attributes = ['id', 'userId', 'createdAt', 'imageUrl'];
@@ -122,10 +123,12 @@ router.get('/', async (req, res, next) => {
         firstSpot: Boolean(spot.get('isFirstRetained'))
       })),
       firstSpotBadge,
+      carWhispererBadge,
       quizRecords: records.map(({ username, quizBest, quizBestAt }) => ({
         garageName: `@${username}`,
         garageUrl: `/u/${encodeURIComponent(username)}`,
         best: quizBest,
+        carWhisperer: carWhispererBadge.test({ quizBest }),
         dateIso: utcDay(quizBestAt),
         dateLabel: dayLabel.format(quizBestAt)
       })),

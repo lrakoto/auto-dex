@@ -84,7 +84,7 @@
       <div class="activity-quiz-heading">
         <div>
           <h2 id="quiz-records-heading">Recent quiz records</h2>
-          <p>Personal best streaks in the car photo quiz.</p>
+          <p>Personal best streaks in the car photo quiz. Dates show when each best was set.</p>
         </div>
         <a class="btn btn-outline-secondary btn-sm activity-quiz-play" href="/play">Play the car quiz</a>
       </div>
@@ -93,7 +93,15 @@
           <li class="activity-quiz-record">
             <div class="activity-details">
               <a class="activity-garage" href="<%= record.garageUrl %>"><%= record.garageName %></a>
-              <p class="activity-quiz-score"><strong><%= record.best %> in a row</strong></p>
+              <p class="activity-quiz-score">
+                <strong><%= record.best %> in a row</strong>
+                <% if (record.carWhisperer) { %>
+                  <span class="activity-quiz-badge" title="Current quiz badge">
+                    <span aria-hidden="true"><%= carWhispererBadge.icon %></span> <%= carWhispererBadge.name %>
+                    <span class="sr-only"> badge</span>
+                  </span>
+                <% } %>
+              </p>
             </div>
             <time datetime="<%= record.dateIso %>"><%= record.dateLabel %></time>
           </li>
