@@ -90,11 +90,12 @@
       <h2 class="mb-4" style="font-size:1.75rem;"><%= make %> <span style="font-weight:300;"><%= model %></span></h2>
       <% if (summary) { %>
         <p class="lead" style="color:#a1a1aa;line-height:1.75;"><%= summary %></p>
-        <% if (wikiUrl) { %>
-          <a href="<%= wikiUrl %>" target="_blank" rel="noopener" style="font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;color:#52525b;">
-            Wikipedia &rarr;
+        <% summarySources.forEach((source, index) => { %>
+          <% if (index) { %> · <% } %>
+          <a href="<%= source.url %>" target="_blank" rel="noopener" style="font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;color:#52525b;">
+            <%= source.label %>
           </a>
-        <% } %>
+        <% }) %>
       <% } else { %>
         <p class="text-muted">No description available for this model.</p>
       <% } %>

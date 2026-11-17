@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
+const cache = require('../lib/cache');
 const carinfo = require('../lib/carinfo');
 const nhtsa = require('../lib/nhtsa');
 const rarity = require('../lib/rarity');
@@ -16,6 +17,8 @@ const brochure1966 = 'https://xr793.com/wp-content/uploads/2017/08/1966-Chevrole
 const brochure1971 = 'https://xr793.com/wp-content/uploads/2017/07/1971-Chevrolet-Caprice-Impala-Belair.pdf#page=2';
 const brochure1977 = 'https://xr793.com/wp-content/uploads/2017/07/1977-Chevrolet-Caprice-Classic-Impala.pdf#page=2';
 const guide1991 = 'https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1991-Chevrolet-Caprice.pdf#page=3';
+const policeLaunch = 'https://www.prnewswire.com/news-releases/chevrolet-prepares-2011-caprice-police-patrol-vehicle-for-duty-99252209.html';
+const policeSpecs = 'https://www.gmupfitter.com/wp-content/uploads/2021/05/Caprice-9C1-Specification-Guide-2017.pdf';
 
 describe('Chevrolet Caprice generations', function() {
   it('matches all four U.S. year ranges and only the exact civilian listing', function() {
@@ -33,15 +36,24 @@ describe('Chevrolet Caprice generations', function() {
     assert.equal(getGenerationHistory({ make: chevrolet, model: caprice, year_min: 1966, year_max: 1996 }), null);
   });
 
-  it('renders the four sourced rows on the civilian detail page alongside the overview', async function() {
-    const originalWiki = carinfo.getWikiSummary;
+  it('renders the civilian generation guide and an independent sourced police overview', async function() {
+    const originalGet = cache.cachedGet;
+    const originalFacts = carinfo.getWikidataFacts;
     const originalFuel = carinfo.getFuelSpecs;
     const originalSafety = nhtsa.getSafetyRatings;
     const originalComplaints = nhtsa.getComplaints;
     const originalRarity = rarity.getCarRarity;
     const carIds = [];
+    const wikiRequests = [];
     try {
-      carinfo.getWikiSummary = async () => ({ summary: 'Existing Caprice overview.', url: wikiUrl });
+      cache.cachedGet = async url => {
+        wikiRequests.push(url);
+        return {
+          type: 'standard', extract: 'Existing Caprice overview.', wikibase_item: 'Q1',
+          content_urls: { desktop: { page: wikiUrl } }
+        };
+      };
+      carinfo.getWikidataFacts = async () => [{ label: 'Produced', values: ['1965–1996'] }];
       carinfo.getFuelSpecs = async () => null;
       nhtsa.getSafetyRatings = async () => null;
       nhtsa.getComplaints = async () => null;
@@ -73,11 +85,25 @@ describe('Chevrolet Caprice generations', function() {
       assert.ok(guide.includes(`href="${guide1991}"`));
       assert.match(res.text, /Existing Caprice overview\./);
       assert.ok(res.text.includes(`href="${wikiUrl}"`));
+      assert.match(res.text, /<dt>Produced<\/dt>/);
 
       const policePage = await request(app).get('/cars/car').query({ make: chevrolet, model: police }).expect(200);
-      assert.doesNotMatch(policePage.text, /Caprice generations|First standalone Caprice/);
+      const overview = policePage.text.match(/<p class="lead"[^>]*>(Chevrolet offered the Caprice Police Patrol Vehicle,[^<]*2011–2017\.)<\/p>/)?.[1];
+      assert.ok(overview, 'missing police overview');
+      for (const meta of ['name="description"', 'property="og:description"', 'name="twitter:description"']) {
+        assert.ok(policePage.text.includes(`<meta ${meta} content="${overview}">`), meta);
+      }
+      assert.ok(policePage.text.includes(`href="${policeLaunch}"`));
+      assert.ok(policePage.text.includes(`href="${policeSpecs}"`));
+      assert.ok(!policePage.text.includes(`href="${wikiUrl}"`));
+      assert.doesNotMatch(policePage.text, /Caprice generations|Existing Caprice overview|1965–1996/);
+
+      const comparison = await request(app).get('/cars/compare').query({ c: `${chevrolet}|${police}` }).expect(200);
+      assert.doesNotMatch(comparison.text, /1965–1996/);
+      assert.deepEqual(wikiRequests, ['https://en.wikipedia.org/api/rest_v1/page/summary/Chevrolet_Caprice']);
     } finally {
-      carinfo.getWikiSummary = originalWiki;
+      cache.cachedGet = originalGet;
+      carinfo.getWikidataFacts = originalFacts;
       carinfo.getFuelSpecs = originalFuel;
       nhtsa.getSafetyRatings = originalSafety;
       nhtsa.getComplaints = originalComplaints;
