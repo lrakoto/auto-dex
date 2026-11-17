@@ -89,11 +89,13 @@ async function ballot(recent, voteDay, now, userId) {
   ]);
   const votesBySpot = new Map(totals.map(row => [row.spottingId, Number(row.votes)]));
   const top = Math.max(0, ...votesBySpot.values());
-  const leaders = totals.filter(row => Number(row.votes) === top);
-  const leadingId = leaders.length === 1 ? leaders[0].spottingId : null;
+  const leaders = new Set([...votesBySpot]
+    .filter(([, votes]) => votes > 0 && votes === top)
+    .map(([spottingId]) => spottingId));
   const unavailableVote = ownVote && !eligible.some(spot => spot.id === ownVote.spottingId);
   return {
     hasVote: Boolean(ownVote),
+    hasTiedLeaders: leaders.size > 1,
     unavailableVoteToken: unavailableVote ? voteWithdrawalToken(userId, voteDay, ownVote) : null,
     candidates: eligible.map(spot => ({
       ...publicSighting(spot),
@@ -102,7 +104,7 @@ async function ballot(recent, voteDay, now, userId) {
       votes: votesBySpot.get(spot.id) || 0,
       isMine: ownVote?.spottingId === spot.id,
       canVote: Boolean(userId && userId !== spot.userId),
-      isLeading: spot.id === leadingId
+      isLeading: leaders.has(spot.id)
     }))
   };
 }

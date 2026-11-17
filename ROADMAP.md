@@ -225,7 +225,8 @@ R14 on 2026-10-01 so they ship before R4.
 - [x] Spot of the Day voting at `/activity` for photos from the public feed's
   recent sightings within the last seven UTC dates. Each signed-in account
   can choose one sighting per day, move or withdraw its vote, and see the
-  current leader. The ballot resets at midnight UTC.
+  current leader. Photos tied for the highest positive vote count each
+  show a shared lead. The ballot resets at midnight UTC.
 - [x] Recent photo quiz records from public garages at `/activity`. The feed
   shows the latest dated personal best per garage, up to 12 records. Scores
   earned before the date was recorded still appear on the leaderboard.
