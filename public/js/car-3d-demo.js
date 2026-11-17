@@ -53,8 +53,10 @@
 
   function armLoadTimer(attempt) {
     stopLoadTimer(attempt);
+    // Hidden tabs can finish downloading while the browser pauses rendering.
+    if (document.visibilityState === 'hidden') return;
     const timer = setTimeout(() => {
-      if (attempt.timer === timer) fail(attempt, 'Loading took too long.');
+      if (attempt.timer === timer && document.visibilityState !== 'hidden') fail(attempt, 'Loading took too long.');
     }, inactivityTimeoutMs);
     attempt.timer = timer;
   }
@@ -162,6 +164,9 @@
     document.head.appendChild(script);
   }
 
+  document.addEventListener('visibilitychange', () => {
+    if (current && stage.dataset.state === 'loading') armLoadTimer(current);
+  });
   button.addEventListener('click', () => {
     const state = stage.dataset.state;
     if (state === 'loading' || state === 'ready') {
