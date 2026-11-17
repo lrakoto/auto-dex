@@ -457,8 +457,14 @@ R14 on 2026-10-01 so they ship before R4.
   has 73,408 rendered triangles and weighs 1,455,000 bytes without textures.
   The instrument cluster is visible from the rear quarter through the
   driver's window. Direct side reflections can obscure the small markings.
-  The cabin surfaces and colors are approximate. The lower cabin and tire
-  tread still need detail.
+  The eighth export recesses the carpeted floor below the sill, shapes the
+  transmission tunnel and toe board, and gives both bench seats cushions and
+  supports. The automatic-transmission layout includes a suspended service
+  brake, floor-pivoted accelerator, outboard parking brake with a separate
+  release, and a floor high-beam switch. The complete steering-wheel rim
+  is visible from the driver's seat. The export has 80,604 rendered triangles
+  and weighs 1,684,484 bytes without textures. Floor contours and controls
+  are approximate. Inner door panels and tire tread still need detail.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
@@ -472,6 +478,8 @@ R14 on 2026-10-01 so they ship before R4.
   [Chevrolet's dashboard equipment](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=11) ·
   [Chevrolet chassis service manual, Fig. 38](https://drive.google.com/file/d/0B0llMKUpqcpRczZlVEdXMXJWbG8/view?usp=sharing&resourcekey=0-aYaxonz4ae9wSPUK_C4d0A) ·
   [Instrument panel on a 16647 coupe](https://bringatrailer.com/wp-content/uploads/2022/06/1969_chevrolet_caprice-2-dr-sedan-427-v-8_20220806_114847-17069-scaled.jpg?w=1100) ·
+  [Chevrolet's parking brake specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
+  [Pedal layout on a bench-seat 16647 coupe](https://topclassiccarsforsale.com/chevrolet/311561-1969-chevrolet-caprice-coupe-unrestored-original-26k-miles-like-impala.html) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
