@@ -2663,7 +2663,7 @@ textarea:focus-visible,
 .puzzle-board-scroll { overflow-x: auto; max-width: 100%; margin-bottom: 1.25rem; }
 .puzzle-board-scroll:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .puzzle-board { width: 100%; border-collapse: collapse; }
-.puzzle-board th {
+.puzzle-board thead th {
   padding: 0 0.5rem 0.4rem 0;
   font-size: 0.66rem;
   font-weight: 700;
@@ -2672,21 +2672,22 @@ textarea:focus-visible,
   color: var(--text-muted);
   text-align: left;
 }
-.puzzle-board td { padding: 0.25rem 0.5rem 0.25rem 0; vertical-align: middle; }
-.puzzle-guess-name { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+.puzzle-board tbody th, .puzzle-board td { padding: 0.25rem 0.5rem 0.25rem 0; vertical-align: middle; }
+.puzzle-guess-name { font-size: 0.85rem; font-weight: 400; text-align: left; color: var(--text-muted); white-space: nowrap; }
 .puzzle-board tr.is-correct-row .puzzle-guess-name { color: var(--text); font-weight: 600; }
 .puzzle-tile {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
+  padding: 0.3rem 0.45rem;
   font-size: 0.78rem;
   font-weight: 600;
   white-space: nowrap;
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-hover);
-  color: var(--text-muted);
+  color: var(--text);
 }
 .puzzle-tile--exact {
   color: #0a2e1a;
@@ -2698,9 +2699,17 @@ textarea:focus-visible,
   background: #facc15;
   border-color: #facc15;
 }
-.puzzle-tile--wrong { opacity: 0.6; }
-.puzzle-tile--unknown { opacity: 0.5; font-style: italic; }
-.puzzle-arrow { font-size: 0.85rem; }
+.puzzle-tile--unknown { font-style: italic; }
+.puzzle-result-symbol, .puzzle-arrow { font-size: 0.85rem; font-weight: 700; font-style: normal; }
+.puzzle-legend-heading { margin: 0; font-size: 1rem; }
+.puzzle-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
 .puzzle-result { padding-top: 1rem; border-top: 1px solid var(--border); }
 .puzzle-verdict { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 700; color: var(--text); }
 .puzzle-verdict.is-correct { color: #4ade80; }

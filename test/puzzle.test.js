@@ -23,6 +23,25 @@ function assertShareResult(html, score, rows) {
   if (!/\breadonly\b/.test(field[0].split('>')[0])) throw new Error('share text must be usable for manual copying');
 }
 
+function guessBoard(html) {
+  const board = html.match(/<table class="puzzle-board"[^>]*>[\s\S]*?<\/table>/);
+  assert.ok(board, 'puzzle guess board is missing');
+  return board[0];
+}
+
+function scoredTiles(board, state, value) {
+  return Array.from(board.matchAll(/<td\b[^>]*>[\s\S]*?<\/td>/g), ([tile]) => tile)
+    .filter(tile => tile.includes(`puzzle-tile--${state}"`) && tile.replace(/<[^>]+>/g, ' ').includes(value));
+}
+
+function assertTileFeedback(tile, symbol, label, arrow) {
+  assert.ok(tile, `missing puzzle tile for ${label}`);
+  assert.ok(tile.includes(`class="puzzle-result-symbol" aria-hidden="true">${symbol}</span>`));
+  const spoken = tile.match(/<span class="sr-only">([^<]+)<\/span>/);
+  assert.ok(spoken?.[1].includes(label), `missing screen-reader text: ${label}`);
+  if (arrow) assert.ok(tile.includes(`class="puzzle-arrow" aria-hidden="true">${arrow}</span>`));
+}
+
 describe('Daily car puzzle', function() {
   describe('pure helpers', function() {
     let realGetFuelSpecs;
@@ -116,9 +135,9 @@ describe('Daily car puzzle', function() {
         csrfToken: 'test', guessesLeft: 5, maxGuesses: 6
       });
       if (!html.includes('Honda Puzzle Guess') || !html.includes('5 guesses left')) throw new Error('legacy guess was lost');
-      if ((html.match(/puzzle-tile--unknown">Unknown<\/span><\/td>/g) || []).length !== 3) {
-        throw new Error('legacy cells did not use the unknown state');
-      }
+      const tiles = scoredTiles(guessBoard(html), 'unknown', 'Unknown');
+      assert.equal(tiles.length, 3, 'legacy cells did not use the unknown state');
+      for (const tile of tiles) assertTileFeedback(tile, '?', 'Not enough data');
     });
   });
 
@@ -219,8 +238,12 @@ describe('Daily car puzzle', function() {
 
       const res = await agent.get('/puzzle').expect(200);
       if (!res.text.includes('Puzzle Future')) throw new Error('guess not shown');
-      if (!res.text.includes('puzzle-tile--wrong">Honda<')) throw new Error('make should read wrong');
-      if (!res.text.includes('puzzle-tile--exact">Japan<')) throw new Error('country should read exact (Honda is Japanese too)');
+      const board = guessBoard(res.text);
+      assert.equal((board.match(/<th\b[^>]*\bscope="col"/g) || []).length, 7);
+      assert.match(board, /<th\b[^>]*\bscope="row"[^>]*>\s*Honda Puzzle Future\s*<\/th>/);
+      assertTileFeedback(scoredTiles(board, 'wrong', 'Honda')[0], '×', 'Different');
+      assertTileFeedback(scoredTiles(board, 'exact', 'Japan')[0], '✓', 'Match');
+      assertTileFeedback(scoredTiles(board, 'wrong', '2010s')[0], '×', 'Different. Guess an earlier decade', '↓');
       if (!res.text.includes('5 guesses left')) throw new Error('did not spend a guess');
       if (res.text.includes('id="puzzle-share-text"')) throw new Error('unfinished puzzle has a share result');
     });
@@ -252,8 +275,8 @@ describe('Daily car puzzle', function() {
       const ongoing = await agent.get('/puzzle').expect(200);
       assert.ok(ongoing.text.includes(notice));
       assert.match(ongoing.text, /5 guesses left/);
-      assert.match(ongoing.text, /class="puzzle-guess-name">Honda Puzzle Future<\/td>/);
-      assert.doesNotMatch(ongoing.text, /class="puzzle-guess-name">Toyota Puzzle Twin<\/td>/);
+      assert.match(ongoing.text, /class="puzzle-guess-name">Honda Puzzle Future<\/th>/);
+      assert.doesNotMatch(ongoing.text, /class="puzzle-guess-name">Toyota Puzzle Twin<\/th>/);
     });
 
     it('scores class, drive and fuel tiles on their own data, independent of make', async function() {
@@ -264,9 +287,10 @@ describe('Daily car puzzle', function() {
       await agent.post('/puzzle/guess').type('form').send({ guess: 'Honda Puzzle Future', _csrf: token }).expect(302);
 
       const res = await agent.get('/puzzle').expect(200);
-      if (!res.text.includes('puzzle-tile--exact">Compact Cars<')) throw new Error('class should read exact');
-      if (!res.text.includes('puzzle-tile--exact">Front-Wheel Drive<')) throw new Error('drive should read exact');
-      if (!res.text.includes('puzzle-tile--exact">Regular Gasoline<')) throw new Error('fuel should read exact');
+      const board = guessBoard(res.text);
+      for (const value of ['Compact Cars', 'Front-Wheel Drive', 'Regular Gasoline']) {
+        assertTileFeedback(scoredTiles(board, 'exact', value)[0], '✓', 'Match');
+      }
     });
 
     it('scores class, drive and fuel tiles as wrong when FuelEconomy.gov data differs', async function() {
@@ -275,9 +299,10 @@ describe('Daily car puzzle', function() {
       await agent.post('/puzzle/guess').type('form').send({ guess: 'Toyota Puzzle Twin', _csrf: token }).expect(302);
 
       const res = await agent.get('/puzzle').expect(200);
-      if (!res.text.includes('puzzle-tile--wrong">Pickup Trucks<')) throw new Error('class should read wrong');
-      if (!res.text.includes('puzzle-tile--wrong">Rear-Wheel Drive<')) throw new Error('drive should read wrong');
-      if (!res.text.includes('puzzle-tile--wrong">Premium Gasoline<')) throw new Error('fuel should read wrong');
+      const board = guessBoard(res.text);
+      for (const value of ['Pickup Trucks', 'Rear-Wheel Drive', 'Premium Gasoline']) {
+        assertTileFeedback(scoredTiles(board, 'wrong', value)[0], '×', 'Different');
+      }
     });
 
     it('shows an unknown tile when the guess has no FuelEconomy.gov data', async function() {
@@ -286,9 +311,33 @@ describe('Daily car puzzle', function() {
       await agent.post('/puzzle/guess').type('form').send({ guess: 'Ford Puzzle Vintage', _csrf: token }).expect(302);
 
       const res = await agent.get('/puzzle').expect(200);
-      const board = res.text.slice(res.text.indexOf('puzzle-board'), res.text.indexOf('</table>'));
-      const unknownTiles = board.match(/puzzle-tile--unknown">Unknown</g) || [];
-      if (unknownTiles.length !== 3) throw new Error('expected 3 unknown tiles (class, drive, fuel) on the board: ' + unknownTiles.length);
+      const board = guessBoard(res.text);
+      const tiles = scoredTiles(board, 'unknown', 'Unknown');
+      assert.equal(tiles.length, 3, 'expected the class, drive, and fuel tiles to be unknown');
+      for (const tile of tiles) assertTileFeedback(tile, '?', 'Not enough data');
+      assertTileFeedback(scoredTiles(board, 'wrong', '1960s')[0], '×', 'Different. Guess a later decade', '↑');
+    });
+
+    it('labels known guess values as unknown when the answer has no specs', async function() {
+      const getFuelSpecs = carinfo.getFuelSpecs;
+      carinfo.getFuelSpecs = async (make, model, year) => model === answerRow.model ? null : getFuelSpecs(make, model, year);
+      puzzle.clearPuzzleCache();
+      try {
+        const agent = request.agent(app);
+        const token = await getCsrfToken(agent, '/puzzle');
+        for (const guess of ['Honda Puzzle Future', 'Honda Puzzle Recent']) {
+          await agent.post('/puzzle/guess').type('form').send({ guess, _csrf: token }).expect(302);
+        }
+        const res = await agent.get('/puzzle').expect(200);
+        const board = guessBoard(res.text);
+        for (const value of ['Compact Cars', 'Front-Wheel Drive', 'Regular Gasoline']) {
+          assertTileFeedback(scoredTiles(board, 'unknown', value)[0], '?', 'Not enough data');
+        }
+        assertTileFeedback(scoredTiles(board, 'close', '2000s')[0], '≈', 'Close. Guess an earlier decade', '↓');
+      } finally {
+        carinfo.getFuelSpecs = getFuelSpecs;
+        puzzle.clearPuzzleCache();
+      }
     });
 
     it('rejects a guess that is not in the catalog without spending one', async function() {

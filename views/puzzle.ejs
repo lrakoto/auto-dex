@@ -1,8 +1,20 @@
+<%
+  const tileResults = {
+    exact: { symbol: '✓', label: 'Match' },
+    close: { symbol: '≈', label: 'Close' },
+    wrong: { symbol: '×', label: 'Different' },
+    unknown: { symbol: '?', label: 'Not enough data' }
+  };
+  const decadeDirections = {
+    higher: { symbol: '↑', label: 'Guess a later decade' },
+    lower: { symbol: '↓', label: 'Guess an earlier decade' }
+  };
+%>
 <section class="jumbotron text-center">
   <div class="container">
     <p class="eyebrow">Daily Puzzle</p>
     <h1 class="jumbotron-heading">Guess the Mystery Car</h1>
-    <p class="lead text-muted">One car, the same for everyone today. Six guesses — each one checks the make, country and decade against the answer.</p>
+    <p class="lead text-muted">Everyone gets the same car and six guesses. Clues cover make, country, decade, class, drivetrain and fuel.</p>
   </div>
 </section>
 
@@ -34,24 +46,39 @@
             <div class="puzzle-board-scroll" role="region" aria-label="Guess board" tabindex="0">
               <table class="puzzle-board" aria-label="Your guesses so far">
                 <thead>
-                  <tr><th>Guess</th><th>Make</th><th>Country</th><th>Decade</th><th>Class</th><th>Drive</th><th>Fuel</th></tr>
+                  <tr>
+                    <th scope="col">Guess</th>
+                    <th scope="col">Make</th>
+                    <th scope="col">Country</th>
+                    <th scope="col">Decade</th>
+                    <th scope="col">Class</th>
+                    <th scope="col">Drive</th>
+                    <th scope="col">Fuel</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  <% guesses.forEach(g => { %>
+                  <% guesses.forEach(g => {
+                    const tiles = [
+                      [g.make, g.makeState],
+                      [g.country, g.countryState],
+                      [g.decade + 's', g.decadeState, decadeDirections[g.decadeDirection]],
+                      [g.bodyClass, g.bodyClassState],
+                      [g.drive, g.driveState],
+                      [g.fuel, g.fuelState]
+                    ];
+                  %>
                     <tr class="<%= g.correct ? 'is-correct-row' : '' %>">
-                      <td class="puzzle-guess-name"><%= g.make %> <%= g.model %></td>
-                      <td><span class="puzzle-tile puzzle-tile--<%= g.makeState %>"><%= g.make %></span></td>
-                      <td><span class="puzzle-tile puzzle-tile--<%= g.countryState %>"><%= g.country %></span></td>
-                      <td>
-                        <span class="puzzle-tile puzzle-tile--<%= g.decadeState %>">
-                          <%= g.decade %>s
-                          <% if (g.decadeDirection === 'higher') { %><span class="puzzle-arrow" aria-label="guess a later decade">&uarr;</span><% } %>
-                          <% if (g.decadeDirection === 'lower') { %><span class="puzzle-arrow" aria-label="guess an earlier decade">&darr;</span><% } %>
-                        </span>
-                      </td>
-                      <td><span class="puzzle-tile puzzle-tile--<%= g.bodyClassState || 'unknown' %>"><%= g.bodyClass || 'Unknown' %></span></td>
-                      <td><span class="puzzle-tile puzzle-tile--<%= g.driveState || 'unknown' %>"><%= g.drive || 'Unknown' %></span></td>
-                      <td><span class="puzzle-tile puzzle-tile--<%= g.fuelState || 'unknown' %>"><%= g.fuel || 'Unknown' %></span></td>
+                      <th scope="row" class="puzzle-guess-name"><%= g.make %> <%= g.model %></th>
+                      <% tiles.forEach(([value, comparison, direction]) => {
+                        const state = comparison || 'unknown';
+                        const result = tileResults[state];
+                      %>
+                        <td><span class="puzzle-tile puzzle-tile--<%= state %>"><%= value || 'Unknown' %>
+                          <span class="puzzle-result-symbol" aria-hidden="true"><%= result.symbol %></span>
+                          <% if (direction) { %><span class="puzzle-arrow" aria-hidden="true"><%= direction.symbol %></span><% } %>
+                          <span class="sr-only"> · <%= result.label %><% if (direction) { %>. <%= direction.label %><% } %></span>
+                        </span></td>
+                      <% }) %>
                     </tr>
                   <% }) %>
                 </tbody>
@@ -94,8 +121,13 @@
 
     <aside class="puzzle-side">
       <div class="media-card">
-        <h5>How to read a tile</h5>
-        <p class="puzzle-note"><span class="puzzle-tile puzzle-tile--exact">Green</span> is an exact match. <span class="puzzle-tile puzzle-tile--close">Yellow</span> means the decade is one off. An arrow points to a later (&uarr;) or earlier (&darr;) decade than your guess. Class, drive and fuel are exact or wrong only; a faded <span class="puzzle-tile puzzle-tile--unknown">Unknown</span> tile means the data needed to score it is unavailable.</p>
+        <h2 class="puzzle-legend-heading" id="puzzle-legend-heading">How to read a tile</h2>
+        <ul class="puzzle-legend" aria-labelledby="puzzle-legend-heading" role="list">
+          <% Object.entries(tileResults).forEach(([state, result]) => { %>
+            <li><span class="puzzle-tile puzzle-tile--<%= state %>"><span class="puzzle-result-symbol" aria-hidden="true"><%= result.symbol %></span> <%= result.label %></span></li>
+          <% }) %>
+        </ul>
+        <p class="puzzle-note">Close means one decade away. Arrows point to a later <span aria-hidden="true">(↑)</span> or earlier <span aria-hidden="true">(↓)</span> decade.</p>
       </div>
       <% if (typeof accountStats !== 'undefined' && accountStats) { %>
         <section id="puzzle-account-stats" class="media-card puzzle-account-stats" aria-labelledby="puzzle-account-stats-heading">
