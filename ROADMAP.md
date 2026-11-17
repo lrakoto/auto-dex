@@ -498,11 +498,21 @@ R14 on 2026-10-01 so they ship before R4.
   widths are approximate. The glass shapes and overall vehicle dimensions
   were preserved. The export has 137,252 rendered triangles and weighs
   2,259,552 bytes without textures.
+  The thirteenth export makes the ventless door glass and rear quarter
+  glass separate panes on each side. A slim bright retainer and a dark
+  rubber lip sit on the leading edge of each quarter pane, following
+  Fisher Body's front vertical weatherstrip. The hardtop opening stays
+  pillarless. The profiles and the existing joint position are approximate.
+  The joint still sits forward of the rear door shutline. The rest of the
+  car and its overall dimensions were preserved. The export has 137,592
+  rendered triangles and weighs 2,271,568 bytes without textures.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
+  [Fisher Body's ventless door glass assembly](https://www.camaros.org/pdf/1969FisherBody.pdf#page=126) ·
+  [Fisher Body's quarter glass assembly and vertical weatherstrip](https://www.camaros.org/pdf/1969FisherBody.pdf#page=173) ·
   [Fisher Body's windshield reveal parts](https://www.camaros.org/pdf/1969FisherBody.pdf#page=558) ·
   [Fisher Body's rear-window reveal parts](https://www.camaros.org/pdf/1969FisherBody.pdf#page=561) ·
   [Chevrolet's Custom Coupe rear-window illustration](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=2) ·
