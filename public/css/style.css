@@ -2676,6 +2676,7 @@ textarea:focus-visible,
 .puzzle-guess-name { font-size: 0.85rem; font-weight: 400; text-align: left; color: var(--text-muted); white-space: nowrap; }
 .puzzle-board tr.is-correct-row .puzzle-guess-name { color: var(--text); font-weight: 600; }
 .puzzle-tile {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
