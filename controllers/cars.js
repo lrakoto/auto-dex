@@ -269,7 +269,7 @@ router.get('/', async (req, res) => {
     const make = await lookupMake(requested);
     if (!make) return notFound(res);
     if (make !== requested) {
-      return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${wantedType ? typeParam(wantedType) : ''}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
+      return res.redirect(301, `/cars?selectmake=${encodeURIComponent(make)}${wantedType ? '&type=' + wantedType : ''}${year ? '&year=' + year : ''}${page > 1 ? '&page=' + page : ''}`);
     }
 
     const isCarMake = carquery.MAKES_LIST.includes(make);
@@ -351,8 +351,17 @@ router.get('/', async (req, res) => {
     }
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
-    const baseUrl = `/cars?selectmake=${encodeURIComponent(make)}${typeParam(type)}${year ? '&year=' + year : ''}&page=`;
-    const viewData = { search: make, carImg: pagedCars, page, totalPages, total, baseUrl };
+    const makeUrl = `/cars?selectmake=${encodeURIComponent(make)}`;
+    const browseType = wantedType || (type === 'car' ? null : type);
+    const browseUrl = makeUrl + (browseType ? '&type=' + browseType : '');
+    const baseUrl = browseUrl + (year ? '&year=' + year : '') + '&page=';
+    const emptyState = year && total === 0 ? {
+      title: `No models found for ${year}`,
+      message: 'Browse all model years to see this manufacturer’s listings.',
+      href: browseUrl,
+      action: 'Clear year filter'
+    } : null;
+    const viewData = { search: make, carImg: pagedCars, page, totalPages, total, baseUrl, emptyState };
     if (req.query.partial === '1') {
       return res.render('partials/car-grid', { ...viewData, layout: false });
     }
@@ -366,11 +375,11 @@ router.get('/', async (req, res) => {
 
     const noun = TYPE_NOUNS[type];
     Object.assign(viewData, {
-      year, yearOptions, dexProgress, type, tabs,
+      year, yearOptions, dexProgress, type, tabs, browseType,
       typeParam: typeParam(type),
       // Each make is its own page to search engines (req.path alone made
       // every make canonicalize to /cars). Year filters point at the make.
-      canonicalPath: `/cars?selectmake=${encodeURIComponent(make)}${typeParam(type)}${page > 1 && !year ? '&page=' + page : ''}`,
+      canonicalPath: `${makeUrl}${typeParam(type)}${page > 1 && !year ? '&page=' + page : ''}`,
       pageTitle: `${make} ${noun}${year ? ' (' + year + ')' : ''} — AutoDex`,
       pageDescription: `Browse ${total} ${make} ${noun.toLowerCase()}${year ? ' from ' + year : ''} on AutoDex.`
     });
