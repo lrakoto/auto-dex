@@ -32,7 +32,12 @@
               <div class="activity-details">
                 <h3><a href="<%= candidate.carUrl %>"><%= vehicle %></a></h3>
                 <a class="activity-garage" href="<%= candidate.garageUrl %>"><%= candidate.garageName %></a>
-                <p class="activity-candidate-count"><%= candidate.votes %> <%= candidate.votes === 1 ? 'vote' : 'votes' %><% if (candidate.isLeading) { %> · <strong>Leading today</strong><% } %></p>
+                <p class="activity-candidate-count">
+                  <%= candidate.votes %> <%= candidate.votes === 1 ? 'vote' : 'votes' %>
+                  <% if (candidate.isLeading) { %>
+                    · <strong><%= hasTiedLeaders ? 'Tied for the lead' : 'Leading today' %></strong>
+                  <% } %>
+                </p>
                 <% if (currentUser && !candidate.canVote && !candidate.isMine) { %>
                   <p class="activity-candidate-count">Your sighting</p>
                 <% } %>

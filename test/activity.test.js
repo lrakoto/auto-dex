@@ -305,6 +305,36 @@ describe('Public sightings feed', function () {
       assert.doesNotMatch(await feed(), /Leading today/i);
     });
 
+    it('marks only positive co-leaders and returns to a single leader after a vote moves', async function () {
+      const day = utcDay(new Date());
+      const submitter = await owner('tie_submitter', true);
+      const models = await cars('Tie First', 'Tie Second', 'Tie Lower');
+      const [first, second, lower] = await Promise.all(models.map((car, i) =>
+        recentSpot(submitter, car, new Date(day), photo('tie-' + i))));
+
+      function leadLabels(html) {
+        const rows = html.match(/<li class="activity-candidate">[\s\S]*?<\/li>/g) || [];
+        return models.map(car => {
+          const row = rows.find(entry => entry.includes(modelMarker(car)));
+          assert.ok(row, 'missing ballot candidate ' + car.model);
+          return row.match(/Tied for the lead|Leading today/g) || [];
+        });
+      }
+
+      assert.deepEqual(leadLabels(await feed()), [[], [], []]);
+
+      const voters = await Promise.all(Array.from({ length: 5 }, (_, i) => owner('tie_voter_' + i, false)));
+      await db.spot_vote.bulkCreate([first.id, first.id, second.id, second.id, lower.id].map((spottingId, i) => ({
+        spottingId, userId: voters[i].id, voteDay: day
+      })));
+      assert.deepEqual(leadLabels(await feed()), [['Tied for the lead'], ['Tied for the lead'], []]);
+
+      const { agent, _csrf } = await signIn(voters[0]);
+      await postVote(agent, { spottingId: second.id, day, action: 'vote', _csrf })
+        .expect(302).expect('Location', ballotPath);
+      assert.deepEqual(leadLabels(await feed()), [[], ['Leading today'], []]);
+    });
+
     it('allows withdrawal when the voted sighting is no longer public', async function () {
       const day = utcDay(new Date());
       const yesterday = utcDay(new Date(Date.parse(day) - dayMs));
