@@ -59,6 +59,12 @@
           <div class="activity-details">
             <h2><a href="<%= spot.carUrl %>"><%= spot.make %> <%= spot.model %></a></h2>
             <a class="activity-garage" href="<%= spot.garageUrl %>"><%= spot.garageName %></a>
+            <% if (spot.firstSpot) { %>
+              <span class="activity-first-spot" title="First sighting still in this garage">
+                <span aria-hidden="true"><%= firstSpotBadge.icon %></span> <%= firstSpotBadge.name %>
+                <span class="sr-only"> badge. First sighting still in this garage.</span>
+              </span>
+            <% } %>
           </div>
           <time datetime="<%= spot.dateIso %>"><%= spot.dateLabel %></time>
         </li>

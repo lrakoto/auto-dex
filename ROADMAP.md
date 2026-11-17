@@ -227,6 +227,8 @@ R14 on 2026-10-01 so they ship before R4.
   shows the latest dated personal best per garage, up to 12 records. Scores
   earned before the date was recorded still appear on the leaderboard.
 - [ ] Badge activity from public garages.
+  The First Spot badge appears beside a sighting already in the feed when
+  it is the earliest retained sighting in that public garage.
 
 ### R13 — Build log
 - [x] Modifications on garage cars (part, vendor, cost, date, photos) beside

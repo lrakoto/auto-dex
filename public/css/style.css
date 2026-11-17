@@ -2248,6 +2248,15 @@ textarea:focus-visible,
 .activity-details h2 { margin: 0; font-size: 1.05rem; }
 .activity-garage, .activity-sighting time, .activity-quiz-record time { color: #a1a1aa; font-size: 0.82rem; }
 .activity-garage { text-decoration: underline; text-underline-offset: 0.15em; }
+.activity-first-spot {
+  display: inline-block;
+  margin-inline-start: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  color: var(--text);
+  font-size: 0.75rem;
+}
 .activity-sighting time, .activity-quiz-record time { margin-left: auto; white-space: nowrap; }
 .activity-sightings-empty { margin: 1rem 0; color: #a1a1aa; }
 .activity-quiz { margin-top: 1.5rem; }

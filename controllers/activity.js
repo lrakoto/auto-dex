@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../models');
 const isLoggedIn = require('../middleware/isLoggedIn');
 const { PLACEHOLDER_URL } = require('../lib/constants');
-const { RECENT_SPOTS } = require('../lib/dex');
+const { BADGES, RECENT_SPOTS } = require('../lib/dex');
 const { getRecentRecords } = require('../lib/quiz');
 const { isValidImageUrl } = require('../lib/validators');
 
@@ -13,12 +13,23 @@ const dayLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'sho
 const voteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
 const { Op } = db.Sequelize;
 const utcDay = now => now.toISOString().slice(0, 10);
+const firstSpotBadge = BADGES.find(badge => badge.id === 'first-spot');
 
-function recentSightings(transaction) {
+function recentSightings({ transaction, includeFirstSpot = false } = {}) {
+  const attributes = ['id', 'userId', 'createdAt', 'imageUrl'];
+  if (includeFirstSpot) {
+    // Check the retained ledger, including sightings older than the feed.
+    // Only the boolean for an already-public feed row is returned.
+    attributes.push([db.sequelize.literal(`NOT EXISTS (
+      SELECT 1 FROM spottings AS earlier
+      WHERE earlier."userId" = "spotting"."userId"
+        AND (earlier."createdAt", earlier.id) < ("spotting"."createdAt", "spotting".id)
+    )`), 'isFirstRetained']);
+  }
   // Apply the public feed's cap before filtering for photos. The ballot
   // cannot resurface a photo outside that garage's own recent list.
   return db.spotting.findAll({
-    attributes: ['id', 'userId', 'createdAt', 'imageUrl'],
+    attributes,
     include: [
       { model: db.user, attributes: ['username'], where: { garagePublic: true, username: { [Op.ne]: '' } } },
       { model: db.car, attributes: ['make', 'model'], required: true }
@@ -104,9 +115,13 @@ router.get('/', async (req, res, next) => {
   try {
     const now = new Date();
     const voteDay = utcDay(now);
-    const [recent, records] = await Promise.all([recentSightings(), getRecentRecords()]);
+    const [recent, records] = await Promise.all([recentSightings({ includeFirstSpot: true }), getRecentRecords()]);
     res.render('activity', {
-      spots: recent.map(publicSighting),
+      spots: recent.map(spot => ({
+        ...publicSighting(spot),
+        firstSpot: Boolean(spot.get('isFirstRetained'))
+      })),
+      firstSpotBadge,
       quizRecords: records.map(({ username, quizBest, quizBestAt }) => ({
         garageName: `@${username}`,
         garageUrl: `/u/${encodeURIComponent(username)}`,
@@ -160,7 +175,7 @@ router.post('/vote', isLoggedIn, voteLimiter, async (req, res, next) => {
           attributes: ['id'], where: { id: spottingId, userId: spot.userId }, transaction, lock: transaction.LOCK.SHARE
         });
         if (!locked) return false;
-        const recent = await recentSightings(transaction);
+        const recent = await recentSightings({ transaction });
         if (!photoCandidates(recent, voteDay, now).some(candidate => candidate.id === spottingId)) return false;
         await db.spot_vote.upsert({ userId, voteDay, spottingId }, { transaction, conflictFields: ['userId', 'voteDay'] });
         return true;

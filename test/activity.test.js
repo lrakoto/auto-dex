@@ -45,6 +45,11 @@ describe('Public sightings feed', function () {
   const detail = car => '/cars/car?make=' + encodeURIComponent(car.make) + '&model=' + encodeURIComponent(car.model);
   const modelMarker = car => 'model=' + encodeURIComponent(car.model);
 
+  function sightingRow(html, car) {
+    return (html.match(/<li class="activity-sighting">[\s\S]*?<\/li>/g) || [])
+      .find(row => row.includes(modelMarker(car))) || '';
+  }
+
   afterEach(async function () {
     if (knownUsers.length) await db.user.destroy({ where: { id: knownUsers.splice(0) } });
     if (knownCars.length) await db.car.destroy({ where: { id: knownCars.splice(0) } });
@@ -116,17 +121,61 @@ describe('Public sightings feed', function () {
     const positions = models.map(model => initial.indexOf(modelMarker(model)));
     assert.equal(positions[0], -1);
     assert.ok(positions.slice(1).every((position, i) => position >= 0 && (i === 0 || position < positions[i])));
+    // The oldest sighting is outside the feed, so none of this owner's
+    // visible newer sightings should be marked as their first.
+    assert.doesNotMatch(sightingRow(initial, models[1]), /class="activity-first-spot"/);
+    assert.match(sightingRow(initial, models[12]), /class="activity-first-spot"/);
 
     await second.update({ garagePublic: false });
     const hidden = await feed();
     assert.ok(!hidden.includes(modelMarker(models[12])));
     assert.ok(!hidden.includes('@activity_second'));
     assert.ok(hidden.includes(modelMarker(models[0])));
+    assert.match(sightingRow(hidden, models[0]), /class="activity-first-spot"/);
 
     await sightings[11].destroy();
     const deleted = await feed();
     assert.ok(!deleted.includes(modelMarker(models[11])));
     assert.ok(deleted.includes(modelMarker(models[10])));
+  });
+
+  it('marks only the earliest retained public sighting and follows source and visibility changes', async function () {
+    const publicOwner = await owner('first_badge', true);
+    const privateOwner = await owner('private_badge', false);
+    const [earliest, tied, later, privateModel] = await cars('First Badge Oldest', 'First Badge Tie', 'First Badge Later', 'First Badge Hidden');
+    const first = await spot(publicOwner, earliest, 100);
+    await spot(publicOwner, tied, 100);
+    await spot(publicOwner, later, 200);
+    await spot(privateOwner, privateModel, 10, { notes: 'private-first-badge-note' });
+
+    const original = await feed();
+    const firstRow = sightingRow(original, earliest);
+    assert.match(firstRow, /class="activity-first-spot"/);
+    assert.match(firstRow, /First Spot/);
+    assert.match(firstRow, /First sighting still in this garage/);
+    assert.match(firstRow, /datetime="2099-01-01"/);
+    assert.doesNotMatch(firstRow, /2099-01-01T/);
+    for (const model of [tied, later]) {
+      assert.ok(sightingRow(original, model));
+      assert.doesNotMatch(sightingRow(original, model), /class="activity-first-spot"/);
+    }
+    assert.doesNotMatch(original, /activity_private_badge|private-first-badge-note|First Badge Hidden/);
+
+    await publicOwner.update({ username: 'activity_badge_renamed' });
+    const renamed = await feed();
+    assert.match(sightingRow(renamed, earliest), /href="\/u\/activity_badge_renamed"/);
+    assert.doesNotMatch(renamed, /activity_first_badge/);
+
+    await first.destroy();
+    const deleted = await feed();
+    assert.equal(sightingRow(deleted, earliest), '');
+    assert.match(sightingRow(deleted, tied), /class="activity-first-spot"/);
+    assert.doesNotMatch(sightingRow(deleted, later), /class="activity-first-spot"/);
+
+    await publicOwner.update({ garagePublic: false });
+    const hidden = await feed();
+    assert.equal(sightingRow(hidden, tied), '');
+    assert.doesNotMatch(hidden, /activity_badge_renamed/);
   });
 
   it('shows dated records from public garages in time and ID order, and hides them on unpublish', async function () {
