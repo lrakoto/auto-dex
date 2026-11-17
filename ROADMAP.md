@@ -464,7 +464,13 @@ R14 on 2026-10-01 so they ship before R4.
   release, and a floor high-beam switch. The complete steering-wheel rim
   is visible from the driver's seat. The export has 80,604 rendered triangles
   and weighs 1,684,484 bytes without textures. Floor contours and controls
-  are approximate. Inner door panels and tire tread still need detail.
+  are approximate. The ninth export adds the two front inner door panels
+  with padded sills, bright-edged wood-tone inserts, upholstered seams,
+  carpet, padded armrests, bail releases, manual window cranks, and lock
+  posts. The wood-tone insert turns down at the hinge end. The doors
+  share seven meshes, mirrored in the export. The model has 91,524 rendered
+  triangles and weighs 1,913,164 bytes without textures. The proportions and
+  finish are approximate. Rear quarter trim and tire tread still need detail.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
@@ -480,6 +486,8 @@ R14 on 2026-10-01 so they ship before R4.
   [Instrument panel on a 16647 coupe](https://bringatrailer.com/wp-content/uploads/2022/06/1969_chevrolet_caprice-2-dr-sedan-427-v-8_20220806_114847-17069-scaled.jpg?w=1100) ·
   [Chevrolet's parking brake specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
   [Pedal layout on a bench-seat 16647 coupe](https://topclassiccarsforsale.com/chevrolet/311561-1969-chevrolet-caprice-coupe-unrestored-original-26k-miles-like-impala.html) ·
+  [Fisher Body armrest and release](https://www.camaros.org/pdf/1969FisherBody.pdf#page=330) ·
+  [Manual-window front door on a 16647 coupe](https://topclassiccarsforsale.com/uploads/photoalbum/1969-chevrolet-caprice-coupe-unrestored-original-26k-miles-like-impala-6.jpg) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
