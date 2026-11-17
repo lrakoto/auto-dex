@@ -229,6 +229,8 @@ R14 on 2026-10-01 so they ship before R4.
 - [ ] Badge activity from public garages.
   The First Spot badge appears beside a sighting already in the feed when
   it is the earliest retained sighting in that public garage.
+  Car Whisperer appears alongside qualifying public quiz records. The
+  displayed date belongs to the personal best.
 
 ### R13 — Build log
 - [x] Modifications on garage cars (part, vendor, cost, date, photos) beside
