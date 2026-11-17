@@ -491,11 +491,21 @@ R14 on 2026-10-01 so they ship before R4.
   against the preceding export. The tread is an original period-style
   approximation. The model has 133,700 rendered triangles and weighs
   2,138,496 bytes without textures.
+  The twelfth export replaces the flat window bands with a rounded bright
+  windshield surround and bright trim across the top and sides of the rear
+  window. Separate dark seals follow both panes, and the rear lower edge
+  keeps the subdued finish seen on the Custom Coupe. The trim profiles and
+  widths are approximate. The glass shapes and overall vehicle dimensions
+  were preserved. The export has 137,252 rendered triangles and weighs
+  2,259,552 bytes without textures.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
+  [Fisher Body's windshield reveal parts](https://www.camaros.org/pdf/1969FisherBody.pdf#page=558) ·
+  [Fisher Body's rear-window reveal parts](https://www.camaros.org/pdf/1969FisherBody.pdf#page=561) ·
+  [Chevrolet's Custom Coupe rear-window illustration](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=2) ·
   [Period Firestone dealer ad, October 1969](https://history.hicksvillelibrary.org/sites/default/files/2021-02/MID-ISLAND-HERALD-19691016.pdf#page=5) ·
   [Chevrolet's wheel specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
   [Wheel covers in Chevrolet's dealer mailer](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=1) ·
