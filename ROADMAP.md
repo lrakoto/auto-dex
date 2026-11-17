@@ -480,12 +480,19 @@ R14 on 2026-10-01 so they ship before R4.
   rear glass. Side recesses make room for the armrests alongside the rear
   bench. The model has 96,308 rendered triangles and weighs 2,025,432 bytes
   without textures. The liner contours and finishes are approximate.
-  Tire tread still needs detail.
+  The eleventh export adds four recessed zigzag tread grooves and rounded
+  shoulders to the blackwall tires. All four tires share one mesh and retain
+  the preceding study's estimated 26.2 in diameter and 7.3 in width. The wheel
+  centers, cover geometry, and clearance in the wheel openings were verified
+  against the preceding export. The tread is an original period-style
+  approximation. The model has 133,700 rendered triangles and weighs
+  2,138,496 bytes without textures.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
+  [Period Firestone dealer ad, October 1969](https://history.hicksvillelibrary.org/sites/default/files/2021-02/MID-ISLAND-HERALD-19691016.pdf#page=5) ·
   [Chevrolet's wheel specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
   [Wheel covers in Chevrolet's dealer mailer](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=1) ·
   [Chevrolet's cabin equipment](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=10) ·
