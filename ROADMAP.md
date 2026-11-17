@@ -433,14 +433,21 @@ R14 on 2026-10-01 so they ship before R4.
   separates the bright deck molding, painted lower valance, and rear quarter
   markers. The fourth traces the long door gaps, adds body-color side
   molding between thin bright edges, and fits bright rocker and wheel-opening
-  trim to the open arches. Reducing redundant trim sections cut this export
+  trim to the open arches. Reducing redundant trim sections cut that export
   to 32,656 triangles and 1,066,120 bytes without textures, 24% smaller than
-  the first side-detail export. The glazing and wheel faces are still simplified.
+  the first side-detail export. The fifth uses the factory 14 × 5J rim size
+  and models the full covers with a rounded outer lip, separate slots, fine
+  radial ribs, and blank dark medallions. All four instances use one mesh.
+  The result has 64,336 rendered triangles and weighs 1,082,736 bytes without
+  textures. Factory dimensions and wheel clearance were verified. The glazing
+  is opaque and the tire tread is still simplified.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
+  [Chevrolet's wheel specifications](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=23) ·
+  [Wheel covers in Chevrolet's dealer mailer](https://xr793.com/wp-content/uploads/2018/10/1969-Chevrolet-Pacesetter-Values-Mailer.pdf#page=1) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
