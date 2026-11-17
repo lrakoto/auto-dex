@@ -506,11 +506,23 @@ R14 on 2026-10-01 so they ship before R4.
   The joint still sits forward of the rear door shutline. The rest of the
   car and its overall dimensions were preserved. The export has 137,592
   rendered triangles and weighs 2,271,568 bytes without textures.
+  The fourteenth export uses wheelbase-scaled 16647 side photographs and a
+  Chevrolet brochure profile to extend the rear roof. The backlight and its
+  trim move aft by 27 in in the model. The larger quarter opening retains
+  the slim glass-mounted seal. The lower glass joint and rear door shutline
+  now line up at 96.5 in from the rear bumper in the model, compared with
+  a 21.2 in offset in the preceding export. The rear sail liners and parcel
+  shelf follow the revised cabin. Placement is estimated from images.
+  Overall dimensions, wheelbase, and windshield geometry match the
+  preceding export. The model has 137,596 rendered triangles and weighs
+  2,273,552 bytes without textures.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
   [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
+  [Chevrolet's Custom Coupe side profile](https://www.oldcarbrochures.org/United%20States/Chevrolet/1969-Chevrolet/1969-Chevrolet-Full-Size-Brochure/slides/1969_Chevrolet_Full_Size-26-27.html) ·
+  [Side photos of VIN 166479C006934](https://www.skywayclassics.com/vehicles/sn3234-1969-chevrolet-caprice) ·
   [Fisher Body's ventless door glass assembly](https://www.camaros.org/pdf/1969FisherBody.pdf#page=126) ·
   [Fisher Body's quarter glass assembly and vertical weatherstrip](https://www.camaros.org/pdf/1969FisherBody.pdf#page=173) ·
   [Fisher Body's windshield reveal parts](https://www.camaros.org/pdf/1969FisherBody.pdf#page=558) ·
