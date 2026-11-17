@@ -474,7 +474,13 @@ R14 on 2026-10-01 so they ship before R4.
   posts. The wood-tone insert turns down at the hinge end. The doors
   share seven meshes, mirrored in the export. The model has 91,524 rendered
   triangles and weighs 1,913,164 bytes without textures. The proportions and
-  finish are approximate. Rear quarter trim and tire tread still need detail.
+  finish are approximate. The tenth export adds padded rear quarter trim
+  with bright-edged wood-tone inserts, manual window cranks, armrests with
+  inset closed ashtrays, and matte sail-panel lining between the side and
+  rear glass. Side recesses make room for the armrests alongside the rear
+  bench. The model has 96,308 rendered triangles and weighs 2,025,432 bytes
+  without textures. The liner contours and finishes are approximate.
+  Tire tread still needs detail.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
@@ -492,6 +498,8 @@ R14 on 2026-10-01 so they ship before R4.
   [Pedal layout on a bench-seat 16647 coupe](https://topclassiccarsforsale.com/chevrolet/311561-1969-chevrolet-caprice-coupe-unrestored-original-26k-miles-like-impala.html) ·
   [Fisher Body armrest and release](https://www.camaros.org/pdf/1969FisherBody.pdf#page=330) ·
   [Manual-window front door on a 16647 coupe](https://topclassiccarsforsale.com/uploads/photoalbum/1969-chevrolet-caprice-coupe-unrestored-original-26k-miles-like-impala-6.jpg) ·
+  [Fisher Body rear quarter armrest, Fig. 14-19B](https://www.camaros.org/pdf/1969FisherBody.pdf#page=335) ·
+  [Rear quarter trim on a 16647 coupe](https://bringatrailer.com/wp-content/uploads/2022/06/1969_chevrolet_caprice-2-dr-sedan-427-v-8_dsc04388-4-99118.jpg) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
