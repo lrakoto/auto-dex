@@ -420,6 +420,18 @@ R14 on 2026-10-01 so they ship before R4.
   [Chevrolet's 1973 brochure](https://xr793.com/wp-content/uploads/2021/01/1973-Chevrolet-Caprice-Impala-Bel-Air-v2.pdf#page=2) ·
   [GM's 1980 order guide](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1980-Chevrolet-Impala.pdf) ·
   [GM's 1969 model data](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf).
+- **Private 1969 Caprice scale study.** An original Blender model uses the
+  factory dimensions of the two-door Custom Coupe (16647). The exported
+  GLB measures 5,483.9 × 2,026.9 × 1,371.6 mm (length × width × height),
+  with a 3,022.6 mm wheelbase. Front and rear overhangs are 947.4 and
+  1,513.8 mm. Front and rear tracks are 1,587.5 and 1,585.0 mm. The
+  texture-free export contains 17,832 triangles and weighs 545,048 bytes.
+  The roof, windows, wheels, lights, and trim use simplified geometry.
+  Use the study to check the proportions of a more detailed exterior,
+  starting with the roof pillars and wraparound front bumper.
+  [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
+  [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
+  [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
 - **Historical alternative.** Deutsches Museum publishes its reconstruction of
   Benz Patent-Motorwagen No. 1, inventory 4710, under
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The model
