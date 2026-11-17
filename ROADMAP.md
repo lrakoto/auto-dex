@@ -135,7 +135,10 @@ R14 on 2026-10-01 so they ship before R4.
   Shipped as three more tiles per guess, exact/wrong only (no "close"). The
   day's car warms its lookup without delaying the page, and guess scoring
   gives both cached lookups one short deadline. Missing or slow data reads
-  as a faded "Unknown" tile without affecting the outcome of a guess.
+  as a "Not enough data" result without affecting the outcome of a guess.
+  Symbols and a legend distinguish match, close, different and unavailable
+  scores without color. The guess board exposes scores and decade directions
+  as text for screen readers.
 - [x] A shareable result grid: completed boards offer a spoiler-free emoji
   summary with the UTC date, score, and puzzle link. Copy it with the button
   or select the text manually.
