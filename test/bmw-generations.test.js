@@ -6,7 +6,7 @@ const db = require('../models');
 const carinfo = require('../lib/carinfo');
 const nhtsa = require('../lib/nhtsa');
 const rarity = require('../lib/rarity');
-const { getGenerationHistory } = require('../lib/bmw-generations');
+const { getGenerationHistory } = require('../lib/generation-history');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const archive528iE12 = 'https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-159-1.bmw-528i-e12.html';
 const archive840ci = 'https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html';
@@ -49,10 +49,12 @@ describe('BMW generation references', function() {
   it('uses the U.S. E12 model years and keeps factory production dates separate', function() {
     const e12 = {
       code: 'E12', firstYear: 1979, lastYear: 1981,
-      production: '1977–1981', url: archive528iE12
+      production: '1977–1981', sources: [{ label: 'BMW archive for E12', url: archive528iE12 }]
     };
     for (const year of [1979, 1980, 1981]) {
-      assert.deepEqual(history('528i', [year]), { overview: null, generations: [e12] });
+      assert.deepEqual(history('528i', [year]), {
+        heading: 'BMW generation references', yearLabel: null, overview: null, generations: [e12]
+      });
     }
     const result = history('528i', [1997, 1981, 2008]);
     assert.equal(result.overview, null);
@@ -62,7 +64,7 @@ describe('BMW generation references', function() {
   it('matches the 840Ci archive only for verified U.S. model years', function() {
     const generation = {
       code: 'E31', firstYear: 1994, lastYear: 1997,
-      production: 'July 1993 – May 1999', url: archive840ci
+      production: 'July 1993 – May 1999', sources: [{ label: 'BMW archive for E31', url: archive840ci }]
     };
     for (const year of [1994, 1997]) {
       const result = history('840Ci', [1981, year]);

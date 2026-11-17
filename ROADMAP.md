@@ -279,6 +279,11 @@ R14 on 2026-10-01 so they ship before R4.
   article. [Ford's 1975 brochure](https://www.thehenryford.org/collections/explore/artifact/383704) ·
   [Ford's 1978 brochure](https://www.thehenryford.org/collections/explore/artifact/383723) ·
   [1978 EPA guide](https://www.fueleconomy.gov/feg/epadata/78guide.txt).
+  The civilian [Chevrolet Caprice](https://autodx.io/cars/car?make=Chevrolet&model=Caprice)
+  shows Chevrolet references for U.S. model years 1966–1970 and 1971–1976.
+  The guide distinguishes the 1965 Impala option and the 1973 Classic name.
+  [Chevrolet's 1977 downsizing brochure](https://xr793.com/wp-content/uploads/2017/07/1977-Chevrolet-Caprice-Classic-Impala.pdf#page=2)
+  is the starting point for the next generation.
 - [x] Generation photos for older trims: a series article leads with its
   current generation, so trims that ended years ago (BMW 633CSi, 840Ci) get no
   series photo. Generation articles ("BMW 5 Series (E34)") have the right car;

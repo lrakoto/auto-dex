@@ -1736,6 +1736,14 @@ textarea:focus-visible,
 .fact-row dd a { text-decoration: underline; text-underline-offset: 2px; }
 .generation-references .section-label,
 .generation-references .fact-row dt { color: var(--text); }
+.generation-guide .facts-list { grid-template-columns: minmax(0, 1fr); }
+.generation-guide .fact-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  padding: 0.75rem 0;
+}
+.generation-guide .fact-row dd { text-align: left; line-height: 1.6; }
+.generation-year-label { margin: -0.45rem 0 0.35rem; color: var(--text); font-size: 0.8rem; }
 .facts-source { font-size: 0.7rem; color: var(--text-subtle); margin-top: 0.75rem; }
 .facts-source a { color: var(--text-muted); }
 
