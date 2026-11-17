@@ -431,12 +431,16 @@ R14 on 2026-10-01 so they ship before R4.
   a wraparound rear bumper with six recessed lamps, slim inset rings, and a
   narrow clear backup insert in the middle red lens on each side. It also
   separates the bright deck molding, painted lower valance, and rear quarter
-  markers. The latest export has 22,200 triangles and weighs 719,708 bytes
-  without textures. The glazing is opaque and the wheels are still simplified.
+  markers. The fourth traces the long door gaps, adds body-color side
+  molding between thin bright edges, and fits bright rocker and wheel-opening
+  trim to the open arches. Reducing redundant trim sections cut this export
+  to 32,656 triangles and 1,066,120 bytes without textures, 24% smaller than
+  the first side-detail export. The glazing and wheel faces are still simplified.
   [Front reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847268053%29.jpg) ·
   [Rear reference photo by dave_7](https://commons.wikimedia.org/wiki/File:1969_Chevrolet_Caprice_%284847889450%29.jpg) ·
   [Straight-on Custom Coupe rear photo](https://photos.classiccars.com/cc-temp/listing/207/167/59167482-1969-chevrolet-caprice-std.jpg) ·
   [Original Guide 5961475 backup lens](https://www.taillightking.com/images/69-70_ChevyCar/69_Guide15_5961475_Caprice_Used_BULens.JPG) ·
+  [Chevrolet's exterior equipment table](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=9) ·
   [Chevrolet's model identification](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=7) ·
   [Chevrolet's exterior dimensions](https://www.gm.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1969-Chevrolet.pdf#page=22) ·
   [Chevrolet's AMA roof height](https://autohistorypreservationsociety.org/wp-content/uploads/1969-CHEVROLET-AMA-Specs-Biscayne-Bel-Air-Impala-Caprice-Wagons-PG-1-33.pdf#page=2).
