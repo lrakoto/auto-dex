@@ -279,6 +279,10 @@ R14 on 2026-10-01 so they ship before R4.
   scripted check can't pass; add them once someone confirms their search URL
   in a browser.
 - [ ] Generation pages from Wikipedia/Wikidata generation articles.
+  The BMW 318ti uses the EPA's 1995–1999 U.S. model years. Its E36 Compact
+  reference gives BMW's September 1994–August 2000 factory production dates.
+  [EPA model-year dataset](https://www.fueleconomy.gov/feg/download.shtml) ·
+  [BMW Classic E36 318ti Compact](https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-74-5.bmw-318ti-compact-e36.html).
   BMW detail pages now link to manufacturer records for the E39 528i and
   both the E32 and E38 750iL. The references use stored model years and
   show BMW's factory production dates explicitly.
