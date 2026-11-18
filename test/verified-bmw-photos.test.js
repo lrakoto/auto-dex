@@ -118,6 +118,53 @@ describe('Verified BMW catalog photos', function() {
     }
   });
 
+  it('replaces the 840Ci photo only on the 850CSi and keeps its gallery history', async function() {
+    const oldFile = 'BMW_840_Ci_%287724204324%29_%28cropped%29.jpg';
+    const oldPhoto = thumb('e/ec', oldFile);
+    const verified = thumb('4/40', '1995_BMW_850_CSi.JPG');
+    const credit = 'https://commons.wikimedia.org/wiki/File:1995_BMW_850_CSi.JPG';
+    const cars = await db.car.bulkCreate(['850CSi', '840Ci'].map(model => ({
+      make: 'BMW', model, image: oldPhoto, updated_img: true
+    })));
+    const [csi, ci] = cars;
+    let voter;
+    try {
+      const [oldOnCsi] = await db.car_image.bulkCreate(cars.map(car => ({
+        carId: car.id, url: oldPhoto, source: 'wikimedia', score: 1, credit_name: 'nakhon100'
+      })));
+      voter = await db.user.create({
+        name: '850CSi fixture', email: '850csi-photo@example.test', password: '850csi-photo-fixture-password'
+      });
+      const oldVote = await db.car_image_vote.create({ imageId: oldOnCsi.id, userId: voter.id, value: 1 });
+
+      await images.applyVerifiedCatalogPhotos();
+      await images.applyVerifiedCatalogPhotos();
+
+      assert.equal((await csi.reload()).image, verified);
+      const [replacement, ...otherPhotos] = await gallery.getGallery(csi, voter.id);
+      assert.deepEqual(otherPhotos, []);
+      assert.equal(replacement.url, verified);
+      assert.equal(replacement.credit_name, 'Jagvar');
+      assert.equal(replacement.credit_url, credit);
+      assert.equal(replacement.license, 'Public domain');
+      assert.equal(replacement.license_url, credit + '#Licensing');
+      assert.equal(await db.car_image.count({ where: { carId: csi.id } }), 2);
+      assert.equal(await gallery.vote(oldOnCsi.id, voter.id, -1), null);
+      assert.equal((await oldOnCsi.reload()).score, 1);
+      assert.equal(oldOnCsi.credit_name, 'nakhon100');
+      assert.equal((await oldVote.reload()).value, 1);
+
+      const original = commons + 'e/ec/' + decodeURIComponent(oldFile);
+      await images.addWikipediaPhoto(csi, { url: original });
+      assert.equal(await db.car_image.findOne({ where: { carId: csi.id, url: original } }), null);
+      assert.equal((await ci.reload()).image, oldPhoto);
+      assert.deepEqual((await gallery.getGallery(ci)).map(photo => photo.url), [oldPhoto]);
+    } finally {
+      await db.car.destroy({ where: { id: cars.map(car => car.id) } });
+      if (voter) await voter.destroy();
+    }
+  });
+
   it('fills only eligible missing xDrive covers and retains credited gallery rows and votes', async function() {
     const car = await db.car.create({ ...xDrive, image: null, wiki_checked: true, updated_img: null });
     let voter;

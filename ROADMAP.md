@@ -83,6 +83,10 @@ Check an item off in the same PR that finishes it. Research behind this list
   are excluded from display and selection for the two affected trims.
   [528i photo and license](https://commons.wikimedia.org/wiki/File:2000_BMW_528i_Sedan_in_Jet_Black,_Front_Left,_07-12-2023.jpg) ·
   [750iL photo and dedication](https://commons.wikimedia.org/wiki/File:BMW_750iL.jpg#Licensing).
+- The BMW 850CSi uses Jagvar's public-domain photo of a 1995 850CSi.
+  The previous 840Ci photo stays in the 850CSi's gallery history with its
+  votes and remains eligible on the 840Ci listing.
+  [850CSi photo and dedication](https://commons.wikimedia.org/wiki/File:1995_BMW_850_CSi.JPG#Licensing).
 - The civilian Chevrolet Caprice uses a 1969 coupe photo by dave_7. The 2011
   Caprice Police Vehicle photo remains in the civilian listing's gallery
   history and is excluded from its public gallery and cover selection.
