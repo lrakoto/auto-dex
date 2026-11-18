@@ -1,3 +1,4 @@
+const assert = require('node:assert/strict');
 const path = require('path');
 const ejs = require('ejs');
 const db = require('../models');
@@ -5,7 +6,7 @@ const cache = require('../lib/cache');
 const carinfo = require('../lib/carinfo');
 const wikimedia = require('../lib/wikimedia');
 const unsplash = require('../lib/unsplash');
-const { photoCredit, cardPhoto } = require('../lib/photos');
+const { photoCredit, cardPhoto, photoBackground } = require('../lib/photos');
 const { refreshHero } = require('../lib/gallery');
 const { wikipediaPhotos, addWikipediaPhoto, unsplashImages, WIKI_RECHECK_DAYS } = require('../jobs/images');
 const { PLACEHOLDER_URL } = require('../lib/constants');
@@ -102,12 +103,28 @@ describe('Wikipedia photos (R2)', function() {
       if (wikimedia.fitWidth(1280, 4160) !== 1280) throw new Error('large original');
       if (wikimedia.fitWidth(1280, 1000) !== 960) throw new Error('1000px original');
       if (wikimedia.fitWidth(1280, 400) !== 330) throw new Error('small original');
-      if (cardPhoto(HERO) !== HERO.replace(/1280px-/, '500px-')) throw new Error('card not 500px');
-      const small = HERO.replace(/1280px-/, '500px-');
+      const canonical = HERO.replace('upload.wikimedia.org', 'thumb.wikimedia.org');
+      const small = canonical.replace('1280px-', '500px-');
+      if (cardPhoto(HERO) !== small) throw new Error('card not 500px');
       if (cardPhoto(small) !== small) throw new Error('500px thumb changed');
-      if (wikimedia.sizedPhoto(HERO, 480) !== HERO) throw new Error('non-standard width used');
+      if (wikimedia.sizedPhoto(HERO, 480) !== canonical) throw new Error('non-standard width used');
       const other = 'https://images.unsplash.com/photo-1?w=1080';
       if (cardPhoto(other) !== PLACEHOLDER_URL) throw new Error('Unsplash URL still displayed');
+    });
+
+    it('uses the thumbnail host for display while keeping originals and gallery keys', function() {
+      const canonical = HERO.replace('upload.wikimedia.org', 'thumb.wikimedia.org');
+      const suffix = '?utm_source=commons.wikimedia.org&one=two#photo';
+      assert.equal(wikimedia.sizedPhoto(HERO + suffix), canonical + suffix);
+      assert.equal(cardPhoto(HERO + suffix), canonical.replace('1280px-', '500px-') + suffix);
+      assert.equal(cardPhoto(canonical.replace('1280px-', '120px-')), canonical.replace('1280px-', '120px-'));
+      assert.equal(photoBackground(HERO), `url("${canonical}"), url("${PLACEHOLDER_URL}")`);
+      assert.equal(wikimedia.sizedPhoto(PILOT_ORIGINAL), PILOT_ORIGINAL);
+      const ordinary = HERO.replace('upload.wikimedia.org', 'media.example.test');
+      assert.equal(cardPhoto(ordinary), ordinary);
+      const nonstandard = HERO.replace('1280px-', '640px-');
+      assert.equal(wikimedia.sizedPhoto(nonstandard), nonstandard);
+      assert.equal(wikimedia.thumbUrl(wikimedia.commonsFile(HERO), 1280), HERO);
     });
 
     it('keeps credits as plain text', function() {

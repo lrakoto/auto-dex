@@ -2,6 +2,8 @@
   'use strict';
 
   var PLACEHOLDER = '/assets/no-photo.svg';
+  var COMMONS_THUMBNAIL = /^(\/wikipedia\/commons\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+))\/([1-9]\d*)px-\2$/;
+  var COMMONS_WIDTH = /^(20|40|60|120|250|330|500|960|1280|1920|3840)$/;
   var attempted = new WeakSet();
 
   function isRetiredPhoto(url) {
@@ -32,15 +34,32 @@
     return parsed.relative ? parsed.url.pathname + parsed.url.search + parsed.url.hash : parsed.url.href;
   }
 
-  function cardPhoto(value) {
+  function photoUrl(value, cardWidth) {
     var parsed = imageUrl(value);
     if (!parsed) return PLACEHOLDER;
     var url = parsed.url;
     if (url.hostname === 'upload.wikimedia.org' || url.hostname === 'thumb.wikimedia.org') {
-      var thumb = url.pathname.match(/^(\/wikipedia\/commons\/thumb\/[0-9a-f]\/[0-9a-f]{2}\/([^/]+))\/(\d+)px-\2$/);
-      if (thumb && Number(thumb[3]) > 500) url.pathname = thumb[1] + '/500px-' + thumb[2];
+      var thumb = url.pathname.match(COMMONS_THUMBNAIL);
+      if (thumb) {
+        var width = thumb[3];
+        if (cardWidth && Number(width) > cardWidth) {
+          width = String(cardWidth);
+          url.pathname = thumb[1] + '/' + width + 'px-' + thumb[2];
+        }
+        if (url.protocol === 'https:' && !url.port && !url.username && !url.password && COMMONS_WIDTH.test(width)) {
+          url.hostname = 'thumb.wikimedia.org';
+        }
+      }
     }
     return formatUrl(parsed);
+  }
+
+  function displayPhoto(value) {
+    return photoUrl(value);
+  }
+
+  function cardPhoto(value) {
+    return photoUrl(value, 500);
   }
 
   function failedImage(img) {
@@ -70,5 +89,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scanFailedImages, { once: true });
   else scanFailedImages();
 
-  window.AutoDexPhotos = { cardPhoto: cardPhoto };
+  window.AutoDexPhotos = { displayPhoto: displayPhoto, cardPhoto: cardPhoto };
 })();

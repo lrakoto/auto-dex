@@ -94,7 +94,7 @@
 
     next = data.next;
     skipRoundInput.value = next ? next.id : '';
-    if (next && next.image) new Image().src = next.image; // preload
+    if (next && next.image) new Image().src = window.AutoDexPhotos.displayPhoto(next.image); // preload
     nextBtn.focus({ preventScroll: true });
   }
 
@@ -131,7 +131,7 @@
     if (!next) { window.location.reload(); return; }
     roundInput.value = next.id;
     img.classList.add('is-swapping');
-    img.src = next.image;
+    img.src = window.AutoDexPhotos.displayPhoto(next.image);
     renderCredit(next.credit);
 
     var buttons = choices();

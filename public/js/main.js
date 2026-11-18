@@ -806,7 +806,7 @@
 
   function setHeroImage(url) {
     var hero = document.querySelector('.car-hero');
-    if (hero && url) hero.style.backgroundImage = 'url(' + JSON.stringify(url) + '), url("/assets/no-photo.svg")';
+    if (hero && url) hero.style.backgroundImage = 'url(' + JSON.stringify(window.AutoDexPhotos.displayPhoto(url)) + '), url("/assets/no-photo.svg")';
   }
 
   document.addEventListener('click', function (e) {
