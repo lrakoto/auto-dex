@@ -698,6 +698,12 @@ R14 on 2026-10-01 so they ship before R4.
   2,300,216-byte Caprice GLB transferred 871,767 Brotli bytes together
   after a tap. The interactive model became ready in about 2.8 s at the
   median for each format. A physical-phone check remains open.
+- **Offline Caprice preview.** The private study includes a standalone
+  HTML file with the optimized poster, exact Caprice GLB, and the pinned
+  viewer and its license. Opening the file in desktop Chrome renders the
+  poster and gives the user a button to open the interactive model.
+  Chrome 158 checks at 390 and 1000 CSS px passed keyboard rotation, zoom,
+  reset, and return to the poster. The file made no HTTP requests.
 - **Gzip fallback (2026-11-15).** Desktop WKWebView received the painted
   BMW model and viewer over local HTTP using gzip. Their combined response
   bodies went from 5,851,132 to 3,360,599 bytes (43% smaller) and decoded to
