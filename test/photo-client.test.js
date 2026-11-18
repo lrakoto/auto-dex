@@ -52,12 +52,34 @@ describe('Browser photo handling', function() {
     assert.equal(photos.cardPhoto('https://images.unsplash.com.example.org/car.jpg'), 'https://images.unsplash.com.example.org/car.jpg');
   });
 
-  it('shrinks Commons thumbnails on both hosts without upscaling or changing originals', function() {
+  it('delivers standard Commons thumbnails on the current host without changing their size', function() {
     const { photos } = loadPhotos();
+    const path = '/wikipedia/commons/thumb/a/ab/Car_%28front%29.jpg/';
+    const filename = 'Car_%28front%29.jpg';
+    const current = 'https://thumb.wikimedia.org' + path;
     for (const host of ['upload.wikimedia.org', 'thumb.wikimedia.org']) {
-      const prefix = `https://${host}/wikipedia/commons/thumb/a/ab/Car_%28front%29.jpg/`;
-      assert.equal(photos.cardPhoto(prefix + '1280px-Car_%28front%29.jpg?x=1&amp;y=2'), prefix + '500px-Car_%28front%29.jpg?x=1&y=2');
-      assert.equal(photos.cardPhoto(prefix + '330px-Car_%28front%29.jpg'), prefix + '330px-Car_%28front%29.jpg');
+      const prefix = `https://${host}${path}`;
+      assert.equal(photos.displayPhoto(prefix + '1280px-' + filename + '?x=1&amp;y=2#photo'), current + '1280px-' + filename + '?x=1&y=2#photo');
+      assert.equal(photos.displayPhoto(prefix + '120px-' + filename), current + '120px-' + filename);
+      assert.equal(photos.displayPhoto(prefix + '1024px-' + filename), prefix + '1024px-' + filename);
+    }
+    const original = 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Car.jpg';
+    assert.equal(photos.displayPhoto(original), original);
+    assert.equal(photos.displayPhoto('/assets/local-photo.jpg'), '/assets/local-photo.jpg');
+    const unrelated = 'https://example.com' + path + '1280px-' + filename;
+    assert.equal(photos.displayPhoto(unrelated), unrelated);
+  });
+
+  it('shrinks Commons thumbnails without upscaling or changing originals', function() {
+    const { photos } = loadPhotos();
+    const path = '/wikipedia/commons/thumb/a/ab/Car_%28front%29.jpg/';
+    const filename = 'Car_%28front%29.jpg';
+    const current = 'https://thumb.wikimedia.org' + path;
+    for (const host of ['upload.wikimedia.org', 'thumb.wikimedia.org']) {
+      const prefix = `https://${host}${path}`;
+      assert.equal(photos.cardPhoto(prefix + '1280px-' + filename + '?x=1&amp;y=2'), current + '500px-' + filename + '?x=1&y=2');
+      assert.equal(photos.cardPhoto(prefix + '1024px-' + filename), current + '500px-' + filename);
+      assert.equal(photos.cardPhoto(prefix + '330px-' + filename), current + '330px-' + filename);
     }
     const original = 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Car.jpg';
     assert.equal(photos.cardPhoto(original), original);

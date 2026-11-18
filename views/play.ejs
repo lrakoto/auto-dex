@@ -36,7 +36,7 @@
           <% } %>
 
           <figure class="play-photo">
-            <img id="play-img" src="<%= round.image %>" alt="The mystery <%= noun.toLowerCase() %>">
+            <img id="play-img" src="<%= photoUrl(round.image) %>" alt="The mystery <%= noun.toLowerCase() %>">
             <figcaption class="play-credit" id="play-credit"><%- include('partials/photo-credit', { credit: round.credit }) %></figcaption>
           </figure>
 

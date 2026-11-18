@@ -26,9 +26,10 @@ if (IS_MAIN && process.env.ENABLE_BACKGROUND_JOBS !== 'false' && process.env.NOD
 
 app.set('view engine', 'ejs');
 app.set('trust proxy', 1); // Required for secure cookies behind a reverse proxy
-// View helper: a catalog photo at card size (500px Commons thumbnails)
-app.locals.cardPhoto = require('./lib/photos').cardPhoto;
-app.locals.photoBackground = require('./lib/photos').photoBackground;
+const { cardPhoto, photoBackground, sizedPhoto } = require('./lib/photos');
+app.locals.cardPhoto = cardPhoto;
+app.locals.photoBackground = photoBackground;
+app.locals.photoUrl = sizedPhoto;
 
 app.use(require('./config/security-headers'));
 

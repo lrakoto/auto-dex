@@ -64,6 +64,10 @@ Check an item off in the same PR that finishes it. Research behind this list
   alternatives join the gallery, where eligible photos can be voted on.
 - The owner subsequently approved one exception: retain the original
   decorative Unsplash homepage hero, independently of Car of the Day.
+- Catalog pages use Wikimedia's current thumbnail host for standard-size
+  Commons images. Gallery records and votes keep their stored image URLs.
+  Browse and Search defer image requests below the first three cards.
+  [Wikimedia's thumbnail host change](https://phabricator.wikimedia.org/T427465).
 - While the initial retirement queue remains, the hourly job checks up to
   500 vehicles per run, then returns to its normal 150. Requests stay
   sequential with the same spacing and failure stop; logs distinguish actual

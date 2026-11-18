@@ -28,8 +28,8 @@
     <meta name="twitter:title" content="<%= typeof ogTitle !== 'undefined' ? ogTitle : metaTitle %>">
     <meta name="twitter:description" content="<%= typeof ogDescription !== 'undefined' ? ogDescription : metaDescription %>">
     <% if (typeof ogImage !== 'undefined' && ogImage) { %>
-      <meta property="og:image" content="<%= ogImage %>">
-      <meta name="twitter:image" content="<%= ogImage %>">
+      <meta property="og:image" content="<%= photoUrl(ogImage) %>">
+      <meta name="twitter:image" content="<%= photoUrl(ogImage) %>">
     <% } %>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
