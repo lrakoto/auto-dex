@@ -106,6 +106,8 @@ Check an item off in the same PR that finishes it. Research behind this list
 - Missing Ford Aspire covers use IFCAR's public-domain photo of the
   North American three-door hatchback.
   [Aspire photo and dedication](https://commons.wikimedia.org/wiki/File:Ford_Aspire_front_--_07-22-2010.jpg#Licensing).
+- Missing Ford E-150 covers use MercurySable99's photo of a 2004 cargo van.
+  [E-150 photo and license](https://commons.wikimedia.org/wiki/File:2004_Ford_E-150_cargo_van%2C_front_left%2C_11-24-2023.jpg#Licensing).
 - Missing Ram 2500 covers use Bull-Doser's public-domain photo of a
   2020 Cummins Crew Cab.
   [Ram 2500 photo and dedication](https://commons.wikimedia.org/wiki/File:%2720_Ram_2500_Cummins_Crew_Cab.jpg#Licensing).
