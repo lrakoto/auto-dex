@@ -21,7 +21,7 @@ const xDrivePhoto = thumb('8/8d', '2016_BMW_528i_xDrive.jpg');
 const xDriveCredit = 'https://commons.wikimedia.org/wiki/File:2016_BMW_528i_xDrive.jpg';
 
 describe('Verified BMW catalog photos', function() {
-  it('fills a missing 1M cover with the credited photo for the exact trim', async function() {
+  it('fills missing and retired 1M covers with the credited photo for the exact trim', async function() {
     const photo = thumb('d/d3', 'BMW_1_Series_M_Coupe_%28front_quarter%29.jpg');
     const [oneM, mOne] = await db.car.bulkCreate(['1M', 'M1'].map(model => ({
       make: 'BMW', model, image: PLACEHOLDER_URL, updated_img: false, wiki_checked: true
@@ -41,6 +41,20 @@ describe('Verified BMW catalog photos', function() {
       assert.equal(cover.license_url, 'https://creativecommons.org/licenses/by-sa/3.0/');
       assert.equal((await mOne.reload()).image, PLACEHOLDER_URL);
       assert.deepEqual(await gallery.getGallery(mOne), []);
+
+      const retired = 'https://images.unsplash.com/photo-legacy-bmw-1m';
+      await oneM.update({ image: retired, updated_img: true });
+      assert.equal(oneM.image, PLACEHOLDER_URL);
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await oneM.reload()).image, photo);
+      assert.deepEqual((await gallery.getGallery(oneM)).map(image => image.url), [photo]);
+      const archived = await db.car_image.findOne({ where: { carId: oneM.id, url: retired } });
+      assert.equal(archived.source, 'unsplash');
+      assert.equal(await db.car_image.count({ where: { carId: oneM.id } }), 2);
+
+      await oneM.update({ image: PLACEHOLDER_URL, updated_img: true });
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await oneM.reload()).getDataValue('image'), PLACEHOLDER_URL);
 
       await oneM.update({ image: 'https://example.test/owner-chosen-1m.jpg' });
       await images.applyVerifiedCatalogPhotos();

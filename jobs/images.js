@@ -69,8 +69,11 @@ async function applyVerifiedCatalogPhotos() {
     updated_img: { [Op.not]: true },
     [Op.or]: [{ image: null }, { image: { [Op.in]: ['', PLACEHOLDER_URL] } }]
   };
+  const replaceableCover = {
+    [Op.or]: [missingCover, { image: { [Op.iRegexp]: RETIRED_PHOTO_PATTERN } }]
+  };
   for (const { make, model, wrongFile, photo } of verifiedCatalogPhotos) {
-    const eligible = wrongFile ? { image: { [Op.iRegexp]: wrongFile.source } } : missingCover;
+    const eligible = wrongFile ? { image: { [Op.iRegexp]: wrongFile.source } } : replaceableCover;
     await db.sequelize.transaction(async transaction => {
       const car = await db.car.findOne({
         attributes: ['id', 'image'],
@@ -79,10 +82,11 @@ async function applyVerifiedCatalogPhotos() {
       });
       if (!car) return;
       const previous = car.getDataValue('image');
-      if (wrongFile) {
+      const retired = isRetiredPhoto(previous);
+      if (wrongFile || retired) {
         await db.car_image.findOrCreate({
           where: { carId: car.id, url: previous },
-          defaults: { source: 'catalog' },
+          defaults: { source: retired ? 'unsplash' : 'catalog' },
           transaction
         });
       }
