@@ -21,6 +21,35 @@ const xDrivePhoto = thumb('8/8d', '2016_BMW_528i_xDrive.jpg');
 const xDriveCredit = 'https://commons.wikimedia.org/wiki/File:2016_BMW_528i_xDrive.jpg';
 
 describe('Verified BMW catalog photos', function() {
+  it('fills a missing 1M cover with the credited photo for the exact trim', async function() {
+    const photo = thumb('d/d3', 'BMW_1_Series_M_Coupe_%28front_quarter%29.jpg');
+    const [oneM, mOne] = await db.car.bulkCreate(['1M', 'M1'].map(model => ({
+      make: 'BMW', model, image: PLACEHOLDER_URL, updated_img: false, wiki_checked: true
+    })));
+    try {
+      await images.applyVerifiedCatalogPhotos();
+      await images.applyVerifiedCatalogPhotos();
+
+      assert.equal((await oneM.reload()).image, photo);
+      const [cover, ...alternates] = await gallery.getGallery(oneM);
+      assert.deepEqual(alternates, []);
+      assert.equal(cover.url, photo);
+      assert.equal(cover.source, 'wikimedia');
+      assert.equal(cover.credit_name, 'Overlaet');
+      assert.equal(cover.credit_url, 'https://commons.wikimedia.org/wiki/File:BMW_1_Series_M_Coupe_(front_quarter).jpg');
+      assert.equal(cover.license, 'CC BY-SA 3.0');
+      assert.equal(cover.license_url, 'https://creativecommons.org/licenses/by-sa/3.0/');
+      assert.equal((await mOne.reload()).image, PLACEHOLDER_URL);
+      assert.deepEqual(await gallery.getGallery(mOne), []);
+
+      await oneM.update({ image: 'https://example.test/owner-chosen-1m.jpg' });
+      await images.applyVerifiedCatalogPhotos();
+      assert.equal((await oneM.reload()).image, 'https://example.test/owner-chosen-1m.jpg');
+    } finally {
+      await db.car.destroy({ where: { id: [oneM.id, mOne.id] } });
+    }
+  });
+
   it('corrects only known wrong covers while keeping gallery history and votes', async function() {
     const cars = await db.car.bulkCreate([
       { make: 'BMW', model: '528i', image: wrong528 },
