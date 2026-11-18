@@ -161,6 +161,35 @@ describe('Verified BMW catalog photos', function() {
     }
   });
 
+  it('uses the Compact photo only on the 318ti and retains the sedan in gallery history', async function() {
+    const sedan = thumb('a/a6', '1991-1996_BMW_318i_%28E36%29_sedan_%282011-04-02%29_01.jpg');
+    const compactFile = '1998_BMW_318TI_Compact_Auto_(38312255052).jpg';
+    const compact = thumb('f/f1', compactFile);
+    const [hatchback, fourDoor] = await db.car.bulkCreate(['318ti', '318i'].map(model => ({
+      make: 'BMW', model, image: sedan, updated_img: true
+    })));
+    try {
+      await db.car_image.create({ carId: fourDoor.id, url: sedan, source: 'wikimedia' });
+      await images.applyVerifiedCatalogPhotos();
+      await images.applyVerifiedCatalogPhotos();
+
+      assert.equal((await hatchback.reload()).image, compact);
+      const publicPhotos = await gallery.getGallery(hatchback);
+      assert.deepEqual(publicPhotos.map(photo => photo.url), [compact]);
+      const [cover] = publicPhotos;
+      assert.equal(cover.credit_name, 'Kieran White');
+      assert.equal(cover.credit_url, 'https://commons.wikimedia.org/wiki/File:' + compactFile);
+      assert.equal(cover.license, 'CC BY 2.0');
+      assert.equal(cover.license_url, 'https://creativecommons.org/licenses/by/2.0/');
+      assert.equal(await db.car_image.count({ where: { carId: hatchback.id } }), 2);
+      assert.ok(await db.car_image.findOne({ where: { carId: hatchback.id, url: sedan } }));
+      assert.equal((await fourDoor.reload()).image, sedan);
+      assert.deepEqual((await gallery.getGallery(fourDoor)).map(photo => photo.url), [sedan]);
+    } finally {
+      await db.car.destroy({ where: { id: [hatchback.id, fourDoor.id] } });
+    }
+  });
+
   it('replaces the 840Ci photo only on the 850CSi and keeps its gallery history', async function() {
     const oldFile = 'BMW_840_Ci_%287724204324%29_%28cropped%29.jpg';
     const oldPhoto = thumb('e/ec', oldFile);
