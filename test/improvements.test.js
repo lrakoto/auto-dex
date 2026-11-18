@@ -1,7 +1,9 @@
+const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../server');
 const db = require('../models');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const carinfo = require('../lib/carinfo');
 const unsplash = require('../lib/unsplash');
 
 describe('Improvements', function() {
@@ -76,13 +78,28 @@ describe('Improvements', function() {
 
   describe('photo credits on the detail page', function() {
     it('shows a local placeholder instead of an Unsplash photo or credit', async function() {
-      await db.car.create({
+      const retiredPhoto = 'https://images.unsplash.com/photo-svx?w=1080';
+      const car = await db.car.create({
         make: 'Subaru', model: 'SVX', favcount: 0, updated_img: true,
-        image: 'https://images.unsplash.com/photo-svx?w=1080'
+        year_max: null, image: retiredPhoto
       });
-      const res = await request(app).get('/cars/car?make=Subaru&model=SVX').expect(200);
-      if (res.text.includes('images.unsplash.com/photo-svx') || /Photo from.*Unsplash/.test(res.text)) throw new Error('retired photo or credit rendered');
-      if (!res.text.includes(PLACEHOLDER_URL)) throw new Error('local placeholder missing');
+      await car.reload();
+      assert.equal(car.getDataValue('image'), retiredPhoto, 'the fixture must retain its legacy URL');
+
+      const { getWikiSummary, getFuelSpecs } = carinfo;
+      try {
+        // The photo policy under test does not need Wikipedia or fuel data.
+        carinfo.getWikiSummary = async () => null;
+        carinfo.getFuelSpecs = async () => null;
+        const { text } = await request(app).get('/cars/car?make=Subaru&model=SVX').expect(200);
+        const recentCar = text.match(/<div id="car-recent-data"[^>]*>/)?.[0];
+        assert.ok(recentCar?.includes(`data-image="${PLACEHOLDER_URL}"`), 'the main photo did not use the placeholder');
+        assert.match(text, /<p class="photo-credit" id="hero-credit" hidden>\s*<\/p>/);
+        assert.doesNotMatch(text, /images\.unsplash\.com\/photo-svx|Photo from.*Unsplash/i);
+      } finally {
+        carinfo.getWikiSummary = getWikiSummary;
+        carinfo.getFuelSpecs = getFuelSpecs;
+      }
     });
   });
 });
