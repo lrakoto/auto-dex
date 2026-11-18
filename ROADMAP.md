@@ -610,6 +610,29 @@ R14 on 2026-10-01 so they ship before R4.
   page. The museum's credited Commons photo loads first. Opening 3D loads
   the unmodified publisher-hosted scan, limited to its exact embed URL.
   [Museum photo and license](https://commons.wikimedia.org/wiki/File:View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg#Licensing).
+- **Expand the 3D collection (requested by the owner).** Keep the still photo
+  and source credit visible and let the visitor choose to load the viewer.
+  Link exhibits from Explore and from the matching catalog detail page when
+  the exact variant is documented. For the next exhibit, share the existing
+  viewer controls and keep the embed permission scoped to that exhibit's
+  published model. Add a collection page once a second exhibit is ready.
+  - **1909 Tudhope-McIntyre.** Steve Benoit used footage from Simcoe County
+    Museum staff. Sketchfab lists CC BY 4.0 and serves the embed. Verify the
+    specimen with that museum's records and confirm the footage can be used
+    in a public interactive model. The Canadian Automotive Museum listing
+    documents the model at a different collection.
+    [Creator's scan](https://sketchfab.com/models/6d2eee5af2c2476cabca0c81ab157bb8) ·
+    [Canadian Automotive Museum](https://www.canadianautomotivemuseum.com/cars/1908-tudhope-mcintyre).
+  - **Ford Model T.** Libau Media's original recreation and maddevil57's
+    weathered 1925 recreation have CC BY 4.0 listings and working embeds.
+    Verify the year and body style against period records and check any
+    retained texture or branding rights before choosing an exhibit.
+    [Libau Media model](https://sketchfab.com/3d-models/ford-model-t-v2-downloadable-028ff3c03a284216801eb05623c5b2a3) ·
+    [1925 recreation](https://sketchfab.com/3d-models/old-ford-model-t-1925-c96b97ba24344dd8a0688c9ca756f21c).
+  - **Renault 4L.** Emm's LiDAR scan has a CC BY 4.0 listing and a working
+    embed. The listing identifies the model family. Verify the exact year
+    and trim, check exterior coverage and clear the visible markings.
+    [Creator's scan](https://sketchfab.com/3d-models/renault-4l-bf8dd7b8eae54f2c9c40d8dfedaf79bb).
 - **Before publishing.** Record the exact source, license, asset revision,
   credits, changes, and any separate rights for marks and textures. Confirm
   permission covers optimizing and serving the files the browser receives.
