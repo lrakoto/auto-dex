@@ -109,6 +109,8 @@ describe('Complete model-year scans', function() {
     const verified = [[1994, 1995, 1996, 1997], 1994, 1997, true];
     const stale850csi = { model_years: [1981, 1994, 1995], year_min: 1981, year_max: 1995 };
     const verified850csi = [[1994, 1995], 1994, 1995, true];
+    const stale318ti = { model_years: [1981, 1995, 1996, 1999, 2000], year_min: 1981, year_max: 2000 };
+    const verified318ti = [[1995, 1996, 1997, 1998, 1999], 1995, 1999, true];
     const modernYears = [[2020, 2021], 2020, 2021, true];
     const verified528i = [
       [1979, 1980, 1981, 1997, 1998, 1999, 2000, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016],
@@ -122,6 +124,7 @@ describe('Complete model-year scans', function() {
     const requests = [];
     let models = new Map([
       ['840Ci', stale.model_years], ['850CSi', stale850csi.model_years], ['840i', modernYears[0]],
+      ['318ti', stale318ti.model_years],
       ['528i', [1981, 1998, 2000, 2007, 2016]], ['528xi', stale528xi.model_years],
       ['528i xDrive', [2010, 2011, 2012]]
     ]);
@@ -133,6 +136,7 @@ describe('Complete model-year scans', function() {
     try {
       const historical = await create({ make: 'BMW', model: '840Ci', years_checked: true, ...stale, ...metadata });
       const csi = await create({ make: 'BMW', model: '850CSi', years_checked: true, ...stale850csi, ...metadata });
+      const compact = await create({ make: 'BMW', model: '318ti', years_checked: true, ...stale318ti, ...metadata });
       const modern = await create({ make: 'BMW', model: '840i', years_checked: true,
         model_years: modernYears[0], year_min: 2020, year_max: 2021 });
       const sedan = await create({ make: 'BMW', model: '528i', years_checked: true,
@@ -150,6 +154,7 @@ describe('Complete model-year scans', function() {
       assert.deepEqual(requests, []);
       assert.deepEqual(fields(await historical.reload()), verified);
       assert.deepEqual(fields(await csi.reload()), verified850csi);
+      assert.deepEqual(fields(await compact.reload()), verified318ti);
       assert.deepEqual(fields(await modern.reload()), modernYears);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);
@@ -161,6 +166,7 @@ describe('Complete model-year scans', function() {
       await scanMake('BMW');
       assert.deepEqual(fields(await historical.reload()), verified);
       assert.deepEqual(fields(await csi.reload()), verified850csi);
+      assert.deepEqual(fields(await compact.reload()), verified318ti);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);
       assert.deepEqual(fields(await xDrive.reload()), verifiedXDrive);
@@ -173,6 +179,8 @@ describe('Complete model-year scans', function() {
       for (const [key, value] of Object.entries(metadata)) assert.equal(historical[key], value);
       assert.deepEqual(fields(await csi.reload()), verified850csi);
       for (const [key, value] of Object.entries(metadata)) assert.equal(csi[key], value);
+      assert.deepEqual(fields(await compact.reload()), verified318ti);
+      for (const [key, value] of Object.entries(metadata)) assert.equal(compact[key], value);
       assert.deepEqual(fields(await modern.reload()), modernYears);
       assert.deepEqual(fields(await sedan.reload()), verified528i);
       assert.deepEqual(fields(await allWheelDrive.reload()), verified528xi);

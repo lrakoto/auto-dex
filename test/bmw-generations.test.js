@@ -8,6 +8,7 @@ const nhtsa = require('../lib/nhtsa');
 const rarity = require('../lib/rarity');
 const { getGenerationHistory } = require('../lib/generation-history');
 const { PLACEHOLDER_URL } = require('../lib/constants');
+const archive318ti = 'https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-74-5.bmw-318ti-compact-e36.html';
 const archive528iE12 = 'https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-159-1.bmw-528i-e12.html';
 const archive840ci = 'https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html';
 const archive850csi = 'https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-213-1.bmw-850csi.html';
@@ -100,6 +101,7 @@ describe('BMW generation references', function() {
       { model: '528i', years: [1979, 1980, 1981, 1997, 1998, 1999, 2000, 2008, 2016], wikidataId: 'Q642', wikiArticle: 'BMW_5_Series', summary: 'Multi-generation 5 Series fixture introduction.' },
       { model: '840Ci', years: [1994, 1995, 1996, 1997], wikidataId: 'Q840', wikiArticle: 'BMW_8_Series_(E31)', summary: 'E31 fixture introduction.' },
       { model: '850CSi', years: [1994, 1995], wikidataId: 'Q850', wikiArticle: 'BMW_8_Series_(E31)', summary: 'General E31 fixture introduction.' },
+      { model: '318ti', years: [1995, 1996, 1997, 1998, 1999], wikidataId: 'Q318', wikiArticle: 'BMW_3_Series_Compact', summary: 'General Compact fixture introduction.' },
       { model: '840i', years: [2020, 2021], wikidataId: 'Q841', wikiArticle: 'BMW_8_Series_(G15)', summary: 'Modern 8 Series fixture introduction.' }
     ];
     const originalCarinfo = {
@@ -182,6 +184,12 @@ describe('BMW generation references', function() {
       assert.ok(csi.text.includes('href="' + escapeXML(epa850csi) + '"'));
       assert.match(csi.text, /5\.6-liter V12/);
       assert.doesNotMatch(csi.text, /General E31 fixture introduction/);
+
+      const compact = await request(app).get('/cars/car').query({ make: 'BMW', model: '318ti' }).expect(200);
+      assert.match(compact.text, /<p class="car-hero-sub">Germany · 1995–1999<\/p>/);
+      assert.match(compact.text, /<dt>E36<\/dt>[\s\S]*?September 1994 – August 2000 production/);
+      assert.ok(compact.text.includes('href="' + archive318ti + '"'));
+      assert.match(compact.text, /EPA’s 1995–1999 U.S. model-year records/);
 
       const modernEight = await request(app).get('/cars/car').query({ make: 'BMW', model: '840i' }).expect(200);
       assert.match(modernEight.text, /Modern 8 Series fixture introduction/);
