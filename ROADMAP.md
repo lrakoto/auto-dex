@@ -99,6 +99,9 @@ Check an item off in the same PR that finishes it. Research behind this list
 - Missing Ford Aspire covers use IFCAR's public-domain photo of the
   North American three-door hatchback.
   [Aspire photo and dedication](https://commons.wikimedia.org/wiki/File:Ford_Aspire_front_--_07-22-2010.jpg#Licensing).
+- Missing Ram 2500 covers use Bull-Doser's public-domain photo of a
+  2020 Cummins Crew Cab.
+  [Ram 2500 photo and dedication](https://commons.wikimedia.org/wiki/File:%2720_Ram_2500_Cummins_Crew_Cab.jpg#Licensing).
 - The civilian Chevrolet Caprice uses a 1969 coupe photo by dave_7. The 2011
   Caprice Police Vehicle photo remains in the civilian listing's gallery
   history and is excluded from its public gallery and cover selection.
