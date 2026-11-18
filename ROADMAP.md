@@ -102,6 +102,9 @@ Check an item off in the same PR that finishes it. Research behind this list
 - Missing Ram 2500 covers use Bull-Doser's public-domain photo of a
   2020 Cummins Crew Cab.
   [Ram 2500 photo and dedication](https://commons.wikimedia.org/wiki/File:%2720_Ram_2500_Cummins_Crew_Cab.jpg#Licensing).
+- Missing SCG 004S covers use Mr.choppers' photo of the 004S shown at the
+  2022 Greenwich Concours d'Elegance.
+  [004S photo and license](https://commons.wikimedia.org/wiki/File:2021_Scuderia_Cameron_Glickenhaus_SCG_004S_in_GOLD%2C_front_left.jpg#Licensing).
 - The civilian Chevrolet Caprice uses a 1969 coupe photo by dave_7. The 2011
   Caprice Police Vehicle photo remains in the civilian listing's gallery
   history and is excluded from its public gallery and cover selection.
