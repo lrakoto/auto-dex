@@ -94,6 +94,10 @@ Check an item off in the same PR that finishes it. Research behind this list
   The previous 840Ci photo stays in the 850CSi's gallery history with its
   votes and remains eligible on the 840Ci listing.
   [850CSi photo and dedication](https://commons.wikimedia.org/wiki/File:1995_BMW_850_CSi.JPG#Licensing).
+- The BMW 318ti uses Kieran White's photo of a 1998 E36 Compact. The 318i
+  sedan photo stays in the 318ti's gallery history and remains eligible on
+  the 318i listing.
+  [318ti photo and license](https://commons.wikimedia.org/wiki/File:1998_BMW_318TI_Compact_Auto_%2838312255052%29.jpg#Licensing).
 - Missing BMW 1M covers use Overlaet's photo of the 1 Series M Coupé at
   AutoRAI 2011. Verified photos can replace hidden Unsplash covers on
   exact models. The job keeps retired images in gallery history and
