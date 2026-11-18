@@ -1,6 +1,7 @@
+<% const poster = 'https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg/960px-View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg'; %>
 <article class="container py-4 motorwagen-page">
   <p><a href="/cars/explore">Back to Explore</a></p>
-  <h1>Benz Patent-Motorwagen No. 1</h1>
+  <h1>Benz Patent-Motorwagen No.&nbsp;1</h1>
   <p>The Deutsches Museum scanned its specimen of Carl Benz’s 1886 design, reassembled in 1895 (inventory 4710).</p>
   <div class="motorwagen-controls mb-3">
     <button type="button" id="motorwagen-toggle" class="btn btn-primary" aria-expanded="false"
@@ -9,7 +10,8 @@
   </div>
   <div id="motorwagen-stage" class="motorwagen-stage">
     <img id="motorwagen-poster"
-      src="https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg/960px-View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg"
+      src="<%= poster %>" srcset="<%= photoUrl(poster, 500) %> 500w, <%= poster %> 960w"
+      sizes="(max-width: 575px) calc(100vw - 64px), 960px"
       width="960" height="716" alt="Side view of the three-wheeled Benz Patent-Motorwagen in the museum">
   </div>
   <p class="mt-3 small">
