@@ -92,8 +92,13 @@ router.get('/search', async (req, res) => {
 // make, photos-only, sort. Decades use the NHTSA model years (jobs/years.js),
 // so cars whose make hasn't been scanned yet only appear when no decade is
 // picked. Cars unless another type (or all) is chosen.
+// Explore uses the same cover rule for the photo filter and popularity ties.
+const exploreHasPhoto = db.sequelize.literal(`(
+  COALESCE(BTRIM("car"."image"), '') NOT IN ('', ${db.sequelize.escape(PLACEHOLDER_URL)})
+  AND "car"."image" !~* ${db.sequelize.escape(RETIRED_PHOTO_PATTERN)}
+)`);
 const EXPLORE_SORTS = {
-  popular: [['favcount', 'DESC'], ['year_max', 'DESC NULLS LAST'], ['model', 'ASC']],
+  popular: [['favcount', 'DESC'], [exploreHasPhoto, 'DESC'], ['year_max', 'DESC NULLS LAST'], ['model', 'ASC']],
   newest:  [['year_max', 'DESC NULLS LAST'], ['favcount', 'DESC']],
   oldest:  [['year_min', 'ASC NULLS LAST'], ['favcount', 'DESC']],
   az:      [['make', 'ASC'], ['model', 'ASC']]
@@ -145,9 +150,7 @@ router.get('/explore', async (req, res) => {
       for (let y = decade; y < decade + 10; y++) span.push(y);
       where.model_years = { [Op.overlap]: span };
     }
-    if (photos) where.image = {
-      [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: PLACEHOLDER_URL }, { [Op.notIRegexp]: RETIRED_PHOTO_PATTERN }]
-    };
+    if (photos) where[Op.and] = [exploreHasPhoto];
 
     const { rows, count } = makes.length === 0 ? { rows: [], count: 0 } : await db.car.findAndCountAll({
       where,

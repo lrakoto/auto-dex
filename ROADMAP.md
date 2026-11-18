@@ -68,6 +68,9 @@ Check an item off in the same PR that finishes it. Research behind this list
   Commons images. Gallery records and votes keep their stored image URLs.
   Browse and Search defer image requests below the first three cards.
   [Wikimedia's thumbnail host change](https://phabricator.wikimedia.org/T427465).
+- Explore's Popular sort shows cars with assigned covers first when
+  favorite counts tie. The photo-only filter excludes blank and retired
+  covers as well as the local placeholder.
 - While the initial retirement queue remains, the hourly job checks up to
   500 vehicles per run, then returns to its normal 150. Requests stay
   sequential with the same spacing and failure stop; logs distinguish actual
