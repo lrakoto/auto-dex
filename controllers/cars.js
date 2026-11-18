@@ -27,6 +27,16 @@ const { getMakeProgress, XP_BY_RARITY } = require('../lib/dex');
 
 require('dotenv').config();
 
+const { motorwagenEmbed, motorwagenFramePolicy } = require('../config/security-headers');
+
+router.get('/motorwagen-3d', motorwagenFramePolicy, (req, res) => {
+  res.render('cars/motorwagen-3d', {
+    pageTitle: 'Benz Patent-Motorwagen No. 1 in 3D — AutoDex',
+    pageDescription: 'Explore the Deutsches Museum’s scan of the Benz Patent-Motorwagen No. 1.',
+    motorwagenEmbed
+  });
+});
+
 const PAGE_SIZE = 12;
 const MAX_COMPARE = 3;
 

@@ -2980,3 +2980,10 @@ textarea:focus-visible,
 .cool-card-votes { font-size: 0.72rem; color: var(--text-muted); }
 @media (max-width: 992px) { .cool-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .cool-wall { grid-template-columns: 1fr; } }
+
+/* Motorwagen 3D exhibit */
+.motorwagen-page { max-width: 960px; }
+.motorwagen-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
+.motorwagen-stage { background: #161b20; border-radius: .5rem; overflow: hidden; }
+.motorwagen-stage img { width: 100%; height: auto; }
+.motorwagen-stage iframe { display: block; width: 100%; aspect-ratio: 16 / 9; min-height: 16rem; border: 0; }

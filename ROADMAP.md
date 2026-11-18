@@ -604,6 +604,10 @@ R14 on 2026-10-01 so they ship before R4.
   because there is no matching AutoDex catalog page.
   [Museum specimen history](https://www.deutsches-museum.de/museum/aktuell/eine-ikone-der-automobilgeschichte-wird-140) ·
   [Museum's 3D listing](https://sketchfab.com/3d-models/erster-dreirad-motorwagen-von-carl-benz-47df0cb894a34d33a09361f3cb182070).
+- **Motorwagen exhibit.** Explore links to the historical specimen's own
+  page. The museum's credited Commons photo loads first. Opening 3D loads
+  the unmodified publisher-hosted scan, limited to its exact embed URL.
+  [Museum photo and license](https://commons.wikimedia.org/wiki/File:View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg#Licensing).
 - **Before publishing.** Record the exact source, license, asset revision,
   credits, changes, and any separate rights for marks and textures. Confirm
   permission covers optimizing and serving the files the browser receives.

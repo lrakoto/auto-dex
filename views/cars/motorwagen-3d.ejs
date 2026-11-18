@@ -1,0 +1,21 @@
+<article class="container py-4 motorwagen-page">
+  <p><a href="/cars/explore">Back to Explore</a></p>
+  <h1>Benz Patent-Motorwagen No. 1</h1>
+  <p>The Deutsches Museum scanned its specimen of Carl Benz’s 1886 design, reassembled in 1895 (inventory 4710).</p>
+  <div class="motorwagen-controls mb-3">
+    <button type="button" id="motorwagen-toggle" class="btn btn-primary" aria-expanded="false"
+      aria-controls="motorwagen-stage" data-embed="<%= motorwagenEmbed %>" hidden>Load 3D model</button>
+    <a href="https://sketchfab.com/3d-models/erster-dreirad-motorwagen-von-carl-benz-47df0cb894a34d33a09361f3cb182070">Open on Sketchfab</a>
+  </div>
+  <div id="motorwagen-stage" class="motorwagen-stage">
+    <img id="motorwagen-poster"
+      src="https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg/960px-View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg"
+      width="960" height="716" alt="Side view of the three-wheeled Benz Patent-Motorwagen in the museum">
+  </div>
+  <p class="mt-3 small">
+    <a href="https://commons.wikimedia.org/wiki/File:View_of_Right_Side_of_Benz_Patent_Motorwagen_in_Deutsches_Museum.jpg">Photo by Deutsches Museum, Munich</a> ·
+    3D scan by Deutsches Museum | Digital · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a> for both ·
+    <a href="https://www.deutsches-museum.de/en/verkehrszentrum/exhibitions/mobility-and-technology/highlights-mobility-and-technology">Museum exhibit</a>
+  </p>
+</article>
+<script src="/js/motorwagen-3d.js" defer></script>
