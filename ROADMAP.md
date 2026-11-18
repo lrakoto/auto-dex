@@ -96,6 +96,9 @@ Check an item off in the same PR that finishes it. Research behind this list
   exact models. The job keeps retired images in gallery history and
   respects manually cleared covers.
   [1M photo and license](https://commons.wikimedia.org/wiki/File:BMW_1_Series_M_Coupe_%28front_quarter%29.jpg#Licensing).
+- Missing Ford Aspire covers use IFCAR's public-domain photo of the
+  North American three-door hatchback.
+  [Aspire photo and dedication](https://commons.wikimedia.org/wiki/File:Ford_Aspire_front_--_07-22-2010.jpg#Licensing).
 - The civilian Chevrolet Caprice uses a 1969 coupe photo by dave_7. The 2011
   Caprice Police Vehicle photo remains in the civilian listing's gallery
   history and is excluded from its public gallery and cover selection.
