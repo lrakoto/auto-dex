@@ -679,6 +679,16 @@ R14 on 2026-10-01 so they ship before R4.
   uses the current lab controls and approved viewer version, and starts
   independently of the catalog and database. The BMW model and poster
   stay in local files. See [the setup instructions](README.md#local-3d-viewer-prototype).
+- **Caprice preview poster (2026-11-18).** A progressive JPEG of the
+  original 1050 × 650 render uses 52,978 bytes, compared with 619,397 bytes
+  for the PNG. Desktop Chrome 157 emulated a 390 × 844 phone at 2×
+  resolution, with cache disabled, 3 Mbps down, 1 Mbps up, and 150 ms
+  added latency. Median poster download completion measured from
+  navigation fell from 2.02 s to 0.52 s over three runs per format.
+  Each run requested only its poster before opt-in. The viewer and the
+  2,300,216-byte Caprice GLB transferred 871,767 Brotli bytes together
+  after a tap. The interactive model became ready in about 2.8 s at the
+  median for each format. A physical-phone check remains open.
 - **Gzip fallback (2026-11-15).** Desktop WKWebView received the painted
   BMW model and viewer over local HTTP using gzip. Their combined response
   bodies went from 5,851,132 to 3,360,599 bytes (43% smaller) and decoded to
