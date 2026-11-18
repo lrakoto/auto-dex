@@ -155,6 +155,36 @@ describe('Catalog pagination', function() {
     }
   });
 
+  it('prefers photos only within popularity ties before Explore pagination', async function() {
+    const make = 'Explore Photo Order';
+    const photo = 'https://example.test/explore-photo.jpg';
+    const unpictured = [
+      PLACEHOLDER_URL, '', '  ', null, 'https://images.unsplash.com/retired-cover',
+      ...Array(6).fill(PLACEHOLDER_URL)
+    ].map((image, index) => ({
+      model: 'Unpictured ' + String(index).padStart(2, '0'), image, favcount: 1, year_max: 2020
+    }));
+    const rows = await db.car.bulkCreate([
+      { model: 'More Favorites', image: PLACEHOLDER_URL, favcount: 2, year_max: 2021 },
+      ...unpictured,
+      { model: 'Photographed', image: photo, favcount: 1, year_max: 2018 },
+      { model: 'Fewer Favorites', image: photo, favcount: 0, year_max: 2023 }
+    ].map(row => ({ ...row, make, vehicle_type: 'car' })));
+    const url = '/cars/explore?make=' + encodeURIComponent(make);
+    async function modelsAt(query) {
+      const { text } = await request(app).get(url + query + '&partial=1').expect(200);
+      return Array.from(text.matchAll(/class="card-model">([^<]+)/g), match => match[1]);
+    }
+    try {
+      assert.deepEqual(await modelsAt(''), ['More Favorites', 'Photographed', ...unpictured.slice(0, 10).map(row => row.model)]);
+      assert.deepEqual(await modelsAt('&page=2'), ['Unpictured 10', 'Fewer Favorites']);
+      assert.deepEqual(await modelsAt('&photos=1'), ['Photographed', 'Fewer Favorites']);
+      assert.deepEqual((await modelsAt('&sort=newest')).slice(0, 2), ['Fewer Favorites', 'More Favorites']);
+    } finally {
+      await db.car.destroy({ where: { id: rows.map(row => row.id) } });
+    }
+  });
+
   it('applies the model year while keeping the manufacturer and vehicle type', async function() {
     const make = 'Year Filter Works';
     const rows = await db.car.bulkCreate(Array.from({ length: 13 }, (_, index) => ({
