@@ -261,6 +261,10 @@ R14 on 2026-10-01 so they ship before R4.
   factory production reference. Catalog upkeep corrects pre-launch years
   from vPIC and retains 1997 on later scans. [EPA 840Ci records](https://www.fueleconomy.gov/feg/Find.do?action=sbs&id=29073&id=11648&id=12565&id=13318) ·
   [BMW Classic E31 840Ci](https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html).
+  The 850CSi uses the EPA's 1994–1995 U.S. model years. Its E31 reference
+  also gives BMW's August 1992–November 1996 factory production dates.
+  [EPA 850CSi records](https://www.fueleconomy.gov/feg/Find.do?action=sbs&id=10687&id=11650) ·
+  [BMW Classic E31 850CSi](https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-213-1.bmw-850csi.html).
   The 528i now shows the exact U.S. model-year runs of 1979–1981,
   1997–2000, and 2008–2016. The first two years predate AutoDex's vPIC scan.
   BMW Classic gives 1977–1981 as the E12 528i's factory production range.

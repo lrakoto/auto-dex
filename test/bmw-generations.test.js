@@ -10,6 +10,8 @@ const { getGenerationHistory } = require('../lib/generation-history');
 const { PLACEHOLDER_URL } = require('../lib/constants');
 const archive528iE12 = 'https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-159-1.bmw-528i-e12.html';
 const archive840ci = 'https://www.bmwgroup-classic.com/de/modelle/bmw-klassiker/product-description-page.ad-211-1.bmw-840ci-e31.html';
+const archive850csi = 'https://www.bmwgroup-classic.com/en/models/bmw-classics/product-description-page.ad-213-1.bmw-850csi.html';
+const epa850csi = 'https://www.fueleconomy.gov/feg/Find.do?action=sbs&id=10687&id=11650';
 
 function history(model, years, make = 'BMW') {
   return getGenerationHistory({ make, model, model_years: years });
@@ -76,11 +78,28 @@ describe('BMW generation references', function() {
     assert.equal(history('840i', [1997, 2020]), null);
   });
 
+  it('shows the 850CSi factory dates for its two U.S. model years', function() {
+    for (const year of [1994, 1995]) {
+      const result = history('850CSi', [1981, year]);
+      assert.match(result.overview, /5\.6-liter V12/);
+      assert.deepEqual(result.generations, [{
+        code: 'E31', firstYear: 1994, lastYear: 1995, production: 'August 1992 – November 1996',
+        sources: [
+          { label: 'BMW archive for E31', url: archive850csi },
+          { label: 'EPA’s 1994–1995 U.S. model-year records', url: epa850csi }
+        ]
+      }]);
+    }
+    assert.equal(history('850CSi', [1981, 1992, 1993, 1996]), null);
+    assert.equal(history('850Ci', [1994, 1995]), null);
+  });
+
   it('renders matching generation references and preserves Wikidata facts on public detail pages', async function() {
     const fixtures = [
       { model: '750iL', years: [1988, 1994, 1995, 1999], wikidataId: 'Q208', wikiArticle: 'BMW_7_Series_(E38)', summary: 'E38-only fixture introduction.' },
       { model: '528i', years: [1979, 1980, 1981, 1997, 1998, 1999, 2000, 2008, 2016], wikidataId: 'Q642', wikiArticle: 'BMW_5_Series', summary: 'Multi-generation 5 Series fixture introduction.' },
       { model: '840Ci', years: [1994, 1995, 1996, 1997], wikidataId: 'Q840', wikiArticle: 'BMW_8_Series_(E31)', summary: 'E31 fixture introduction.' },
+      { model: '850CSi', years: [1994, 1995], wikidataId: 'Q850', wikiArticle: 'BMW_8_Series_(E31)', summary: 'General E31 fixture introduction.' },
       { model: '840i', years: [2020, 2021], wikidataId: 'Q841', wikiArticle: 'BMW_8_Series_(G15)', summary: 'Modern 8 Series fixture introduction.' }
     ];
     const originalCarinfo = {
@@ -156,11 +175,23 @@ describe('BMW generation references', function() {
       assert.match(classicEight.text, /Source Q840/);
       assert.doesNotMatch(classicEight.text, /E31 fixture introduction/);
 
+      const csi = await request(app).get('/cars/car').query({ make: 'BMW', model: '850CSi' }).expect(200);
+      assert.match(csi.text, /<p class="car-hero-sub">Germany · 1994–1995<\/p>/);
+      assert.match(csi.text, /<dt>E31<\/dt>[\s\S]*?August 1992 – November 1996 production/);
+      assert.ok(csi.text.includes('href="' + archive850csi + '"'));
+      assert.ok(csi.text.includes('href="' + escapeXML(epa850csi) + '"'));
+      assert.match(csi.text, /5\.6-liter V12/);
+      assert.doesNotMatch(csi.text, /General E31 fixture introduction/);
+
       const modernEight = await request(app).get('/cars/car').query({ make: 'BMW', model: '840i' }).expect(200);
       assert.match(modernEight.text, /Modern 8 Series fixture introduction/);
       assert.doesNotMatch(modernEight.text, /BMW generation references|bmw-840ci-e31/);
       assert.deepEqual(factLookups, fixtures.map(({ wikidataId }) => wikidataId));
       assert.deepEqual(rarityLookups, fixtures.map(({ model, wikidataId }) => [model, wikidataId]));
+
+      const comparison = await request(app).get('/cars/compare').query({ c: ['BMW|850CSi', 'BMW|840Ci'] }).expect(200);
+      assert.match(comparison.text, /<th scope="row">Years<\/th>\s*<td[^>]*>\s*1994–1995\s*<\/td>\s*<td[^>]*>\s*1994–1997\s*<\/td>/);
+      assert.match(comparison.text, /Model years from NHTSA vPIC and verified historical records/);
     } finally {
       Object.assign(carinfo, originalCarinfo);
       Object.assign(nhtsa, originalNhtsa);
